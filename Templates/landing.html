@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NepseSewa - Virtual Stock Exchange Platform</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ============================================
+           NEPSESEWA - LANDING PAGE STYLES
+           ============================================ */
+
+        :root {
+            --bullish-green: #1cf25b;
+            --light-green: #83f991;
+            --medium-green: #3ca479;
+            --dark-green: #287052;
+            --bearish-red: #ff4757;
+            --light-red: #ff6b81;
+            --dark-red: #cc2e3d;
+            --light-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --dark-bg: #1a1d23;
+            --primary-gradient: linear-gradient(135deg, var(--dark-green) 0%, var(--medium-green) 100%);
+            --danger-gradient: linear-gradient(135deg, var(--bearish-red) 0%, var(--dark-red) 100%);
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+            background-color: #f5f5f5;
+        }
+
+        /* ============================================
+           NAVIGATION
+           ============================================ */
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 1rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            color: var(--dark-green) !important;
+            font-weight: 700;
+        }
+
+        .navbar-nav .nav-link {
+            font-weight: 500;
+            color: #333 !important;
+            margin: 0 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            color: var(--medium-green) !important;
+        }
+
+        .btn-login {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 112, 82, 0.4);
+        }
+
+        /* ============================================
+           HERO SECTION
+           ============================================ */
+
+        .hero-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding-top: 100px;
+            position: relative;
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background: var(--primary-gradient);
+            clip-path: polygon(25% 0%, 100% 0%, 100% 100%, 0% 100%);
+            z-index: 0;
+        }
+
+        .hero-section .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-section h1 {
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            font-size: 3.5rem;
+        }
+
+        .hero-section .lead {
+            font-size: 1.25rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .hero-buttons .btn {
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero-stats {
+            border-top: 1px solid #e9ecef;
+            padding-top: 2rem;
+            margin-top: 2rem;
+        }
+
+        .hero-stats .stat h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero-stats .stat p {
+            color: #666;
+            margin: 0;
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .market-dashboard {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .market-dashboard:hover {
+            transform: translateY(-5px);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .dashboard-header h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .market-data {
+            margin-bottom: 1.5rem;
+        }
+
+        .market-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .market-stat:last-child {
+            border-bottom: none;
+        }
+
+        .market-stat .label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .market-stat .value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .stock-ticker {
+            display: flex;
+            justify-content: space-between;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .ticker-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stock-symbol {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .stock-price {
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        /* ============================================
+           SECTIONS COMMON STYLES
+           ============================================ */
+
+        .section-title {
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark-green);
+            font-size: 2.5rem;
+        }
+
+        .section-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+        }
+
+        section {
+            padding: 5rem 0;
+        }
+
+        /* ============================================
+           FEATURES SECTION
+           ============================================ */
+
+        .features-section {
+            background: white;
+        }
+
+        .feature-card {
+            text-align: center;
+            padding: 2rem 1.5rem;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+        }
+
+        .feature-card h5 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            color: #666;
+            margin: 0;
+        }
+
+        /* ============================================
+           MARKET SECTION
+           ============================================ */
+
+        .market-section {
+            background: #f8f9fa;
+        }
+
+        .market-overview-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .market-stat-large .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .market-stat-large .stat-label {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .market-stat-large .stat-change {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .gainers-card,
+        .losers-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+            height: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .stock-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border-radius: 10px;
+            background: #f8f9fa;
+            transition: background 0.3s ease;
+        }
+
+        .stock-item:hover {
+            background: #e9ecef;
+        }
+
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stock-symbol {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .stock-name {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .stock-change {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        /* ============================================
+           HOW IT WORKS SECTION
+           ============================================ */
+
+        .how-it-works-section {
+            background: white;
+        }
+
+        .step-card {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 15px;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+            height: 100%;
+            position: relative;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .step-card h5 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .step-card p {
+            color: #666;
+            margin: 0;
+        }
+
+        /* ============================================
+           TESTIMONIALS SECTION
+           ============================================ */
+
+        .testimonials-section {
+            background: #f8f9fa;
+        }
+
+        .testimonial-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .testimonial-content {
+            font-style: italic;
+            margin-bottom: 1.5rem;
+            color: #555;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+        }
+
+        .author-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .author-info h6 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .author-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* ============================================
+           CTA SECTION
+           ============================================ */
+
+        .cta-section {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .cta-section h3 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-section .btn {
+            border-radius: 50px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+
+        .btn-light {
+            background: white;
+            color: var(--dark-green);
+            border: none;
+        }
+
+        .btn-light:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-outline-light {
+            border: 2px solid white;
+            color: white;
+        }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--dark-green);
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+
+        .footer {
+            background: var(--dark-bg);
+            color: white;
+            padding: 4rem 0 2rem;
+        }
+
+        .footer h5 {
+            color: white;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .footer h6 {
+            color: white;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .footer ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .footer ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer ul li a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer ul li a:hover {
+            color: white;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: background 0.3s ease;
+            color: white;
+            text-decoration: none;
+        }
+
+        .social-links a:hover {
+            background: var(--medium-green);
+            transform: translateY(-2px);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* ============================================
+           ANIMATIONS
+           ============================================ */
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .animate-delay-1 {
+            animation-delay: 0.2s;
+        }
+
+        .animate-delay-2 {
+            animation-delay: 0.4s;
+        }
+
+        .animate-delay-3 {
+            animation-delay: 0.6s;
+        }
+
+        /* ============================================
+           RESPONSIVE DESIGN
+           ============================================ */
+
+        @media (max-width: 992px) {
+            .hero-section::before {
+                width: 100%;
+                clip-path: polygon(0% 0%, 100% 0%, 100% 30%, 0% 100%);
+            }
+
+            .hero-section h1 {
+                font-size: 2.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-buttons .btn {
+                display: block;
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+
+            .hero-buttons .btn:last-child {
+                margin-bottom: 0;
+            }
+
+            .market-stat-large .stat-value {
+                font-size: 2rem;
+            }
+
+            .stock-ticker {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .ticker-item {
+                flex: 1;
+                min-width: 45%;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .hero-section h1 {
+                font-size: 2rem;
+            }
+
+            .hero-section .lead {
+                font-size: 1.1rem;
+            }
+
+            section {
+                padding: 3rem 0;
+            }
+
+            .section-title {
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>NepseSewa
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#market">Market</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#how-it-works">How It Works</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#testimonials">Testimonials</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <a class="btn btn-login" href="{% url 'login' %}">Login / Register</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="animate-fade-in">Trade Virtual Stocks in Real Nepal Market</h1>
+                    <p class="lead animate-fade-in animate-delay-1">
+                        Experience the thrill of stock trading without financial risk.
+                        Practice with virtual money and master the Nepal Stock Exchange.
+                    </p>
+                    <div class="hero-buttons animate-fade-in animate-delay-2">
+                        <a href="login.html" class="btn btn-success">Get Started Free</a>
+                        <a href="#how-it-works" class="btn btn-outline-success">How It Works</a>
+                    </div>
+                    <div class="hero-stats animate-fade-in animate-delay-3">
+                        <div class="row">
+                            <div class="col-4">
+                                <div class="stat">
+                                    <h3>10K+</h3>
+                                    <p>Active Traders</p>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat">
+                                    <h3>Rs 50M+</h3>
+                                    <p>Virtual Trades</p>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat">
+                                    <h3>4.8★</h3>
+                                    <p>User Rating</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-image">
+                        <div class="market-dashboard animate-fade-in">
+                            <div class="dashboard-header">
+                                <h5>Live Market</h5>
+                                <span class="badge bg-success">Live</span>
+                            </div>
+                            <div class="market-data">
+                                <div class="market-stat">
+                                    <span class="label">NEPSE Index</span>
+                                    <span class="value text-success">2191.42 <small>(+0.02%)</small></span>
+                                </div>
+                                <div class="market-stat">
+                                    <span class="label">Sensitive Index</span>
+                                    <span class="value">418.65</span>
+                                </div>
+                                <div class="market-stat">
+                                    <span class="label">Float Index</span>
+                                    <span class="value">152.37</span>
+                                </div>
+                                <div class="market-stat">
+                                    <span class="label">Turnover</span>
+                                    <span class="value text-success">Rs 3.5B</span>
+                                </div>
+                            </div>
+                            <div class="stock-ticker">
+                                <div class="ticker-item">
+                                    <span class="stock-symbol">NBL</span>
+                                    <span class="stock-price text-success">+4.2%</span>
+                                </div>
+                                <div class="ticker-item">
+                                    <span class="stock-symbol">SCB</span>
+                                    <span class="stock-price text-success">+1.6%</span>
+                                </div>
+                                <div class="ticker-item">
+                                    <span class="stock-symbol">SHL</span>
+                                    <span class="stock-price text-danger">-3.3%</span>
+                                </div>
+                                <div class="ticker-item">
+                                    <span class="stock-symbol">NMB</span>
+                                    <span class="stock-price text-danger">-1.9%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <div class="row justify-content-center text-center mb-5">
+                <div class="col-lg-8">
+                    <h2 class="section-title">Why Choose NepseSewa?</h2>
+                    <p class="section-subtitle">
+                        Our platform offers everything you need to learn and practice stock trading in a risk-free
+                        environment.
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-card animate-fade-in">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h5>Real Market Data</h5>
+                        <p>
+                            Trade with real-time NEPSE data and experience actual market conditions
+                            without risking real money.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card animate-fade-in animate-delay-1">
+                        <div class="feature-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <h5>Virtual Portfolio</h5>
+                        <p>
+                            Start with Rs. 100,000 virtual money and build your portfolio.
+                            Track your performance with detailed analytics.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card animate-fade-in animate-delay-2">
+                        <div class="feature-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <h5>Learning Resources</h5>
+                        <p>
+                            Access tutorials, market analysis, and expert insights to improve
+                            your trading strategies and knowledge.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Market Overview Section -->
+    <section id="market" class="market-section">
+        <div class="container">
+            <div class="row justify-content-center text-center mb-5">
+                <div class="col-lg-8">
+                    <h2 class="section-title">Market Overview</h2>
+                    <p class="section-subtitle">
+                        Stay updated with the latest market trends and performance indicators.
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="market-overview-card animate-fade-in">
+                        <div class="market-stat-large text-center">
+                            <div class="stat-value text-success">2191.42</div>
+                            <div class="stat-label">NEPSE Index</div>
+                            <div class="stat-change text-success">+0.02% <i class="fas fa-arrow-up ms-1"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="gainers-card animate-fade-in animate-delay-1">
+                        <h5 class="card-title"><i class="fas fa-arrow-up text-success me-2"></i>Top Gainers</h5>
+                        <div class="stock-list">
+                            <div class="stock-item">
+                                <div class="stock-info">
+                                    <span class="stock-symbol">NBL</span>
+                                    <span class="stock-name">Nepal Bank Ltd.</span>
+                                </div>
+                                <span class="stock-change text-success">+4.2%</span>
+                            </div>
+                            <div class="stock-item">
+                                <div class="stock-info">
+                                    <span class="stock-symbol">SCB</span>
+                                    <span class="stock-name">Standard Chartered</span>
+                                </div>
+                                <span class="stock-change text-success">+1.6%</span>
+                            </div>
+                            <div class="stock-item">
+                                <div class="stock-info">
+                                    <span class="stock-symbol">NIC</span>
+                                    <span class="stock-name">NIC Asia Bank</span>
+                                </div>
+                                <span class="stock-change text-success">+1.0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="losers-card animate-fade-in animate-delay-2">
+                        <h5 class="card-title"><i class="fas fa-arrow-down text-danger me-2"></i>Top Losers</h5>
+                        <div class="stock-list">
+                            <div class="stock-item">
+                                <div class="stock-info">
+                                    <span class="stock-symbol">SHL</span>
+                                    <span class="stock-name">Soaltee Hotel</span>
+                                </div>
+                                <span class="stock-change text-danger">-3.3%</span>
+                            </div>
+                            <div class="stock-item">
+                                <div class="stock-info">
+                                    <span class="stock-symbol">NMB</span>
+                                    <span class="stock-name">NMB Bank</span>
+                                </div>
+                                <span class="stock-change text-danger">-1.9%</span>
+                            </div>
+                            <div class="stock-item">
+                                <div class="stock-info">
+                                    <span class="stock-symbol">CBL</span>
+                                    <span class="stock-name">Civil Bank</span>
+                                </div>
+                                <span class="stock-change text-danger">-1.2%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="how-it-works-section">
+        <div class="container">
+            <div class="row justify-content-center text-center mb-5">
+                <div class="col-lg-8">
+                    <h2 class="section-title">How It Works</h2>
+                    <p class="section-subtitle">
+                        Getting started with NepseSewa is simple and straightforward.
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="step-card animate-fade-in">
+                        <div class="step-number">1</div>
+                        <h5>Create Account</h5>
+                        <p>
+                            Sign up for free and get instant access to Rs. 100,000 virtual money
+                            to start your trading journey.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="step-card animate-fade-in animate-delay-1">
+                        <div class="step-number">2</div>
+                        <h5>Learn & Practice</h5>
+                        <p>
+                            Explore our learning resources and practice trading with real market
+                            data without any financial risk.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="step-card animate-fade-in animate-delay-2">
+                        <div class="step-number">3</div>
+                        <h5>Master Trading</h5>
+                        <p>
+                            Develop your strategies, track your performance, and become
+                            confident enough to trade in the real market.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="testimonials-section">
+        <div class="container">
+            <div class="row justify-content-center text-center mb-5">
+                <div class="col-lg-8">
+                    <h2 class="section-title">What Our Users Say</h2>
+                    <p class="section-subtitle">
+                        Hear from traders who improved their skills with NepseSewa.
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="testimonial-card animate-fade-in">
+                        <div class="testimonial-content">
+                            "NepseSewa helped me understand the stock market without losing real money.
+                            The virtual trading environment is so realistic!"
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">AS</div>
+                            <div class="author-info">
+                                <h6>Anil Sharma</h6>
+                                <p>Beginner Trader</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="testimonial-card animate-fade-in animate-delay-1">
+                        <div class="testimonial-content">
+                            "As an experienced trader, I use NepseSewa to test new strategies
+                            before implementing them with real money. It's an invaluable tool."
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">SP</div>
+                            <div class="author-info">
+                                <h6>Sarita Poudel</h6>
+                                <p>Experienced Investor</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="testimonial-card animate-fade-in animate-delay-2">
+                        <div class="testimonial-content">
+                            "The learning resources and real-time market data made my transition
+                            to real trading smooth and successful. Highly recommended!"
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">RK</div>
+                            <div class="author-info">
+                                <h6>Rajesh K.C.</h6>
+                                <p>Finance Student</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-8">
+                    <h3 class="animate-fade-in">Ready to Start Your Trading Journey?</h3>
+                    <p class="animate-fade-in animate-delay-1">
+                        Join thousands of traders who are mastering the stock market with NepseSewa.
+                    </p>
+                    <div class="animate-fade-in animate-delay-2">
+                        <a href="login.html" class="btn btn-light me-3">Get Started Free</a>
+                        <a href="#features" class="btn btn-outline-light">Learn More</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <h5><i class="fas fa-chart-line me-2"></i>NepseSewa</h5>
+                    <p>
+                        The premier virtual stock exchange platform for learning and practicing
+                        stock trading with real NEPSE market data.
+                    </p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h6>Platform</h6>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#market">Market Data</a></li>
+                        <li><a href="#how-it-works">How It Works</a></li>
+                        <li><a href="login.html">Login</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h6>Resources</h6>
+                    <ul>
+                        <li><a href="#">Learning Center</a></li>
+                        <li><a href="#">Market Analysis</a></li>
+                        <li><a href="#">Trading Tips</a></li>
+                        <li><a href="#">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h6>Company</h6>
+                    <ul>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-6 mb-4">
+                    <h6>Support</h6>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Community</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                        <li><a href="#">Status</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 NepseSewa. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', function () {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.style.background = 'rgba(255, 255, 255, 0.98)';
+                navbar.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
+            } else {
+                navbar.style.background = 'rgba(255, 255, 255, 0.95)';
+                navbar.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)';
+            }
+        });
+
+        // Animate elements on scroll
+        function animateOnScroll() {
+            const elements = document.querySelectorAll('.animate-fade-in');
+
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+
+                if (elementTop < window.innerHeight - elementVisible) {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }
+            });
+        }
+
+        // Initialize animation states
+        document.querySelectorAll('.animate-fade-in').forEach(element => {
+            element.style.opacity = '0';
+            element.style.transform = 'translateY(20px)';
+            element.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        });
+
+        // Listen for scroll events
+        window.addEventListener('scroll', animateOnScroll);
+
+        // Initial check on page load
+        window.addEventListener('load', animateOnScroll);
+
+        // Simulate live market data updates
+        function updateMarketData() {
+            const statValues = document.querySelectorAll('.market-stat .value');
+            if (statValues.length > 0) {
+                // Randomly update the first stat (NEPSE Index)
+                const currentValue = parseFloat(statValues[0].textContent);
+                const change = (Math.random() - 0.5) * 0.1;
+                const newValue = Math.max(0, currentValue + change);
+                statValues[0].innerHTML = `${newValue.toFixed(2)} <small>(${newValue > 0 ? '+' : ''}${(change * 100).toFixed(2)}%)</small>`;
+                statValues[0].className = `value ${newValue >= currentValue ? 'text-success' : 'text-danger'}`;
+            }
+        }
+
+        // Update market data every 15 seconds
+        setInterval(updateMarketData, 15000);
+    </script>
+</body>
+
+</html>

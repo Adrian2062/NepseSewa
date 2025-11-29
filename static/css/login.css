@@ -1,0 +1,373 @@
+/* ============================================
+   LOGIN/REGISTER PAGE - SEPARATE CSS
+   ============================================ */
+
+:root {
+    --bullish-green: #1cf25b;
+    --light-green: #83f991;
+    --medium-green: #3ca479;
+    --dark-green: #287052;
+    --bearish-red: #ff4757;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow-x: hidden;
+}
+
+/* Main Container */
+.full-screen-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Left Panel - Green Section */
+.left-section {
+    flex: 1;
+    background: linear-gradient(135deg, #287052 0%, #3ca479 100%);
+    color: white;
+    padding: 3rem 2rem;
+    overflow-y: auto;
+}
+
+/* Right Panel - White Section */
+.right-section {
+    flex: 1;
+    background: white;
+    padding: 3rem 4rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* App Header */
+.app-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.app-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.app-header p {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* Stats Cards */
+.stat-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+/* Mover Cards */
+.mover-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 1.5rem;
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.gainers {
+    border-left: 4px solid #1cf25b;
+}
+
+.losers {
+    border-left: 4px solid #ff4757;
+}
+
+.mover-card h6 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.mover-stock {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mover-stock:last-child {
+    border-bottom: none;
+}
+
+.stock-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.stock-change {
+    font-weight: 700;
+}
+
+/* Market News */
+.market-news {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 1rem;
+}
+
+.market-news h5 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.news-scroll {
+    flex-grow: 1;
+    max-height: 300px;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.news-item {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    transition: background 0.3s ease;
+}
+
+.news-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.news-item:last-child {
+    margin-bottom: 0;
+}
+
+.news-text {
+    font-size: 0.9rem;
+    color: white;
+}
+
+/* Forms */
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.form-header h3 {
+    font-weight: 700;
+    color: #287052;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-header p {
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+/* Form Controls */
+.form-label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+}
+
+.form-control:focus {
+    border-color: #3ca479;
+    box-shadow: 0 0 0 0.25rem rgba(60, 164, 121, 0.25);
+    outline: none;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-right: none;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #3ca479 0%, #287052 100%);
+    border: none;
+    color: white;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #287052 0%, #1e5c3f 100%);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff4757 0%, #cc2e3d 100%);
+    border: none;
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-1px);
+}
+
+.btn-outline-dark {
+    border-color: #333;
+    color: #333;
+}
+
+.btn-outline-dark:hover {
+    background-color: #333;
+    color: white;
+}
+
+/* Divider */
+.divider {
+    position: relative;
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #dee2e6;
+    z-index: 1;
+}
+
+.divider span {
+    background: white;
+    padding: 0 15px;
+    position: relative;
+    z-index: 2;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Scrollbar */
+.news-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.news-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.news-scroll::-webkit-scrollbar-thumb {
+    background: #3ca479;
+    border-radius: 10px;
+}
+
+.news-scroll::-webkit-scrollbar-thumb:hover {
+    background: #287052;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .full-screen-container {
+        flex-direction: column;
+    }
+    
+    .left-section, .right-section {
+        width: 100%;
+        min-height: 50vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .left-section, .right-section {
+        padding: 1.5rem;
+    }
+    
+    .app-header h1 {
+        font-size: 2rem;
+    }
+    
+    .right-section {
+        padding: 2rem 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .right-section {
+        padding: 1.5rem 1rem;
+    }
+    
+    .form-header h3 {
+        font-size: 1.5rem;
+    }
+}

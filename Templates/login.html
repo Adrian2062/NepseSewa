@@ -345,7 +345,7 @@
             <!-- Login Form -->
             <form id="loginForm" class="form-container active" method="post" action="{% url 'login' %}">
                 {% csrf_token %}
-                <input type="hidden" name="login" value="1">
+                <input type="hidden" name="form-type" value="login">
                 
                 <div class="form-title">
                     <h3>Welcome Back</h3>
@@ -393,9 +393,9 @@
             </form>
 
             <!-- Register Form -->
-            <form id="registerForm" class="form-container" method="post" action="{% url 'login' %}">
+            <form id="registerForm" class="form-container" name="register-user" method="post" action="{% url 'login' %}">
                 {% csrf_token %}
-                <input type="hidden" name="register" value="1">
+                <input type="hidden" name="form-type" value="register">
                 
                 <div class="form-title">
                     <h3>Join NepseSewa</h3>

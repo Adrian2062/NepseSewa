@@ -33,9 +33,7 @@ def landing_page(request):
 
 def login_view(request):
     if request.method == 'POST':
-        form_type = request.POST.get('form_type')
-
-        # LOGIN
+        form_type = request.POST.get('form-type')
         if form_type == 'login':
             email = request.POST.get('email')
             password = request.POST.get('password')

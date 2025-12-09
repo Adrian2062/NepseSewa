@@ -55,8 +55,12 @@ WSGI_APPLICATION = 'NepseSewa.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'nepse_sewa',
+        'USER': 'postgres',
+        'PASSWORD': 'Adrian@2062',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

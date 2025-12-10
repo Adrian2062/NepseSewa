@@ -126,6 +126,13 @@ LOGOUT_REDIRECT_URL = 'login'
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
+        'SCOPE': [
+            'profile',   
+            'email',     
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
         'APP': {
             'client_id': '698946278656-gcv1iunmrr66dthuquen430pfjlk57g8.apps.googleusercontent.com',
             'secret': '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',
@@ -133,5 +140,6 @@ SOCIALACCOUNT_PROVIDERS = {
         }
     }
 }
+
 
 

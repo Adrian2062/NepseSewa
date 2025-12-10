@@ -7,5 +7,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('myapp.urls')),   # <== IMPORTANT
     path('login/', views.login_view, name='login'),
-    
+    path('accounts/', include('allauth.urls')),
+
 ]

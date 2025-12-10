@@ -1,6 +1,9 @@
 {% load static %}
+{% load socialaccount %}
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,18 +17,18 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             overflow-x: hidden;
         }
-        
+
         .login-wrapper {
             display: flex;
             height: 100vh;
             width: 100%;
         }
-        
+
         .login-left {
             width: 50%;
             background: linear-gradient(135deg, #287052 0%, #3ca479 100%);
@@ -33,7 +36,7 @@
             padding: 3rem 2rem;
             overflow-y: auto;
         }
-        
+
         .login-right {
             width: 50%;
             background: white;
@@ -43,23 +46,23 @@
             flex-direction: column;
             justify-content: center;
         }
-        
+
         .app-title {
             text-align: center;
             margin-bottom: 2rem;
         }
-        
+
         .app-title h1 {
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
         }
-        
+
         .app-title p {
             font-size: 1rem;
             opacity: 0.9;
         }
-        
+
         .stat-box {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(10px);
@@ -68,18 +71,18 @@
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .stat-box .value {
             font-size: 1.75rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
         }
-        
+
         .stat-box .label {
             font-size: 0.85rem;
             opacity: 0.9;
         }
-        
+
         .mover-box {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(10px);
@@ -88,50 +91,50 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             height: 100%;
         }
-        
+
         .mover-box.gainers {
             border-left: 4px solid #1cf25b;
         }
-        
+
         .mover-box.losers {
             border-left: 4px solid #ff4757;
         }
-        
+
         .mover-box h6 {
             font-size: 1rem;
             margin-bottom: 1rem;
             font-weight: 600;
         }
-        
+
         .stock-row {
             display: flex;
             justify-content: space-between;
             padding: 0.75rem 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .stock-row:last-child {
             border-bottom: none;
         }
-        
+
         .stock-row .name {
             font-weight: 600;
         }
-        
+
         .stock-row .change {
             font-weight: 700;
         }
-        
+
         .news-box {
             margin-top: 1rem;
         }
-        
+
         .news-box h5 {
             font-size: 1.2rem;
             margin-bottom: 1rem;
             font-weight: 600;
         }
-        
+
         .news-container {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 12px;
@@ -139,7 +142,7 @@
             max-height: 250px;
             overflow-y: auto;
         }
-        
+
         .news-item {
             padding: 1rem;
             background: rgba(255, 255, 255, 0.15);
@@ -148,70 +151,75 @@
             display: flex;
             align-items: center;
         }
-        
+
         .news-item:last-child {
             margin-bottom: 0;
         }
-        
+
         .news-item .text {
             font-size: 0.9rem;
         }
-        
+
         .form-container {
             display: none;
         }
-        
+
         .form-container.active {
             display: block;
             animation: fadeIn 0.3s ease;
         }
-        
+
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
-        
+
         .form-title {
             text-align: center;
             margin-bottom: 2rem;
         }
-        
+
         .form-title h3 {
             font-weight: 700;
             color: #287052;
             font-size: 2rem;
             margin-bottom: 0.5rem;
         }
-        
+
         .form-title p {
             color: #6c757d;
         }
-        
+
         .form-control:focus {
             border-color: #3ca479;
             box-shadow: 0 0 0 0.25rem rgba(60, 164, 121, 0.25);
         }
-        
+
         .btn-success {
             background: linear-gradient(135deg, #3ca479 0%, #287052 100%);
             border: none;
         }
-        
+
         .btn-success:hover {
             background: linear-gradient(135deg, #287052 0%, #1e5c3f 100%);
         }
-        
+
         .btn-danger {
             background: linear-gradient(135deg, #ff4757 0%, #cc2e3d 100%);
             border: none;
         }
-        
+
         .line-divider {
             position: relative;
             text-align: center;
             margin: 1.5rem 0;
         }
-        
+
         .line-divider::before {
             content: '';
             position: absolute;
@@ -221,7 +229,7 @@
             height: 1px;
             background: #dee2e6;
         }
-        
+
         .line-divider span {
             background: white;
             padding: 0 15px;
@@ -229,19 +237,21 @@
             color: #6c757d;
             font-size: 0.9rem;
         }
-        
+
         @media (max-width: 992px) {
             .login-wrapper {
                 flex-direction: column;
             }
-            
-            .login-left, .login-right {
+
+            .login-left,
+            .login-right {
                 width: 100%;
                 min-height: 50vh;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="login-wrapper">
         <!-- Left Panel -->
@@ -334,19 +344,19 @@
         <!-- Right Panel -->
         <div class="login-right">
             {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
             {% endif %}
 
             <!-- Login Form -->
             <form id="loginForm" class="form-container active" method="post" action="{% url 'login' %}">
                 {% csrf_token %}
                 <input type="hidden" name="form-type" value="login">
-                
+
                 <div class="form-title">
                     <h3>Welcome Back</h3>
                     <p>Sign in to your NepseSewa account</p>
@@ -356,7 +366,8 @@
                     <label class="form-label">Email Address</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="fas fa-envelope text-muted"></i></span>
-                        <input type="email" class="form-control" name="email" placeholder="johnsmith@example.com" required>
+                        <input type="email" class="form-control" name="email" placeholder="johnsmith@example.com"
+                            required>
                     </div>
                 </div>
 
@@ -373,7 +384,8 @@
                         <input class="form-check-input" type="checkbox" id="remember">
                         <label class="form-check-label small text-muted" for="remember">Remember me</label>
                     </div>
-                    <a href="#" class="small text-danger text-decoration-none" onclick="showForgot(); return false;">Forgot Password?</a>
+                    <a href="#" class="small text-danger text-decoration-none"
+                        onclick="showForgot(); return false;">Forgot Password?</a>
                 </div>
 
                 <button type="submit" class="btn btn-success w-100 mb-3">
@@ -382,21 +394,24 @@
 
                 <div class="line-divider"><span>or continue with</span></div>
 
-                <button type="button" class="btn btn-outline-dark w-100 mb-3">
-                    <i class="fab fa-google me-2"></i>Google
-                </button>
+                <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark w-100 mb-3">
+                    <i class="fab fa-google me-2"></i> Continue with Google
+                </a>
+
 
                 <div class="text-center">
                     <span class="text-muted">Don't have an account?</span>
-                    <a href="#" class="text-success text-decoration-none fw-bold ms-1" onclick="showRegister(); return false;">Create Account</a>
+                    <a href="#" class="text-success text-decoration-none fw-bold ms-1"
+                        onclick="showRegister(); return false;">Create Account</a>
                 </div>
             </form>
 
             <!-- Register Form -->
-            <form id="registerForm" class="form-container" name="register-user" method="post" action="{% url 'login' %}">
+            <form id="registerForm" class="form-container" name="register-user" method="post"
+                action="{% url 'login' %}">
                 {% csrf_token %}
                 <input type="hidden" name="form-type" value="register">
-                
+
                 <div class="form-title">
                     <h3>Join NepseSewa</h3>
                     <p>Create your virtual trading account</p>
@@ -425,7 +440,8 @@
                     <label class="form-label">Password</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
-                        <input type="password" class="form-control" name="password1" placeholder="Create a password" required>
+                        <input type="password" class="form-control" name="password1" placeholder="Create a password"
+                            required>
                     </div>
                 </div>
 
@@ -433,7 +449,8 @@
                     <label class="form-label">Confirm Password</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
-                        <input type="password" class="form-control" name="password2" placeholder="Confirm your password" required>
+                        <input type="password" class="form-control" name="password2" placeholder="Confirm your password"
+                            required>
                     </div>
                 </div>
 
@@ -443,13 +460,15 @@
 
                 <div class="line-divider"><span>or continue with</span></div>
 
-                <button type="button" class="btn btn-outline-dark w-100 mb-3">
-                    <i class="fab fa-google me-2"></i>Google
-                </button>
+                <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark w-100 mb-3">
+                    <i class="fab fa-google me-2"></i> Continue with Google
+                </a>
+
 
                 <div class="text-center">
                     <span class="text-muted">Already have an account?</span>
-                    <a href="#" class="text-success text-decoration-none fw-bold ms-1" onclick="showLogin(); return false;">Sign In</a>
+                    <a href="#" class="text-success text-decoration-none fw-bold ms-1"
+                        onclick="showLogin(); return false;">Sign In</a>
                 </div>
             </form>
 
@@ -488,20 +507,21 @@
             hideAll();
             document.getElementById('loginForm').classList.add('active');
         }
-        
+
         function showRegister() {
             hideAll();
             document.getElementById('registerForm').classList.add('active');
         }
-        
+
         function showForgot() {
             hideAll();
             document.getElementById('forgotForm').classList.add('active');
         }
-        
+
         function hideAll() {
             document.querySelectorAll('.form-container').forEach(f => f.classList.remove('active'));
         }
     </script>
 </body>
+
 </html>

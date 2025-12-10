@@ -6,8 +6,8 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    virtual_balance = models.DecimalField(max_digits=12, decimal_places=2, default=1250000.00)
-    portfolio_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    virtual_balance = models.DecimalField(max_digits=12, decimal_places=2, default=100000.00)
+    portfolio_value = models.DecimalField(max_digits=12, decimal_places=2, default=100000.00)
     date_joined = models.DateTimeField(auto_now_add=True)
     
     USERNAME_FIELD = 'email'

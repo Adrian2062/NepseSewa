@@ -262,7 +262,7 @@
             </div>
 
             <!-- Stats -->
-            <div class="row g-3 mb-4">
+            <!-- <div class="row g-3 mb-4">
                 <div class="col-4">
                     <div class="stat-box">
                         <div class="value text-danger">-0.02%</div>
@@ -281,10 +281,46 @@
                         <div class="label">Turnover</div>
                     </div>
                 </div>
+            </div> -->
+
+            <div class="row g-3 mb-4">
+                <div class="col-4">
+                    <div class="stat-box">
+                        {% if has_data and market_stats.gainers %}
+                        <div class="value text-success">{{ market_stats.gainers }}</div>
+                        <div class="label">Gainers</div>
+                        {% else %}
+                        <div class="value text-muted">--</div>
+                        <div class="label">Gainers</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-box">
+                        {% if has_data and market_stats.total_symbols %}
+                        <div class="value">{{ market_stats.total_symbols }}</div>
+                        <div class="label">Total Stocks</div>
+                        {% else %}
+                        <div class="value text-muted">--</div>
+                        <div class="label">Total Stocks</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-box">
+                        {% if has_data and market_stats.losers %}
+                        <div class="value text-danger">{{ market_stats.losers }}</div>
+                        <div class="label">Losers</div>
+                        {% else %}
+                        <div class="value text-muted">--</div>
+                        <div class="label">Losers</div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
 
             <!-- Movers -->
-            <div class="row g-3 mb-4">
+            <!-- <div class="row g-3 mb-4">
                 <div class="col-6">
                     <div class="mover-box gainers">
                         <h6><i class="fas fa-arrow-up me-2 text-success"></i>Top Gainers</h6>
@@ -317,6 +353,39 @@
                             <span class="name">CBL</span>
                             <span class="change text-danger">-1.1%</span>
                         </div>
+                    </div>
+                </div>
+            </div> -->
+
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="mover-box gainers">
+                        <h6><i class="fas fa-arrow-up me-2 text-success"></i>Top Gainers</h6>
+                        {% for stock in top_gainers %}
+                        <div class="stock-row">
+                            <span class="name">{{ stock.symbol }}</span>
+                            <span class="change text-success">+{{ stock.change_pct|floatformat:2 }}%</span>
+                        </div>
+                        {% empty %}
+                        <div class="stock-row">
+                            <span class="text-muted">No data yet</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mover-box losers">
+                        <h6><i class="fas fa-arrow-down me-2 text-danger"></i>Top Losers</h6>
+                        {% for stock in top_losers %}
+                        <div class="stock-row">
+                            <span class="name">{{ stock.symbol }}</span>
+                            <span class="change text-danger">{{ stock.change_pct|floatformat:2 }}%</span>
+                        </div>
+                        {% empty %}
+                        <div class="stock-row">
+                            <span class="text-muted">No data yet</span>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>

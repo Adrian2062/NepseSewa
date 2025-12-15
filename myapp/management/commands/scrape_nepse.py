@@ -1,34 +1,21 @@
 from django.core.management.base import BaseCommand
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
-import pandas as pd
 import time
-from datetime import datetime, timedelta
 from django.utils import timezone
 import chromedriver_autoinstaller
 from myapp.models import NEPSEPrice
+from datetime import datetime
 
 chromedriver_autoinstaller.install()
 
 class Command(BaseCommand):
-    help = 'Scrape NEPSE stock prices'
+    help = 'Scrape NEPSE stock prices and save to PostgreSQL'
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            '--interval',
-            type=int,
-            default=60,
-            help='Scraping interval in seconds (default: 60)'
-        )
-        parser.add_argument(
-            '--once',
-            action='store_true',
-            help='Run once and exit'
-        )
+        parser.add_argument('--interval', type=int, default=60, help='Scraping interval in seconds')
+        parser.add_argument('--once', action='store_true', help='Run once and exit')
 
     def handle(self, *args, **options):
         interval = options['interval']
@@ -37,7 +24,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Starting NEPSE scraper...'))
         
         if run_once:
-            self.scrape_data()
+            self.scrape_and_save()
         else:
             self.stdout.write(f'Scraping every {interval} seconds. Press Ctrl+C to stop.')
             iteration = 0
@@ -45,102 +32,131 @@ class Command(BaseCommand):
                 try:
                     iteration += 1
                     self.stdout.write(f'\n--- Iteration {iteration} ---')
-                    self.scrape_data()
-                    self.stdout.write(f'Waiting {interval} seconds...')
+                    self.scrape_and_save()
+                    self.stdout.write(f'⏳ Waiting {interval} seconds...')
                     time.sleep(interval)
                 except KeyboardInterrupt:
-                    self.stdout.write(self.style.WARNING('\nStopping scraper...'))
+                    self.stdout.write(self.style.WARNING('\n✓ Scraper stopped.'))
                     break
                 except Exception as e:
-                    self.stdout.write(self.style.ERROR(f'Error: {e}'))
+                    self.stdout.write(self.style.ERROR(f'Error in main loop: {e}'))
                     time.sleep(10)
 
-    def scrape_data(self):
-        """Scrape NEPSE data and save to database"""
+    def scrape_and_save(self):
+        """Scrape NEPSE data and save to PostgreSQL"""
+        options = Options()
+        options.headless = True
+        options.add_argument("--start-maximized")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        
+        driver = webdriver.Chrome(options=options)
+        
         try:
-            options = Options()
-            options.add_argument('--headless')
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            self.stdout.write(f'[{timestamp_str}] Loading NEPSE website...')
             
-            driver = webdriver.Chrome(options=options)
-            driver.set_page_load_timeout(60)
-            
-            self.stdout.write('Loading NEPSE website...')
             driver.get("https://www.sharesansar.com/today-share-price")
+            time.sleep(10)  # Wait for page to fully load
             
-            time.sleep(3)
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
             
-            # Wait for table
-            WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "table"))
-            )
-            
-            # Parse table
-            soup = BeautifulSoup(driver.page_source, 'lxml')
-            table = soup.find("table", {"class": "table"})
+            # Find table with the correct class selector
+            table = soup.find("table", {
+                "class": "table table-bordered table-striped table-hover dataTable compact no-footer"
+            })
             
             if not table:
-                self.stdout.write(self.style.ERROR('Table not found'))
-                driver.quit()
+                self.stdout.write(self.style.ERROR('❌ Table not found'))
                 return
             
-            # Extract data
+            self.stdout.write('✓ Table found')
+            
+            # Extract all rows from table
             rows = []
-            for row in table.find_all("tr")[1:]:  # Skip header
-                cells = row.find_all("td")
-                if len(cells) > 1:
-                    try:
-                        row_data = [cell.text.strip() for cell in cells]
-                        if row_data[0]:  # Has symbol
-                            rows.append(row_data)
-                    except:
-                        continue
+            for tr in table.find_all("tr"):
+                cols = [td.get_text(strip=True) for td in tr.find_all(["th", "td"])]
+                if cols:
+                    rows.append(cols)
             
-            driver.quit()
-            
-            if not rows:
-                self.stdout.write(self.style.WARNING('No data found'))
+            if len(rows) <= 1:
+                self.stdout.write(self.style.WARNING('⚠️  No data rows found'))
                 return
             
-            # Save to database
-            current_time = timezone.now()
+            # First row is header
+            headers = rows[0]
+            self.stdout.write(f'✓ Headers: {", ".join(headers[:6])}...')
+            
+            # Parse data rows
+            data_rows = rows[1:]
+            timestamp = timezone.now()
             saved_count = 0
             
-            for row in rows:
+            for idx, row in enumerate(data_rows):
                 try:
-                    symbol = row[0] if len(row) > 0 else None
-                    if not symbol:
+                    if not row or len(row) < 2:
                         continue
                     
-                    def clean_float(val):
-                        if not val or val == '--':
+                    # Map headers to values
+                    row_dict = {}
+                    for i, header in enumerate(headers):
+                        if i < len(row):
+                            row_dict[header] = row[i]
+                    
+                    # Get symbol (usually first column)
+                    symbol = row_dict.get('Symbol', row[0] if row else None)
+                    
+                    if not symbol or symbol == '' or symbol == 'Symbol':
+                        continue
+                    
+                    # Helper to clean numeric values
+                    def clean_number(val):
+                        if val is None or val == '' or val == '--':
                             return None
                         try:
-                            return float(val.replace(',', ''))
-                        except:
+                            cleaned = str(val).replace(',', '').replace('%', '').strip()
+                            return float(cleaned) if cleaned else None
+                        except (ValueError, AttributeError, TypeError):
                             return None
                     
+                    # Extract values from row dict
+                    open_price = clean_number(row_dict.get('Open'))
+                    high = clean_number(row_dict.get('High'))
+                    low = clean_number(row_dict.get('Low'))
+                    close = clean_number(row_dict.get('Close'))
+                    ltp = clean_number(row_dict.get('LTP'))
+                    change_pct = clean_number(row_dict.get('Diff %'))
+                    volume = clean_number(row_dict.get('Vol'))
+                    turnover = clean_number(row_dict.get('Turnover'))
+                    
+                    # Save to database
                     NEPSEPrice.objects.create(
                         symbol=symbol,
-                        timestamp=current_time,
-                        open=clean_float(row[2]) if len(row) > 2 else None,
-                        high=clean_float(row[3]) if len(row) > 3 else None,
-                        low=clean_float(row[4]) if len(row) > 4 else None,
-                        close=clean_float(row[5]) if len(row) > 5 else None,
-                        ltp=clean_float(row[6]) if len(row) > 6 else None,
-                        change_pct=clean_float(row[8]) if len(row) > 8 else None,
-                        volume=clean_float(row[10]) if len(row) > 10 else None,
-                        turnover=clean_float(row[12]) if len(row) > 12 else None,
+                        timestamp=timestamp,
+                        open=open_price,
+                        high=high,
+                        low=low,
+                        close=close,
+                        ltp=ltp,
+                        change_pct=change_pct,
+                        volume=volume,
+                        turnover=turnover,
                     )
                     saved_count += 1
+                
                 except Exception as e:
+                    self.stdout.write(self.style.WARNING(f'⚠️  Skip row {idx}: {str(e)[:60]}'))
                     continue
             
-            self.stdout.write(self.style.SUCCESS(
-                f'✓ Scraped {saved_count} records at {current_time.strftime("%H:%M:%S")}'
-            ))
+            if saved_count > 0:
+                self.stdout.write(self.style.SUCCESS(
+                    f'✓ Saved {saved_count} records at {timestamp.strftime("%H:%M:%S")}'
+                ))
+            else:
+                self.stdout.write(self.style.WARNING('⚠️  No records saved'))
             
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Scraping error: {e}'))
+            self.stdout.write(self.style.ERROR(f'❌ Scraping error: {str(e)}'))
+        
+        finally:
+            driver.quit()

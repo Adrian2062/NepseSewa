@@ -13,21 +13,11 @@ urlpatterns = [
     path('settings/', views.settings_view, name='settings'),
     path('logout/', views.logout_view, name='logout'),
 
-
-    # path('api/nepse/summary/', views.get_market_summary, name='nepse_summary'),
-    # path('api/nepse/top-gainers/', views.get_top_gainers, name='nepse_top_gainers'),
-    # path('api/nepse/top-losers/', views.get_top_losers, name='nepse_top_losers'),
-    # path('api/nepse/top-volume/', views.get_top_volume_stocks, name='nepse_top_volume'),
-    # path('api/nepse/top-turnover/', views.get_top_turnover_stocks, name='nepse_top_turnover'),
-    # path('api/nepse/market-overview/', views.get_market_overview, name='nepse_market_overview'),
-    # path('api/nepse/security-info/', views.get_security_wise_info, name='nepse_security_info'),
-    # path('api/nepse/sector-info/', views.get_sector_wise_info, name='nepse_sector_info'),
-    # path('api/nepse/nepse-index/', views.get_nepse_index, name='nepse_index'),
-    # path('api/nepse/dashboard/', views.get_dashboard_data, name='nepse_dashboard'),
-    path('api/nepse/latest/', views.get_nepse_latest, name='nepse_latest'),
-    path('api/nepse/history/', views.get_nepse_history, name='nepse_history'),
-    path('api/nepse/top-gainers/', views.get_top_gainers_nepse, name='nepse_gainers'),
-    path('api/nepse/top-losers/', views.get_top_losers_nepse, name='nepse_losers'),
+    # NEPSE API Endpoints
+    path('api/latest/', views.api_latest_nepse, name='api_latest'),
+    path('api/gainers/', views.api_top_gainers, name='api_gainers'),
+    path('api/losers/', views.api_top_losers, name='api_losers'),
+    path('api/stats/', views.api_market_stats, name='api_stats'),
+    path('api/history/', views.api_symbol_history, name='api_history'),
+    path('api/search/', views.api_search_symbol, name='api_search'),
 ]
-# urls.py - Add these URLs to your myapp/urls.py or main urls.py
-

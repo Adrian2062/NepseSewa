@@ -916,58 +916,44 @@
                     <div class="gainers-card animate-fade-in animate-delay-1">
                         <h5 class="card-title"><i class="fas fa-arrow-up text-success me-2"></i>Top Gainers</h5>
                         <div class="stock-list">
+                            {% for stock in top_gainers %}
                             <div class="stock-item">
                                 <div class="stock-info">
-                                    <span class="stock-symbol">NBL</span>
-                                    <span class="stock-name">Nepal Bank Ltd.</span>
+                                    <span class="stock-symbol">{{ stock.symbol }}</span>
+                                    <span class="stock-name">{{ stock.name }}</span>
                                 </div>
-                                <span class="stock-change text-success">+4.2%</span>
+                                <span class="stock-change text-success">+{{ stock.change_pct|floatformat:2 }}%</span>
                             </div>
+                            {% empty %}
                             <div class="stock-item">
-                                <div class="stock-info">
-                                    <span class="stock-symbol">SCB</span>
-                                    <span class="stock-name">Standard Chartered</span>
-                                </div>
-                                <span class="stock-change text-success">+1.6%</span>
+                                <span class="text-muted">No data available</span>
                             </div>
-                            <div class="stock-item">
-                                <div class="stock-info">
-                                    <span class="stock-symbol">NIC</span>
-                                    <span class="stock-name">NIC Asia Bank</span>
-                                </div>
-                                <span class="stock-change text-success">+1.0%</span>
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
+
                 <div class="col-lg-4">
                     <div class="losers-card animate-fade-in animate-delay-2">
                         <h5 class="card-title"><i class="fas fa-arrow-down text-danger me-2"></i>Top Losers</h5>
                         <div class="stock-list">
+                            {% for stock in top_losers %}
                             <div class="stock-item">
                                 <div class="stock-info">
-                                    <span class="stock-symbol">SHL</span>
-                                    <span class="stock-name">Soaltee Hotel</span>
+                                    <span class="stock-symbol">{{ stock.symbol }}</span>
+                                    <span class="stock-name">{{ stock.name }}</span>
                                 </div>
-                                <span class="stock-change text-danger">-3.3%</span>
+                                <span class="stock-change text-danger">{{ stock.change_pct|floatformat:2 }}%</span>
                             </div>
+                            {% empty %}
                             <div class="stock-item">
-                                <div class="stock-info">
-                                    <span class="stock-symbol">NMB</span>
-                                    <span class="stock-name">NMB Bank</span>
-                                </div>
-                                <span class="stock-change text-danger">-1.9%</span>
+                                <span class="text-muted">No data available</span>
                             </div>
-                            <div class="stock-item">
-                                <div class="stock-info">
-                                    <span class="stock-symbol">CBL</span>
-                                    <span class="stock-name">Civil Bank</span>
-                                </div>
-                                <span class="stock-change text-danger">-1.2%</span>
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </section>

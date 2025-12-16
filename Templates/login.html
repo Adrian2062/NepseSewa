@@ -117,6 +117,33 @@
             border-bottom: none;
         }
 
+        .stock-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stock-row .name {
+            flex: 1;
+            font-weight: 600;
+        }
+
+        .stock-row .ltp {
+            flex: 1;
+            text-align: center;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .stock-row .change {
+            flex: 1;
+            text-align: right;
+            font-weight: 700;
+        }
+
+
         .stock-row .name {
             font-weight: 600;
         }
@@ -364,6 +391,7 @@
                         {% for stock in top_gainers %}
                         <div class="stock-row">
                             <span class="name">{{ stock.symbol }}</span>
+                            <span class="ltp">Rs {{ stock.ltp|floatformat:2 }}</span>
                             <span class="change text-success">+{{ stock.change_pct|floatformat:2 }}%</span>
                         </div>
                         {% empty %}
@@ -379,6 +407,7 @@
                         {% for stock in top_losers %}
                         <div class="stock-row">
                             <span class="name">{{ stock.symbol }}</span>
+                            <span class="ltp">Rs {{ stock.ltp|floatformat:2 }}</span>
                             <span class="change text-danger">{{ stock.change_pct|floatformat:2 }}%</span>
                         </div>
                         {% empty %}
@@ -389,6 +418,7 @@
                     </div>
                 </div>
             </div>
+
 
             <!-- News -->
             <div class="news-box">

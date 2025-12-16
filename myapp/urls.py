@@ -20,4 +20,8 @@ urlpatterns = [
     path('api/stats/', views.api_market_stats, name='api_stats'),
     path('api/history/', views.api_symbol_history, name='api_history'),
     path('api/search/', views.api_search_symbol, name='api_search'),
+
+    path('api/nepse-index/', views.api_nepse_index, name='api_nepse_index'),
+    path('api/market-summary/', views.api_market_summary, name='api_market_summary'),
+    path('api/sector-indices/', views.api_sector_indices, name='api_sector_indices'),
 ]

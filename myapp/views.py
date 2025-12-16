@@ -319,3 +319,78 @@ def api_search_symbol(request):
         return JsonResponse({'data': symbols})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+    
+# Add these to your myapp/views.py file (at the end with other API endpoints)
+
+from .models import NEPSEIndex, MarketSummary, MarketIndex
+
+@require_http_methods(["GET"])
+def api_nepse_index(request):
+    """Get latest NEPSE Index value"""
+    try:
+        latest = NEPSEIndex.objects.latest('timestamp')
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'value': float(latest.index_value),
+                'change_pct': float(latest.percentage_change),
+                'timestamp': latest.timestamp.isoformat(),
+            }
+        })
+    except NEPSEIndex.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'No NEPSE Index data available'
+        }, status=404)
+
+
+@require_http_methods(["GET"])
+def api_market_summary(request):
+    """Get latest market summary"""
+    try:
+        latest = MarketSummary.objects.latest('timestamp')
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'total_turnover': float(latest.total_turnover or 0),
+                'total_traded_shares': float(latest.total_traded_shares or 0),
+                'total_transactions': float(latest.total_transactions or 0),
+                'total_scrips': float(latest.total_scrips or 0),
+                'timestamp': latest.timestamp.isoformat(),
+            }
+        })
+    except MarketSummary.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'No market summary data available'
+        }, status=404)
+
+
+@require_http_methods(["GET"])
+def api_sector_indices(request):
+    """Get latest sector indices"""
+    try:
+        latest_time = MarketIndex.objects.latest('timestamp').timestamp
+        
+        indices = MarketIndex.objects.filter(
+            timestamp=latest_time
+        ).exclude(
+            index_name='NEPSE Index'
+        ).order_by('index_name')
+        
+        data = [{
+            'name': idx.index_name,
+            'value': float(idx.value),
+            'change_pct': float(idx.change_pct),
+        } for idx in indices]
+        
+        return JsonResponse({
+            'success': True,
+            'data': data,
+            'timestamp': latest_time.isoformat(),
+        })
+    except MarketIndex.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'No sector indices data available'
+        }, status=404)

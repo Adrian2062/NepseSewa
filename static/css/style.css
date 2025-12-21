@@ -1018,4 +1018,10 @@ body {
     .right-section {
         padding: 2rem 1.5rem;
     }
+    #portfolioChart {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
 }

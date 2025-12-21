@@ -420,3 +420,7 @@ def api_sector_indices(request):
             'success': False,
             'error': 'No sector indices data available'
         }, status=404)
+@login_required
+def stocks(request):
+    # just render page; it will load data using /api/latest/
+    return render(request, "stocks.html")

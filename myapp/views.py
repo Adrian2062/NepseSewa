@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from .forms import RegistrationForm
-from .models import NEPSEPrice
+from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary
 
 User = get_user_model()
 
@@ -64,6 +64,27 @@ def get_nepse_context():
         top_losers = list(latest_prices.order_by('change_pct')[:5].values(
             'symbol', 'ltp', 'change_pct'
         ))
+
+        # --- LIVE DATA FETCHING ---
+        try:
+            nepse_index = NEPSEIndex.objects.latest('timestamp')
+        except NEPSEIndex.DoesNotExist:
+            nepse_index = None
+
+        try:
+            sensitive_index = MarketIndex.objects.filter(index_name='Sensitive Index').latest('timestamp')
+        except MarketIndex.DoesNotExist:
+            sensitive_index = None
+            
+        try:
+            float_index = MarketIndex.objects.filter(index_name='Float Index').latest('timestamp')
+        except MarketIndex.DoesNotExist:
+            float_index = None
+
+        try:
+            market_summary = MarketSummary.objects.latest('timestamp')
+        except MarketSummary.DoesNotExist:
+            market_summary = None
         
         return {
             'has_data': True,
@@ -74,7 +95,12 @@ def get_nepse_context():
             },
             'top_gainers': top_gainers,
             'top_losers': top_losers,
-            'last_update': latest_time
+            'last_update': latest_time,
+            # Added live indices
+            'nepse_index': nepse_index,
+            'sensitive_index': sensitive_index,
+            'float_index': float_index,
+            'market_summary': market_summary
         }
     except Exception as e:
         print(f"Error getting NEPSE context: {e}")

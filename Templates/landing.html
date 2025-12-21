@@ -762,7 +762,7 @@
                         Practice with virtual money and master the Nepal Stock Exchange.
                     </p>
                     <div class="hero-buttons animate-fade-in animate-delay-2">
-                        <a href="login.html" class="btn btn-success">Get Started Free</a>
+                        <a href="{% url 'login' %}" class="btn btn-success">Get Started Free</a>
                         <a href="#how-it-works" class="btn btn-outline-success">How It Works</a>
                     </div>
                     <div class="hero-stats animate-fade-in animate-delay-3">
@@ -798,38 +798,69 @@
                             <div class="market-data">
                                 <div class="market-stat">
                                     <span class="label">NEPSE Index</span>
-                                    <span class="value text-success">2191.42 <small>(+0.02%)</small></span>
+                                    {% if nepse_index %}
+                                    {% with nepse_index.percentage_change|floatformat:2 as p %}
+                                    {% with nepse_index.percentage_change|default:0 as u %}
+                                    <span class="value {% if u >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ nepse_index.index_value|floatformat:2 }}
+                                        <small>({% if u >= 0 %}+{% endif %}{{ p }}%)</small>
+                                    </span>
+                                    {% endwith %}
+                                    {% endwith %}
+                                    {% else %}
+                                    <span class="value">N/A</span>
+                                    {% endif %}
                                 </div>
                                 <div class="market-stat">
                                     <span class="label">Sensitive Index</span>
-                                    <span class="value">418.65</span>
+                                    {% if sensitive_index %}
+                                    <span class="value">{{ sensitive_index.value|floatformat:2 }}</span>
+                                    {% else %}
+                                    <span class="value">N/A</span>
+                                    {% endif %}
                                 </div>
                                 <div class="market-stat">
                                     <span class="label">Float Index</span>
-                                    <span class="value">152.37</span>
+                                    {% if float_index %}
+                                    <span class="value">{{ float_index.value|floatformat:2 }}</span>
+                                    {% else %}
+                                    <span class="value">N/A</span>
+                                    {% endif %}
                                 </div>
                                 <div class="market-stat">
                                     <span class="label">Turnover</span>
-                                    <span class="value text-success">Rs 3.5B</span>
+                                    {% if market_summary %}
+                                    <span class="value text-success">{{ market_summary.format_turnover }}</span>
+                                    {% else %}
+                                    <span class="value">Rs 0.00</span>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="stock-ticker">
+                                {% if top_gainers %}
+                                {% for stock in top_gainers|slice:":2" %}
                                 <div class="ticker-item">
-                                    <span class="stock-symbol">NBL</span>
-                                    <span class="stock-price text-success">+4.2%</span>
+                                    <span class="stock-symbol">{{ stock.symbol }}</span>
+                                    <span class="stock-price text-success">+{{ stock.change_pct|floatformat:1 }}%</span>
                                 </div>
+                                {% endfor %}
+                                {% endif %}
+
+                                {% if top_losers %}
+                                {% for stock in top_losers|slice:":2" %}
                                 <div class="ticker-item">
-                                    <span class="stock-symbol">SCB</span>
-                                    <span class="stock-price text-success">+1.6%</span>
+                                    <span class="stock-symbol">{{ stock.symbol }}</span>
+                                    <span class="stock-price text-danger">{{ stock.change_pct|floatformat:1 }}%</span>
                                 </div>
+                                {% endfor %}
+                                {% endif %}
+
+                                {% if not top_gainers and not top_losers %}
                                 <div class="ticker-item">
-                                    <span class="stock-symbol">SHL</span>
-                                    <span class="stock-price text-danger">-3.3%</span>
+                                    <span class="stock-symbol">NEPSE</span>
+                                    <span class="stock-price text-muted">Closed</span>
                                 </div>
-                                <div class="ticker-item">
-                                    <span class="stock-symbol">NMB</span>
-                                    <span class="stock-price text-danger">-1.9%</span>
-                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -906,9 +937,24 @@
                 <div class="col-lg-4">
                     <div class="market-overview-card animate-fade-in">
                         <div class="market-stat-large text-center">
-                            <div class="stat-value text-success">2191.42</div>
+                            {% if nepse_index %}
+                            {% with nepse_index.percentage_change|floatformat:2 as p %}
+                            {% with nepse_index.percentage_change|default:0 as u %}
+                            <div class="stat-value {% if u >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ nepse_index.index_value|floatformat:2 }}
+                            </div>
                             <div class="stat-label">NEPSE Index</div>
-                            <div class="stat-change text-success">+0.02% <i class="fas fa-arrow-up ms-1"></i></div>
+                            <div class="stat-change {% if u >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if u >= 0 %}+{% endif %}{{ p }}%
+                                <i class="fas {% if u >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} ms-1"></i>
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
+                            {% else %}
+                            <div class="stat-value">N/A</div>
+                            <div class="stat-label">NEPSE Index</div>
+                            <div class="stat-change text-muted">No Data</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -920,7 +966,7 @@
                             <div class="stock-item">
                                 <div class="stock-info">
                                     <span class="stock-symbol">{{ stock.symbol }}</span>
-                                    <span class="stock-name">{{ stock.name }}</span>
+                                    <span class="stock-price">Rs {{ stock.ltp|floatformat:2 }}</span>
                                 </div>
                                 <span class="stock-change text-success">+{{ stock.change_pct|floatformat:2 }}%</span>
                             </div>
@@ -941,7 +987,7 @@
                             <div class="stock-item">
                                 <div class="stock-info">
                                     <span class="stock-symbol">{{ stock.symbol }}</span>
-                                    <span class="stock-name">{{ stock.name }}</span>
+                                    <span class="stock-price">Rs {{ stock.ltp|floatformat:2 }}</span>
                                 </div>
                                 <span class="stock-change text-danger">{{ stock.change_pct|floatformat:2 }}%</span>
                             </div>
@@ -1075,7 +1121,7 @@
                         Join thousands of traders who are mastering the stock market with NepseSewa.
                     </p>
                     <div class="animate-fade-in animate-delay-2">
-                        <a href="login.html" class="btn btn-light me-3">Get Started Free</a>
+                        <a href="{% url 'login' %}" class="btn btn-light me-3">Get Started Free</a>
                         <a href="#features" class="btn btn-outline-light">Learn More</a>
                     </div>
                 </div>
@@ -1106,7 +1152,7 @@
                         <li><a href="#features">Features</a></li>
                         <li><a href="#market">Market Data</a></li>
                         <li><a href="#how-it-works">How It Works</a></li>
-                        <li><a href="login.html">Login</a></li>
+                        <li><a href="{% url 'login' %}">Login</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
@@ -1201,7 +1247,7 @@
         }
 
         // Update market data every 15 seconds
-        setInterval(updateMarketData, 15000);
+        // setInterval(updateMarketData, 15000); // Disabled now that we use live data
     </script>
 </body>
 

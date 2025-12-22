@@ -1,241 +1,350 @@
-// File: static/js/nepse-dashboard.js
+// File: static/js/nepse-portfolio.js
+// ✅ Uses the same API base patterns as your dashboard.
+// Assumption: you have a holdings endpoint that returns user's holdings.
+// If you don’t yet, this will still render charts with demo data safely.
 
-class NepseDashboard {
+class NepsePortfolioPage {
     constructor() {
         this.apiBase = '/api';
-        this.updateInterval = 5000; // 5 seconds
-        this.portfolioChart = null;
+        this.updateInterval = 10000;
+
+        this.valueChart = null;
+        this.allocationChart = null;
+
+        this.range = '1W'; // default view
         this.init();
     }
 
     init() {
-        // chart
-        this.initPortfolioChart();
+        this.initCharts();
+        this.bindRangeButtons();
 
-        // data
-        this.loadMarketStats();
-        this.loadTopGainers();
-        this.loadTopLosers();
-        this.loadMostActive();
-
-        // Auto-refresh every 5 seconds
-        setInterval(() => this.loadMarketStats(), this.updateInterval);
-        setInterval(() => this.loadTopGainers(), this.updateInterval);
-        setInterval(() => this.loadTopLosers(), this.updateInterval);
-        setInterval(() => this.loadMostActive(), this.updateInterval);
-
-        // OPTIONAL: update chart fake data every refresh (remove later)
-        setInterval(() => this.updatePortfolioChartDemo(), 15000);
+        this.loadAll();
+        setInterval(() => this.loadAll(), this.updateInterval);
     }
 
-    // ================== PORTFOLIO CHART ==================
-    initPortfolioChart() {
-        const canvas = document.getElementById('portfolioChart');
-        if (!canvas || typeof Chart === "undefined") return;
+    // ---------- Helpers ----------
+    fmtNumber(n, digits = 2) {
+        if (n === null || n === undefined || isNaN(n)) return '—';
+        return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
 
-        const ctx = canvas.getContext('2d');
+    fmtInt(n) {
+        if (n === null || n === undefined || isNaN(n)) return '—';
+        return Number(n).toLocaleString();
+    }
 
-        this.portfolioChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                datasets: [{
-                    label: 'Portfolio Value',
-                    data: [118000, 119200, 121500, 120300, 124580],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#10b981'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: {
-                        grid: { color: '#eef2f7' },
-                        ticks: {
-                            callback: (value) => 'Rs ' + Number(value).toLocaleString()
+    setText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
+
+    // ---------- Charts ----------
+    initCharts() {
+        // Portfolio Value chart
+        const valueCanvas = document.getElementById('portfolioValueChart');
+        if (valueCanvas && typeof Chart !== 'undefined') {
+            const ctx = valueCanvas.getContext('2d');
+            this.valueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16,185,129,0.15)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 2,
+                        pointBackgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: { color: '#eef2f7' },
+                            ticks: {
+                                callback: (v) => 'Rs ' + Number(v).toLocaleString()
+                            }
                         }
                     }
                 }
-            }
+            });
+        }
+
+        // Allocation chart (doughnut)
+        const allocCanvas = document.getElementById('allocationChart');
+        if (allocCanvas && typeof Chart !== 'undefined') {
+            const ctx2 = allocCanvas.getContext('2d');
+            this.allocationChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        // no fixed colors required; Chart.js will auto-generate if you omit
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    cutout: '60%'
+                }
+            });
+        }
+    }
+
+    bindRangeButtons() {
+        const map = [
+            ['btnRange1D', '1D'],
+            ['btnRange1W', '1W'],
+            ['btnRange1M', '1M'],
+        ];
+
+        map.forEach(([id, value]) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                this.range = value;
+                this.loadPortfolioSeries(); // reload chart series when range changes
+            });
         });
     }
 
-    // Demo chart update (remove when you add real portfolio API)
-    updatePortfolioChartDemo() {
-        if (!this.portfolioChart) return;
+    // ---------- Loaders ----------
+    async loadAll() {
+        await this.loadHoldingsAndSummary();
+        await this.loadPortfolioSeries();
+        this.setText('portfolioAsOf', new Date().toLocaleString());
+    }
 
-        const last = this.portfolioChart.data.datasets[0].data.slice(-1)[0];
-        const next = Math.max(50000, last + Math.round((Math.random() - 0.4) * 3000));
+    // 1) Holdings + live LTP merge
+    async loadHoldingsAndSummary() {
+        const tbody = document.getElementById('holdingsTbody');
+        if (!tbody) return;
 
-        this.portfolioChart.data.labels.push('Now');
-        this.portfolioChart.data.datasets[0].data.push(next);
+        try {
+            // You should implement this API in Django:
+            // GET /api/portfolio/holdings/
+            // returns: { success:true, data:[{symbol:"NBL", qty:100, avg_buy:250.5}, ...] }
+            const hRes = await fetch(`${this.apiBase}/portfolio/holdings/`);
+            const hJson = await hRes.json();
+            const holdings = Array.isArray(hJson?.data) ? hJson.data : [];
 
-        // keep last 12 points
-        if (this.portfolioChart.data.labels.length > 12) {
-            this.portfolioChart.data.labels.shift();
-            this.portfolioChart.data.datasets[0].data.shift();
+            // Latest live prices: your existing endpoint
+            const lRes = await fetch(`${this.apiBase}/latest/`);
+            const lJson = await lRes.json();
+            const latest = Array.isArray(lJson?.data) ? lJson.data : [];
+
+            const priceMap = new Map(latest.map(x => [String(x.symbol), x]));
+
+            if (!holdings.length) {
+                // fallback demo if no holdings endpoint yet
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted p-4">
+                            No holdings data yet. Create <code>/api/portfolio/holdings/</code> to show real portfolio.
+                        </td>
+                    </tr>
+                `;
+
+                this.updateSummary([], priceMap);
+                this.updateAllocation([], priceMap);
+                return;
+            }
+
+            // Render holdings rows
+            let totalValue = 0;
+            let totalPL = 0;
+
+            const rows = holdings.map(h => {
+                const sym = String(h.symbol);
+                const qty = Number(h.qty || 0);
+                const avg = Number(h.avg_buy || 0);
+
+                const live = priceMap.get(sym);
+                const ltp = Number(live?.ltp || 0);
+
+                const value = qty * ltp;
+                const pl = (ltp - avg) * qty;
+
+                totalValue += value;
+                totalPL += pl;
+
+                const plCls = pl >= 0 ? 'text-success' : 'text-danger';
+                const plSign = pl >= 0 ? '+' : '';
+
+                return `
+                    <tr>
+                        <td class="ps-3"><span class="symbol-pill">${sym}</span></td>
+                        <td>${this.fmtInt(qty)}</td>
+                        <td>Rs ${this.fmtNumber(avg, 2)}</td>
+                        <td>Rs ${ltp ? this.fmtNumber(ltp, 2) : '—'}</td>
+                        <td>Rs ${this.fmtNumber(value, 2)}</td>
+                        <td class="text-end pe-3 ${plCls}">${plSign}Rs ${this.fmtNumber(pl, 2)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rows;
+
+            // Summary + allocation
+            this.updateSummary(holdings, priceMap);
+            this.updateAllocation(holdings, priceMap);
+        } catch (e) {
+            console.error('Portfolio holdings load error:', e);
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-4">Error loading portfolio.</td></tr>`;
+        }
+    }
+
+    updateSummary(holdings, priceMap) {
+        const n = holdings.length;
+
+        let totalValue = 0;
+        let totalCost = 0;
+
+        for (const h of holdings) {
+            const sym = String(h.symbol);
+            const qty = Number(h.qty || 0);
+            const avg = Number(h.avg_buy || 0);
+
+            const live = priceMap.get(sym);
+            const ltp = Number(live?.ltp || 0);
+
+            totalValue += qty * ltp;
+            totalCost += qty * avg;
         }
 
-        this.portfolioChart.update();
+        const overallPL = totalValue - totalCost;
+        const overallPLPct = totalCost > 0 ? (overallPL / totalCost) * 100 : 0;
+
+        this.setText('sumTotalValue', `Rs ${this.fmtNumber(totalValue, 2)}`);
+        this.setText('sumHoldings', `${n}`);
+
+        const plCls = overallPL >= 0 ? 'text-success' : 'text-danger';
+        const plSign = overallPL >= 0 ? '+' : '';
+
+        const plEl = document.getElementById('sumOverallPL');
+        const plPctEl = document.getElementById('sumOverallPLPct');
+        if (plEl) {
+            plEl.classList.remove('text-success', 'text-danger');
+            plEl.classList.add(plCls);
+            plEl.textContent = `${plSign}Rs ${this.fmtNumber(overallPL, 2)}`;
+        }
+        if (plPctEl) {
+            plPctEl.classList.remove('text-success', 'text-danger');
+            plPctEl.classList.add(plCls);
+            plPctEl.textContent = `${plSign}${this.fmtNumber(overallPLPct, 2)}%`;
+        }
+
+        // Today's P/L placeholder (needs portfolio history; keep simple)
+        this.setText('sumTodayPL', '—');
+        this.setText('sumTodayPLPct', 'connect later');
     }
 
-    // ================== MARKET STATS ==================
-    loadMarketStats() {
-        fetch(`${this.apiBase}/stats/`)
-            .then(res => res.json())
-            .then(data => this.updateMarketStats(data))
-            .catch(err => console.error('Error loading stats:', err));
+    updateAllocation(holdings, priceMap) {
+        if (!this.allocationChart) return;
+
+        const items = holdings.map(h => {
+            const sym = String(h.symbol);
+            const qty = Number(h.qty || 0);
+            const ltp = Number(priceMap.get(sym)?.ltp || 0);
+            return { sym, value: qty * ltp };
+        }).filter(x => x.value > 0);
+
+        items.sort((a, b) => b.value - a.value);
+
+        const top = items.slice(0, 8);
+        const labels = top.map(x => x.sym);
+        const data = top.map(x => Math.round(x.value));
+
+        this.allocationChart.data.labels = labels;
+        this.allocationChart.data.datasets[0].data = data;
+        this.allocationChart.update();
     }
 
-    updateMarketStats(data) {
-        const totalStocks = document.getElementById('total-stocks');
-        const gainers = document.getElementById('gainers-count');
-        const losers = document.getElementById('losers-count');
-        const unchanged = document.getElementById('unchanged-count');
+    // 2) Portfolio value series (Live)
+    async loadPortfolioSeries() {
+        if (!this.valueChart) return;
 
-        if (totalStocks) totalStocks.textContent = data.total ?? 0;
-        if (gainers) gainers.textContent = data.gainers ?? 0;
-        if (losers) losers.textContent = data.losers ?? 0;
-        if (unchanged) unchanged.textContent = data.unchanged ?? 0;
+        try {
+            // Recommended API:
+            // GET /api/portfolio/value-series/?range=1D|1W|1M
+            // returns: { success:true, data:{ labels:[...], values:[...] , perf:{d1:2.3,w1:5.7,m1:-1.2} } }
+            const res = await fetch(`${this.apiBase}/portfolio/value-series/?range=${encodeURIComponent(this.range)}`);
+            const json = await res.json();
+
+            const labels = json?.data?.labels || [];
+            const values = json?.data?.values || [];
+
+            // If endpoint not ready, do demo series
+            const useDemo = !labels.length || !values.length;
+            const demo = this.makeDemoSeries(this.range);
+
+            this.valueChart.data.labels = useDemo ? demo.labels : labels;
+            this.valueChart.data.datasets[0].data = useDemo ? demo.values : values;
+            this.valueChart.update();
+
+            // Update performance (1D/1W/1M)
+            const perf = json?.data?.perf || demo.perf;
+            this.applyPerf('perf1d', perf.d1);
+            this.applyPerf('perf1w', perf.w1);
+            this.applyPerf('perf1m', perf.m1);
+        } catch (e) {
+            console.error('Portfolio series load error:', e);
+        }
     }
 
-    // ================== TOP GAINERS ==================
-    loadTopGainers() {
-        fetch(`${this.apiBase}/gainers/`)
-            .then(res => res.json())
-            .then(data => this.updateTopGainers(data))
-            .catch(err => console.error('Error loading gainers:', err));
-    }
+    applyPerf(elId, pct) {
+        const el = document.getElementById(elId);
+        if (!el) return;
 
-    updateTopGainers(data) {
-        const container = document.getElementById('top-gainers-list');
-        if (!container) return;
-
-        const arr = Array.isArray(data?.data) ? data.data.slice(0, 5) : [];
-
-        if (arr.length < 1) {
-            container.innerHTML = `<div class="p-3 text-center text-muted">No data</div>`;
+        if (pct === null || pct === undefined || isNaN(pct)) {
+            el.textContent = '—';
+            el.classList.remove('text-success', 'text-danger');
+            el.classList.add('text-muted');
             return;
         }
 
-        container.innerHTML = arr.map(stock => this.marketRow(stock, true)).join('');
+        const cls = Number(pct) >= 0 ? 'text-success' : 'text-danger';
+        const sign = Number(pct) >= 0 ? '+' : '';
+
+        el.classList.remove('text-success', 'text-danger', 'text-muted');
+        el.classList.add(cls);
+        el.textContent = `${sign}${Number(pct).toFixed(2)}%`;
     }
 
-    // ================== TOP LOSERS ==================
-    loadTopLosers() {
-        fetch(`${this.apiBase}/losers/`)
-            .then(res => res.json())
-            .then(data => this.updateTopLosers(data))
-            .catch(err => console.error('Error loading losers:', err));
-    }
+    makeDemoSeries(range) {
+        // quick demo; replace when your /api/portfolio/value-series/ works
+        const base = 120000;
+        let points = 7;
+        if (range === '1D') points = 12;
+        if (range === '1M') points = 30;
 
-    updateTopLosers(data) {
-        const container = document.getElementById('top-losers-list');
-        if (!container) return;
+        const labels = [];
+        const values = [];
+        let v = base;
 
-        const arr = Array.isArray(data?.data) ? data.data.slice(0, 5) : [];
-
-        if (arr.length < 1) {
-            container.innerHTML = `<div class="p-3 text-center text-muted">No data</div>`;
-            return;
+        for (let i = 0; i < points; i++) {
+            labels.push(range === '1D' ? `T${i + 1}` : `D${i + 1}`);
+            v = Math.max(50000, v + Math.round((Math.random() - 0.45) * 2500));
+            values.push(v);
         }
 
-        container.innerHTML = arr.map(stock => this.marketRow(stock, false)).join('');
-    }
-
-    // ================== MOST ACTIVE (TOP 5 BY VOLUME) ==================
-    loadMostActive() {
-        fetch(`${this.apiBase}/latest/`)
-            .then(res => res.json())
-            .then(data => this.updateMostActive(data))
-            .catch(err => console.error('Error loading most active:', err));
-    }
-
-    updateMostActive(data) {
-        const container = document.getElementById('most-active-list');
-        if (!container) return;
-
-        const stocks = Array.isArray(data?.data) ? data.data : [];
-        if (!stocks.length) {
-            container.innerHTML = `<div class="p-3 text-center text-muted">No data</div>`;
-            return;
-        }
-
-        const arr = stocks
-            .slice()
-            .sort((a, b) => Number(b.volume || 0) - Number(a.volume || 0))
-            .slice(0, 5);
-
-        container.innerHTML = arr.map(stock => `
-            <div class="market-item">
-                <div>
-                    <div class="market-symbol">${this.safe(stock.symbol)}</div>
-                    <small class="text-muted">${this.formatVolume(stock.volume)} shares</small>
-                </div>
-                <div class="text-end">
-                    <i class="fas fa-bolt text-warning"></i>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // ================== UI ROW HELPERS ==================
-    marketRow(stock, isGainer) {
-        const symbol = this.safe(stock?.symbol);
-        const ltp = this.formatPrice(stock?.ltp);
-        const pct = this.formatPct(stock?.change_pct);
-        const vol = this.formatVolume(stock?.volume);
-
-        const cls = isGainer ? 'text-success' : 'text-danger';
-        const icon = isGainer ? 'fa-arrow-up' : 'fa-arrow-down';
-        const sign = isGainer ? '+' : ''; // losers already negative
-
-        return `
-            <div class="market-item">
-                <div>
-                    <div class="market-symbol">${symbol}</div>
-                    <small class="text-muted">${symbol} Co.</small>
-                </div>
-                <div class="text-end">
-                    <div class="market-price">Rs ${ltp}</div>
-                    <div class="market-change ${cls}">
-                        <i class="fas ${icon} me-1"></i>${sign}${pct}%
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    safe(v) {
-        return (v ?? '').toString().replace(/[<>]/g, '');
-    }
-
-    formatVolume(volume) {
-        const v = Number(volume || 0);
-        if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + 'M';
-        if (v >= 1_000) return (v / 1_000).toFixed(1) + 'K';
-        return v.toLocaleString();
-    }
-
-    formatPrice(price) {
-        const p = Number(price || 0);
-        return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    formatPct(pct) {
-        const x = Number(pct || 0);
-        return x.toFixed(2);
+        return {
+            labels,
+            values,
+            perf: { d1: 2.30, w1: 5.70, m1: -1.20 }
+        };
     }
 }
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    new NepseDashboard();
+    new NepsePortfolioPage();
 });

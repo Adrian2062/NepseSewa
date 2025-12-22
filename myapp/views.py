@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Max
 from datetime import timedelta
 from django.utils import timezone
-
+from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
 from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary
 
@@ -428,3 +428,36 @@ def stocks(request):
 @login_required
 def trade(request):
     return render(request, 'trade.html')
+
+from .models import Trade  # make sure this matches your model name
+
+@require_GET
+@login_required
+def api_trade_history(request):
+    """
+    GET /api/trade/history/?symbol=NBL
+    Returns ONLY the logged-in user's BUY/SELL history.
+    """
+    symbol = (request.GET.get('symbol') or '').strip().upper()
+    side = (request.GET.get('side') or '').strip().upper()  # optional filter BUY/SELL
+
+    qs = Trade.objects.filter(user=request.user)
+
+    if symbol:
+        qs = qs.filter(symbol__iexact=symbol)
+
+    if side in ['BUY', 'SELL']:
+        qs = qs.filter(side=side)
+
+    qs = qs.order_by('-created_at')[:200]
+
+    data = [{
+        "created_at": t.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "symbol": t.symbol,
+        "side": t.side,
+        "qty": t.qty,
+        "price": t.price,
+        "status": t.status,
+    } for t in qs]
+
+    return JsonResponse({"success": True, "data": data})

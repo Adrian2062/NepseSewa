@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 # ============= CUSTOM USER MODEL =============
 class CustomUser(AbstractUser):
@@ -134,3 +135,43 @@ class MarketSummary(models.Model):
         if self.total_traded_shares:
             return f"{self.total_traded_shares:,.0f}"
         return "N/A"
+
+class Trade(models.Model):
+    SIDE_CHOICES = [
+        ('BUY', 'BUY'),
+        ('SELL', 'SELL'),
+    ]
+
+    STATUS_CHOICES = [
+        ('PENDING', 'PENDING'),
+        ('COMPLETED', 'COMPLETED'),
+        ('CANCELLED', 'CANCELLED'),
+        ('REJECTED', 'REJECTED'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='trades'
+    )
+
+    symbol = models.CharField(max_length=50, db_index=True)
+    side = models.CharField(max_length=4, choices=SIDE_CHOICES, db_index=True)
+
+    qty = models.PositiveIntegerField()
+    price = models.FloatField(null=True, blank=True)  # executed price or limit price
+
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='COMPLETED', db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'trades'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'symbol', '-created_at']),
+            models.Index(fields=['symbol', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} {self.side} {self.symbol} x{self.qty} @ {self.price}"

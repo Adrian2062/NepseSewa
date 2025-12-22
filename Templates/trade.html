@@ -14,11 +14,7 @@
     rel="stylesheet" />
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
       --primary: #10b981;
@@ -41,7 +37,7 @@
       color: var(--dark);
     }
 
-    /* ========== NAVBAR ========== */
+    /* ========== NAVBAR (same theme) ========== */
     .navbar {
       background: #fff;
       border-bottom: 1px solid var(--border);
@@ -62,11 +58,9 @@
       gap: .5rem;
     }
 
-    .navbar-brand i {
-      color: var(--primary);
-    }
+    .navbar-brand i { color: var(--primary); }
 
-    /* CENTER BAR */
+    /* ====== CENTER BAR (indices/status/turnover/volume) ====== */
     .navbar-summary-integrated {
       display: flex;
       align-items: center;
@@ -77,18 +71,9 @@
       overflow-x: auto;
       scrollbar-width: none;
     }
+    .navbar-summary-integrated::-webkit-scrollbar { display: none; }
 
-    .navbar-summary-integrated::-webkit-scrollbar {
-      display: none;
-    }
-
-    .nav-index-item {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.15;
-      min-width: 115px;
-    }
-
+    .nav-index-item { display: flex; flex-direction: column; line-height: 1.15; min-width: 115px; }
     .nav-index-name {
       font-size: 0.70rem;
       font-weight: 800;
@@ -96,119 +81,22 @@
       text-transform: uppercase;
       letter-spacing: 0.8px;
     }
+    .nav-index-value { font-size: 1.05rem; font-weight: 800; color: #111827; }
+    .nav-index-change { font-size: 0.80rem; font-weight: 700; }
 
-    .nav-index-value {
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: #111827;
-    }
+    .nav-v-separator { width: 1px; height: 34px; background: #e5e7eb; flex-shrink: 0; }
 
-    .nav-index-change {
-      font-size: 0.80rem;
-      font-weight: 700;
-    }
+    .nav-session-info { display: flex; flex-direction: column; min-width: 180px; }
+    .nav-session-info .nav-index-value { font-size: 0.95rem; font-weight: 800; }
 
-    .nav-v-separator {
-      width: 1px;
-      height: 34px;
-      background: #e5e7eb;
-      flex-shrink: 0;
-    }
-
-    .nav-session-info {
-      display: flex;
-      flex-direction: column;
-      min-width: 180px;
-    }
-
-    .nav-session-info .nav-index-value {
-      font-size: 0.95rem;
-      font-weight: 800;
-    }
-
-    .nav-market-totals {
-      display: flex;
-      flex-direction: column;
-      min-width: 260px;
-      text-align: right;
-    }
-
-    .nav-total-item {
-      font-size: 1.0rem;
-      font-weight: 800;
-      color: #2563eb;
-      line-height: 1.2;
-    }
-
-    /* Search */
-    .search-box .input-group {
-      background: var(--light);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      transition: all 0.2s ease;
-      overflow: hidden;
-    }
-
-    .search-box .input-group:focus-within {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
-    }
-
-    .search-box .form-control {
-      border: none;
-      background: transparent;
-      font-size: 0.9rem;
-      padding: 0.6rem 0.9rem;
-    }
-
-    .search-box .form-control:focus {
-      box-shadow: none;
-    }
-
-    .search-results-dropdown {
-      position: absolute;
-      top: 44px;
-      right: 0;
-      left: 0;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
-      overflow: hidden;
-      display: none;
-      z-index: 2000;
-    }
-
-    .search-result-item {
-      padding: 0.75rem 0.9rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
-    }
-
-    .search-result-item:last-child {
-      border-bottom: none;
-    }
-
-    .search-result-item:hover {
-      background: var(--primary-light);
-    }
+    .nav-market-totals { display: flex; flex-direction: column; min-width: 260px; text-align: right; }
+    .nav-total-item { font-size: 1.0rem; font-weight: 800; color: #2563eb; line-height: 1.2; }
 
     .user-avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
+      width: 38px; height: 38px; border-radius: 50%;
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 0.85rem;
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem;
       box-shadow: 0 6px 16px rgba(16, 185, 129, 0.30);
     }
 
@@ -218,35 +106,20 @@
       box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
       padding: 0.5rem 0;
     }
-
-    .dropdown-item {
-      padding: 0.70rem 1.0rem;
-      font-size: 0.9rem;
-    }
-
-    .dropdown-item:hover {
-      background: var(--primary-light);
-      color: var(--primary);
-    }
+    .dropdown-item { padding: 0.70rem 1.0rem; font-size: 0.9rem; }
+    .dropdown-item:hover { background: var(--primary-light); color: var(--primary); }
 
     /* ========== LAYOUT ========== */
     .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: 220px;
+      position: fixed; top: 0; left: 0;
+      height: 100vh; width: 220px;
       background: #fff;
       border-right: 1px solid var(--border);
       padding-top: 70px;
       z-index: 1030;
     }
 
-    .sidebar .nav-pills {
-      gap: 0.25rem;
-      padding: 0 0.5rem;
-    }
-
+    .sidebar .nav-pills { gap: 0.25rem; padding: 0 0.5rem; }
     .sidebar .nav-pills::before {
       content: 'Main Menu';
       display: block;
@@ -287,238 +160,209 @@
       font-weight: 800;
     }
 
-    .main-content {
-      margin-left: 220px;
-      padding: 1.5rem 1.5rem 2rem;
-    }
+    .main-content { margin-left: 220px; padding: 1.5rem 1.5rem 2rem; }
 
-    /* Cards */
+    /* ========== CARDS ========== */
     .card {
       border: 1px solid var(--border);
       border-radius: 14px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      transition: all 0.25s ease;
       overflow: hidden;
     }
+    .card:hover { border-color: var(--primary); box-shadow: 0 10px 26px rgba(16, 185, 129, 0.10); }
+    .card-header { background: white; border-bottom: 1px solid var(--border); padding: 1rem 1.25rem; }
+    .card-title { font-weight: 800; font-size: 0.95rem; margin: 0; }
+    .card-body { padding: 1.25rem; }
 
-    .card-header {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 1.25rem;
-    }
-
-    .card-title {
-      font-weight: 900;
-      font-size: 1rem;
-      margin: 0;
-    }
-
-    .card-body {
-      padding: 1.25rem;
-    }
-
-    /* Trade Header Box */
-    .trade-shell {
-      border: 2px solid rgba(16, 185, 129, .25);
-      border-radius: 16px;
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .35rem .6rem;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: .78rem;
+      border: 1px solid var(--border);
       background: #fff;
-      overflow: hidden;
+      color: #111827;
     }
 
-    .trade-topbar {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.10) 0%, rgba(5, 150, 105, 0.05) 100%);
-      padding: .9rem 1rem;
+    /* ========== STOCK HEADER ========== */
+    .stock-hero {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.06) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .trade-topbar .mini-stat {
-      display: flex;
-      gap: .6rem;
-      align-items: center;
       flex-wrap: wrap;
-      justify-content: center;
     }
 
-    .pill {
+    .stock-hero h4 { margin: 0; font-weight: 900; letter-spacing: -0.3px; }
+    .stock-hero .sub { color: var(--muted); font-weight: 700; font-size: .92rem; }
+
+    .quote-box {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .quote-item { display: flex; flex-direction: column; line-height: 1.2; }
+    .quote-label {
+      font-size: 0.72rem;
+      font-weight: 900;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+    }
+    .quote-value { font-size: 1.2rem; font-weight: 900; color: #111827; }
+    .quote-change { font-size: .9rem; font-weight: 900; }
+
+    /* ========== BUY/SELL TOGGLE (default middle, no "Neutral" text) ========== */
+    .side-toggle {
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 999px;
-      padding: .35rem .65rem;
+      padding: .25rem;
+      display: inline-flex;
+      gap: .25rem;
+      align-items: center;
+    }
+
+    .side-btn {
+      border: none;
+      border-radius: 999px;
+      padding: .55rem 1rem;
       font-weight: 900;
-      font-size: .85rem;
+      font-size: .9rem;
+      background: transparent;
+      color: #111827;
       display: inline-flex;
       align-items: center;
-      gap: .45rem;
+      gap: .5rem;
+      transition: all .15s ease;
     }
 
-    .pill i {
-      color: #111827;
-      opacity: .85;
+    .side-btn:hover { background: rgba(16, 185, 129, .08); }
+
+    .side-btn.active-buy {
+      background: rgba(16, 185, 129, .12);
+      color: var(--primary-dark);
+      border: 1px solid rgba(16, 185, 129, .25);
     }
 
-    /* 3-state toggle: SELL | (blank middle) | BUY  */
-    .trade-side-toggle {
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-      user-select: none;
+    .side-btn.active-sell {
+      background: rgba(239, 68, 68, .10);
+      color: #b91c1c;
+      border: 1px solid rgba(239, 68, 68, .20);
     }
 
-    .side-label {
-      font-weight: 900;
-      letter-spacing: .6px;
-      font-size: .9rem;
-    }
-
-    .side-sell {
-      color: var(--danger);
-    }
-
-    .side-buy {
-      color: var(--success);
-    }
-
-    .triple-toggle {
-      display: flex;
-      border: 1px solid var(--border);
+    .side-btn.middle {
       background: #fff;
-      border-radius: 999px;
-      overflow: hidden;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+      border: 1px solid var(--border);
+      color: #111827;
+      opacity: .9;
     }
 
-    .triple-toggle .tbtn {
-      width: 46px;
-      height: 34px;
-      border: 0;
-      background: transparent;
-      font-weight: 900;
-      cursor: pointer;
-      transition: all .18s ease;
-      display: grid;
-      place-items: center;
-      font-size: .95rem;
+    /* ========== SEARCH (only inside trade card) ========== */
+    .trade-search {
+      position: relative;
     }
 
-    .triple-toggle .tbtn:hover {
-      background: rgba(0, 0, 0, .04);
-    }
-
-    .triple-toggle .tbtn.active {
-      color: #fff;
-    }
-
-    .triple-toggle[data-side="SELL"] .tbtn.active {
-      background: var(--danger);
-    }
-
-    .triple-toggle[data-side="BUY"] .tbtn.active {
-      background: var(--success);
-    }
-
-    .triple-toggle[data-side="NEUTRAL"] .tbtn.active {
-      background: #6b7280;
-    }
-
-    /* Form inputs */
-    .form-label {
-      font-size: .78rem;
-      text-transform: uppercase;
-      letter-spacing: .7px;
-      color: var(--muted);
-      font-weight: 900;
-      margin-bottom: .4rem;
-    }
-
-    .form-select,
-    .form-control {
+    .trade-search .input-group {
+      background: var(--light);
       border-radius: 12px;
       border: 1px solid var(--border);
-      padding: .65rem .8rem;
+      transition: all 0.2s ease;
+      overflow: hidden;
+    }
+
+    .trade-search .input-group:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
+    }
+
+    .trade-search .form-control {
+      border: none;
+      background: transparent;
+      font-size: 0.95rem;
+      padding: 0.75rem 0.95rem;
       font-weight: 700;
     }
+    .trade-search .form-control:focus { box-shadow: none; }
 
-    .btn-neo {
-      border-radius: 12px;
-      font-weight: 900;
-      padding: .7rem 1rem;
-      border: none;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: #fff;
-    }
-
-    .btn-neo-outline {
-      border-radius: 12px;
-      font-weight: 900;
-      padding: .7rem 1rem;
-      border: 1px solid var(--border);
+    .search-results-dropdown {
+      position: absolute;
+      top: 52px;
+      right: 0;
+      left: 0;
       background: #fff;
-      color: #111827;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
+      overflow: hidden;
+      display: none;
+      z-index: 2000;
     }
 
-    .btn-neo:disabled {
-      opacity: .55;
-      cursor: not-allowed;
+    .search-result-item {
+      padding: 0.75rem 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+      font-weight: 700;
     }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: var(--primary-light); }
 
-    /* Order book table */
+    /* ========== ORDER BOOK TABLE ========== */
     .table thead th {
-      font-size: .75rem;
+      font-size: .78rem;
       text-transform: uppercase;
-      letter-spacing: .7px;
+      letter-spacing: .6px;
       color: var(--muted);
       font-weight: 900;
       border-bottom: 1px solid var(--border) !important;
     }
-
     .table tbody td {
       border-top: 1px solid var(--border) !important;
       vertical-align: middle;
-      font-weight: 700;
+      font-weight: 650;
     }
 
     .symbol-pill {
       display: inline-flex;
       align-items: center;
-      gap: .35rem;
-      padding: .25rem .55rem;
+      gap: .45rem;
+      padding: .3rem .55rem;
       border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #fff;
       font-weight: 900;
+      border: 1px solid rgba(16,185,129,.25);
+      background: rgba(16,185,129,.08);
+      color: var(--primary-dark);
+      font-size: .82rem;
     }
 
     /* responsive */
     @media (max-width: 992px) {
-      .sidebar {
-        left: -100%;
-        top: 70px;
-        height: calc(100vh - 70px);
-        transition: left 0.25s ease;
-        box-shadow: 6px 0 18px rgba(0, 0, 0, 0.14);
-      }
-
-      .sidebar.show {
-        left: 0;
-      }
-
-      .main-content {
-        margin-left: 0;
-        padding: 1rem;
-      }
-
-      .navbar-summary-integrated {
-        display: none !important;
-      }
+      .sidebar { left: -100%; top: 70px; height: calc(100vh - 70px); transition: left 0.25s ease; box-shadow: 6px 0 18px rgba(0, 0, 0, 0.14); }
+      .sidebar.show { left: 0; }
+      .main-content { margin-left: 0; padding: 1rem; }
+      .navbar-summary-integrated { display: none !important; }
     }
   </style>
 </head>
 
 <body>
-
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-light">
     <div class="container-fluid px-2">
@@ -530,7 +374,7 @@
         <i class="fas fa-chart-line"></i> NepseSewa
       </a>
 
-      <!-- CENTER: indices/status/turnover/volume -->
+      <!-- CENTER BAR -->
       <div class="navbar-summary-integrated d-none d-lg-flex">
         <div class="d-flex gap-4" id="barIndices">
           <div class="nav-index-item">
@@ -555,19 +399,8 @@
         </div>
       </div>
 
-      <!-- RIGHT: search + user -->
+      <!-- RIGHT: user only (✅ removed navbar search) -->
       <div class="d-flex align-items-center gap-3 ms-auto">
-        <div class="search-box position-relative d-none d-md-block" style="min-width: 320px;">
-          <div class="input-group input-group-sm">
-            <input type="text" id="stockSearch" class="form-control" placeholder="Search stocks (e.g. NBL)..."
-              autocomplete="off">
-            <button class="btn btn-light" type="button">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
-          <div id="searchResults" class="search-results-dropdown"></div>
-        </div>
-
         <div class="dropdown">
           <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
             <div class="user-avatar me-2">
@@ -580,11 +413,9 @@
           <ul class="dropdown-menu dropdown-menu-end">
             <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
             <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
+            <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+              <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
           </ul>
         </div>
       </div>
@@ -634,246 +465,151 @@
 
   <!-- Main -->
   <div class="main-content">
-    <div class="mb-3">
-      <h3 class="mb-0" style="font-weight: 900;">Trade</h3>
-      <div class="text-muted fw-bold">Order Entry • Search a stock • History in Order Book</div>
-    </div>
-
-    <div class="trade-shell">
-      <!-- Top green bar -->
-      <div class="trade-topbar">
-        <div class="fw-bold text-muted">
-          <i class="fa-solid fa-minus me-2"></i>
-          Select a stock from search
-        </div>
-
-        <div class="mini-stat">
-          <span class="pill"><i class="fa-solid fa-tag"></i> LTP: <span id="miniLtp">—</span></span>
-          <span class="pill"><i class="fa-solid fa-chart-line"></i> Chg: <span id="miniChg">—</span></span>
-          <span class="pill"><i class="fa-solid fa-bolt"></i> Vol: <span id="miniVol">—</span></span>
-        </div>
-
-        <!-- SELL | (blank) | BUY : default middle -->
-        <div class="trade-side-toggle">
-          <span class="side-label side-sell">SELL</span>
-
-          <div class="triple-toggle" id="sideToggle" data-side="NEUTRAL">
-            <button type="button" class="tbtn" data-side="SELL" title="SELL">S</button>
-            <button type="button" class="tbtn active" data-side="NEUTRAL" title="(default)">&nbsp;</button>
-            <button type="button" class="tbtn" data-side="BUY" title="BUY">B</button>
-          </div>
-
-          <span class="side-label side-buy">BUY</span>
-
-          <!-- hidden value (SELL | NEUTRAL | BUY) -->
-          <input type="hidden" id="orderSide" value="NEUTRAL">
-        </div>
+    <!-- Header + Quote -->
+    <div class="stock-hero">
+      <div>
+        <h4>Trade Stocks</h4>
+        <div class="sub">Search a stock • Choose Buy/Sell • Place order • See your history in Order Book</div>
       </div>
 
-      <!-- Content -->
-      <div class="p-3">
-        <div class="row g-3">
-          <!-- Left: Order Entry -->
-          <div class="col-lg-7">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">Product Type</label>
-                <select class="form-select" id="productType">
-                  <option value="CNC">CNC</option>
-                  <option value="MARGIN">MARGIN</option>
-                </select>
-              </div>
-
-              <div class="col-md-4">
-                <label class="form-label">Order Type</label>
-                <select class="form-select" id="orderType">
-                  <option value="LMT" selected>LMT</option>
-                  <option value="MKT">MKT</option>
-                </select>
-              </div>
-
-              <div class="col-md-4">
-                <label class="form-label">Validity</label>
-                <select class="form-select" id="validity">
-                  <option value="DAY" selected>DAY</option>
-                  <option value="IOC">IOC</option>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label">Symbol (search from navbar)</label>
-                <input class="form-control" id="symbolInput" placeholder="Select from search..." readonly />
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label">Price (NPR)</label>
-                <input class="form-control" id="priceInput" type="number" step="0.01" placeholder="0" />
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label">Quantity</label>
-                <input class="form-control" id="qtyInput" type="number" step="1" placeholder="0" />
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label">Estimated Amount</label>
-                <input class="form-control" id="estAmount" placeholder="—" readonly />
-              </div>
-
-              <div class="col-12 d-flex gap-2">
-                <button class="btn-neo" id="placeOrderBtn" disabled>
-                  <i class="fa-solid fa-paper-plane me-2"></i>Place Order
-                </button>
-                <button class="btn-neo-outline" id="cancelBtn" type="button">
-                  <i class="fa-solid fa-xmark me-2"></i>Cancel
-                </button>
-              </div>
-
-              <!-- Stats (from history/latest if available) -->
-              <div class="col-12">
-                <div class="row g-2 mt-1">
-                  <div class="col-6 col-md-3">
-                    <div class="card">
-                      <div class="card-body">
-                        <div class="form-label mb-1">Open</div>
-                        <div class="fw-bold" id="stOpen">—</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-6 col-md-3">
-                    <div class="card">
-                      <div class="card-body">
-                        <div class="form-label mb-1">High</div>
-                        <div class="fw-bold" id="stHigh">—</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-6 col-md-3">
-                    <div class="card">
-                      <div class="card-body">
-                        <div class="form-label mb-1">Low</div>
-                        <div class="fw-bold" id="stLow">—</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-6 col-md-3">
-                    <div class="card">
-                      <div class="card-body">
-                        <div class="form-label mb-1">Prev Close</div>
-                        <div class="fw-bold" id="stPrev">—</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Top 5 Buy/Sell (placeholder) -->
-              <div class="col-12">
-                <div class="row g-2">
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header" style="background:#2563eb;color:#fff;">
-                        <div class="fw-bold"><i class="fa-solid fa-arrow-up me-2"></i>TOP 5 BUY</div>
-                      </div>
-                      <div class="card-body p-0">
-                        <div class="table-responsive">
-                          <table class="table mb-0">
-                            <thead>
-                              <tr>
-                                <th class="ps-3">Qty</th>
-                                <th>Price</th>
-                                <th class="pe-3 text-end">Orders</th>
-                              </tr>
-                            </thead>
-                            <tbody id="topBuyTbody">
-                              <tr>
-                                <td colspan="3" class="text-muted p-3 ps-3">Select a stock...</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-md-6">
-                    <div class="card">
-                      <div class="card-header" style="background:#ef4444;color:#fff;">
-                        <div class="fw-bold"><i class="fa-solid fa-arrow-down me-2"></i>TOP 5 SELL</div>
-                      </div>
-                      <div class="card-body p-0">
-                        <div class="table-responsive">
-                          <table class="table mb-0">
-                            <thead>
-                              <tr>
-                                <th class="ps-3">Price</th>
-                                <th>Qty</th>
-                                <th class="pe-3 text-end">Orders</th>
-                              </tr>
-                            </thead>
-                            <tbody id="topSellTbody">
-                              <tr>
-                                <td colspan="3" class="text-muted p-3 ps-3">Select a stock...</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Right: Order Book (History) -->
-          <div class="col-lg-5">
-            <div class="card h-100">
-              <div class="card-header d-flex align-items-center justify-content-between">
-                <h5 class="card-title">Order Book</h5>
-                <button class="btn btn-light btn-sm" id="refreshBookBtn" title="Refresh">
-                  <i class="fa-solid fa-rotate"></i>
-                </button>
-              </div>
-              <div class="card-body p-0">
-                <div class="table-responsive">
-                  <table class="table mb-0">
-                    <thead>
-                      <tr>
-                        <th class="ps-3">S.N</th>
-                        <th>Time</th>
-                        <th>Symbol</th>
-                        <th class="text-end pe-3">LTP</th>
-                      </tr>
-                    </thead>
-                    <tbody id="orderBookTbody">
-                      <tr>
-                        <td colspan="4" class="text-muted p-3 ps-3">
-                          No records (select a stock from search).
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div class="d-flex justify-content-between px-3 py-2 border-top">
-                  <div class="text-muted fw-bold"><span id="orderBookCount">0</span> items</div>
-                  <div class="text-muted fw-bold">As of <span id="orderBookAsOf">—</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="text-muted fw-bold mt-2" style="font-size:.9rem;">
-              Tip: Click a stock from search to load stats + history into Order Book.
-            </div>
-          </div>
-
+      <div class="quote-box">
+        <div class="quote-item">
+          <span class="quote-label">Selected</span>
+          <span class="quote-value" id="selSymbol">—</span>
+        </div>
+        <div class="quote-item">
+          <span class="quote-label">LTP</span>
+          <span class="quote-value" id="selLtp">Rs —</span>
+        </div>
+        <div class="quote-item">
+          <span class="quote-label">Change</span>
+          <span class="quote-change" id="selChange">—</span>
         </div>
       </div>
     </div>
 
+    <div class="row">
+      <!-- LEFT: Trade form -->
+      <div class="col-lg-7 mb-3">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="card-title mb-0">Place Order</h5>
+
+            <!-- ✅ Buy/Sell toggle (default middle; no "Neutral" text) -->
+            <div class="side-toggle" title="Choose side">
+              <button id="btnBuy" class="side-btn" type="button"><i class="fa-solid fa-arrow-up"></i> Buy</button>
+              <button id="btnMid" class="side-btn middle" type="button"><i class="fa-solid fa-minus"></i></button>
+              <button id="btnSell" class="side-btn" type="button"><i class="fa-solid fa-arrow-down"></i> Sell</button>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <!-- ✅ ONE search box only -->
+            <div class="trade-search mb-3">
+              <div class="input-group">
+                <span class="input-group-text bg-transparent border-0" style="font-weight:900;">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input id="tradeSearch" type="text" class="form-control" placeholder="Search stock (e.g. SHPC, NBL)..."
+                  autocomplete="off" />
+                <button class="btn btn-light" type="button" id="clearSearch" title="Clear">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div id="tradeSearchResults" class="search-results-dropdown"></div>
+            </div>
+
+            <form id="tradeForm">
+              <!-- Symbol (filled by search) -->
+              <div class="mb-3">
+                <label class="form-label fw-bold">Symbol</label>
+                <input id="symbolInput" class="form-control" type="text" placeholder="Select from search" readonly />
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Quantity</label>
+                  <input id="qtyInput" class="form-control" type="number" min="1" step="1" value="10" required />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label fw-bold">Price (Rs)</label>
+                  <input id="priceInput" class="form-control" type="number" min="0" step="0.01" placeholder="Use LTP or enter"
+                    required />
+                  <div class="text-muted mt-1" style="font-weight:700;font-size:.85rem;">
+                    Tip: click “Use LTP” to auto-fill.
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-success" id="btnUseLtp" style="border-radius:12px;font-weight:900;">
+                  <i class="fa-solid fa-bolt me-2"></i>Use LTP
+                </button>
+
+                <button type="submit" class="btn btn-success ms-auto"
+                  style="border-radius:12px;font-weight:900;padding:.65rem 1rem;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);border:none;">
+                  <i class="fa-solid fa-check me-2"></i>Place Order
+                </button>
+              </div>
+
+              <div class="mt-3">
+                <span class="chip" id="sideChip"><i class="fa-solid fa-circle-info"></i> Select Buy or Sell</span>
+                <span class="chip ms-2" id="estValueChip"><i class="fa-solid fa-calculator"></i> Est: Rs —</span>
+              </div>
+
+              <div class="alert alert-warning mt-3 mb-0" id="tradeMsg" style="display:none;font-weight:700;"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Order Book (user history only) -->
+      <div class="col-lg-5 mb-3">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="card-title mb-0">Order Book</h5>
+            <div class="d-flex align-items-center gap-2">
+              <span class="chip"><i class="fa-solid fa-list"></i> <span id="orderBookCount">0</span></span>
+              <span class="chip"><i class="fa-solid fa-clock"></i> <span id="orderBookAsOf">—</span></span>
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table mb-0">
+                <thead>
+                  <tr>
+                    <th class="ps-3">Time</th>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Price</th>
+                    <th class="text-end pe-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="orderBookTbody">
+                  <tr>
+                    <td colspan="6" class="text-muted p-3 ps-3">No records (select a stock).</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card-body border-top">
+            <div class="text-muted" style="font-weight:700;font-size:.9rem;">
+              Only shows <b>your</b> BUY/SELL history for the selected stock.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-muted mt-2" style="font-weight:700;font-size:.85rem;">
+      Note: For real placing orders, create a POST endpoint like <code>/api/trade/place/</code>.
+      This page already reads live prices from <code>/api/latest/</code> and reads your history from
+      <code>/api/trade/history/</code>.
+    </div>
   </div>
 
   <!-- JS -->
@@ -887,14 +623,12 @@
       if (n === null || n === undefined || isNaN(n)) return '—';
       return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
+
     function fmtInt(n) {
       if (n === null || n === undefined || isNaN(n)) return '—';
       return Number(n).toLocaleString();
     }
-    function safeText(id, text) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = text;
-    }
+
     function isMarketActive(latestIso, minutes = 5) {
       try {
         const t = new Date(latestIso).getTime();
@@ -905,17 +639,23 @@
       }
     }
 
-    // ==========================
-    // Sidebar toggle
-    // ==========================
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebarToggle');
-    if (toggleBtn && sidebar) {
-      toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
+    function safeText(el, text) { if (el) el.textContent = text; }
+
+    function setMsg(text, type = 'warning') {
+      const msg = document.getElementById('tradeMsg');
+      if (!msg) return;
+      msg.className = `alert alert-${type} mt-3 mb-0`;
+      msg.textContent = text;
+      msg.style.display = 'block';
+    }
+
+    function hideMsg() {
+      const msg = document.getElementById('tradeMsg');
+      if (msg) msg.style.display = 'none';
     }
 
     // ==========================
-    // Navbar center bar
+    // Navbar Center Bar (same API as dashboard)
     // ==========================
     async function updateNavbarBar() {
       const nepseRes = await fetch('/api/nepse-index/');
@@ -987,7 +727,6 @@
 
       if (summaryJson && summaryJson.success) {
         const d = summaryJson.data;
-
         if (turnoverEl) turnoverEl.textContent = `Turnover: ${fmtNumber(d.total_turnover, 2)}`;
         if (volumeEl) volumeEl.textContent = `Volume: ${fmtInt(d.total_traded_shares)}`;
 
@@ -997,265 +736,349 @@
     }
 
     // ==========================
-    // 3-state side toggle (middle is BLANK)
+    // Trade Page State
     // ==========================
-    const sideToggle = document.getElementById('sideToggle');
-    const orderSide = document.getElementById('orderSide');
-    const placeOrderBtn = document.getElementById('placeOrderBtn');
+    let currentSide = 'MID';   // default middle
+    let selectedSymbol = '';
+    let latestMap = new Map(); // symbol -> latest object (ltp, change_pct, ...)
 
-    function setSide(side) {
-      if (!sideToggle || !orderSide) return;
-      sideToggle.querySelectorAll('.tbtn').forEach(b => b.classList.remove('active'));
-      const btn = sideToggle.querySelector(`.tbtn[data-side="${side}"]`);
-      if (btn) btn.classList.add('active');
+    // UI refs
+    const btnBuy = document.getElementById('btnBuy');
+    const btnMid = document.getElementById('btnMid');
+    const btnSell = document.getElementById('btnSell');
+    const sideChip = document.getElementById('sideChip');
 
-      sideToggle.setAttribute('data-side', side);
-      orderSide.value = side;
+    const tradeSearch = document.getElementById('tradeSearch');
+    const tradeSearchResults = document.getElementById('tradeSearchResults');
+    const clearSearch = document.getElementById('clearSearch');
 
-      // Disable order button while neutral
-      if (placeOrderBtn) placeOrderBtn.disabled = (side === 'NEUTRAL');
-    }
-
-    if (sideToggle) {
-      sideToggle.addEventListener('click', (e) => {
-        const btn = e.target.closest('.tbtn');
-        if (!btn) return;
-        setSide(btn.dataset.side);
-      });
-      setSide('NEUTRAL'); // default middle
-    }
-
-    // ==========================
-    // Trade calculations
-    // ==========================
-    const priceInput = document.getElementById('priceInput');
-    const qtyInput = document.getElementById('qtyInput');
-    const estAmount = document.getElementById('estAmount');
-
-    function updateEstimated() {
-      const p = Number(priceInput?.value || 0);
-      const q = Number(qtyInput?.value || 0);
-      const amt = p * q;
-      if (estAmount) estAmount.value = isFinite(amt) && amt > 0 ? `Rs ${fmtNumber(amt, 2)}` : '—';
-    }
-    if (priceInput) priceInput.addEventListener('input', updateEstimated);
-    if (qtyInput) qtyInput.addEventListener('input', updateEstimated);
-
-    // Cancel
-    const cancelBtn = document.getElementById('cancelBtn');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
-        if (priceInput) priceInput.value = '';
-        if (qtyInput) qtyInput.value = '';
-        updateEstimated();
-        setSide('NEUTRAL');
-      });
-    }
-
-    // Place order (UI only; connect to your Django POST later)
-    if (placeOrderBtn) {
-      placeOrderBtn.addEventListener('click', () => {
-        const sym = document.getElementById('symbolInput')?.value?.trim();
-        const side = orderSide?.value;
-        if (!sym) return alert('Select a stock from search first.');
-        if (side === 'NEUTRAL') return alert('Select BUY or SELL.');
-        alert(`Demo: ${side} order for ${sym} (connect to your backend POST).`);
-      });
-    }
-
-    // ==========================
-    // Search (navbar) -> fills trade symbol + loads history into orderbook
-    // ==========================
-    const sIn = document.getElementById('stockSearch');
-    const rBox = document.getElementById('searchResults');
     const symbolInput = document.getElementById('symbolInput');
+    const qtyInput = document.getElementById('qtyInput');
+    const priceInput = document.getElementById('priceInput');
 
-    let sT = null;
-    let selectedSymbol = null;
+    const selSymbolEl = document.getElementById('selSymbol');
+    const selLtpEl = document.getElementById('selLtp');
+    const selChangeEl = document.getElementById('selChange');
+    const estValueChip = document.getElementById('estValueChip');
 
-    async function loadSelectedSymbolLiveCard(symbol) {
-      // pull from /api/latest/ to fill mini stats quickly
+    function applySideUI() {
+      // reset
+      btnBuy.classList.remove('active-buy');
+      btnSell.classList.remove('active-sell');
+      btnMid.classList.remove('middle');
+
+      if (currentSide === 'BUY') {
+        btnBuy.classList.add('active-buy');
+        sideChip.innerHTML = `<i class="fa-solid fa-arrow-up"></i> BUY mode`;
+        sideChip.style.borderColor = 'rgba(16,185,129,.25)';
+        sideChip.style.background = 'rgba(16,185,129,.08)';
+        sideChip.style.color = 'var(--primary-dark)';
+      } else if (currentSide === 'SELL') {
+        btnSell.classList.add('active-sell');
+        sideChip.innerHTML = `<i class="fa-solid fa-arrow-down"></i> SELL mode`;
+        sideChip.style.borderColor = 'rgba(239,68,68,.20)';
+        sideChip.style.background = 'rgba(239,68,68,.08)';
+        sideChip.style.color = '#b91c1c';
+      } else {
+        btnMid.classList.add('middle');
+        sideChip.innerHTML = `<i class="fa-solid fa-circle-info"></i> Select Buy or Sell`;
+        sideChip.style.borderColor = 'var(--border)';
+        sideChip.style.background = '#fff';
+        sideChip.style.color = '#111827';
+      }
+    }
+
+    btnBuy?.addEventListener('click', () => { currentSide = 'BUY'; applySideUI(); hideMsg(); });
+    btnSell?.addEventListener('click', () => { currentSide = 'SELL'; applySideUI(); hideMsg(); });
+    btnMid?.addEventListener('click', () => { currentSide = 'MID'; applySideUI(); hideMsg(); });
+
+    // ==========================
+    // Load latest prices map (for LTP and search display)
+    // ==========================
+    async function refreshLatest() {
       try {
         const res = await fetch('/api/latest/');
         const json = await res.json();
         const arr = Array.isArray(json?.data) ? json.data : [];
-        const item = arr.find(x => String(x.symbol).toUpperCase() === String(symbol).toUpperCase());
+        latestMap = new Map(arr.map(x => [String(x.symbol), x]));
 
-        if (!item) {
-          safeText('miniLtp', '—');
-          safeText('miniChg', '—');
-          safeText('miniVol', '—');
-          return;
+        // update quote if selected
+        if (selectedSymbol) {
+          applySelectedQuote(selectedSymbol);
         }
-
-        safeText('miniLtp', `Rs ${fmtNumber(item.ltp, 2)}`);
-        const chg = Number(item.change_pct || 0);
-        safeText('miniChg', `${chg >= 0 ? '+' : ''}${fmtNumber(chg, 2)}%`);
-        safeText('miniVol', fmtInt(item.volume));
       } catch (e) {
-        console.error('loadSelectedSymbolLiveCard error', e);
+        console.error('latest load error', e);
       }
     }
 
-    async function loadHistoryIntoOrderBook(symbol) {
+    function applySelectedQuote(sym) {
+      selectedSymbol = sym;
+      safeText(symbolInput, sym);
+      safeText(selSymbolEl, sym);
+
+      const live = latestMap.get(sym);
+      const ltp = Number(live?.ltp);
+      const pct = Number(live?.change_pct);
+
+      safeText(selLtpEl, `Rs ${isFinite(ltp) ? fmtNumber(ltp, 2) : '—'}`);
+
+      if (isFinite(pct)) {
+        const cls = pct >= 0 ? 'text-success' : 'text-danger';
+        const sign = pct >= 0 ? '+' : '';
+        selChangeEl.classList.remove('text-success', 'text-danger', 'text-muted');
+        selChangeEl.classList.add(cls);
+        safeText(selChangeEl, `${sign}${pct.toFixed(2)}%`);
+      } else {
+        selChangeEl.classList.remove('text-success', 'text-danger');
+        selChangeEl.classList.add('text-muted');
+        safeText(selChangeEl, '—');
+      }
+
+      // update estimate
+      updateEstimate();
+
+      // load only user's history into orderbook
+      loadUserOrderHistory(sym);
+    }
+
+    // ==========================
+    // Trade Search (uses /api/search/)
+    // ==========================
+    let searchTimer;
+
+    function renderSearchDropdown(list) {
+      if (!tradeSearchResults) return;
+      if (!list.length) {
+        tradeSearchResults.style.display = 'none';
+        tradeSearchResults.innerHTML = '';
+        return;
+      }
+
+      tradeSearchResults.innerHTML = list.slice(0, 12).map(s => {
+        const sym = String(s.symbol);
+        const ltp = Number(s.ltp);
+        const pct = Number(s.change_pct);
+        const cls = pct >= 0 ? 'text-success' : 'text-danger';
+        const sign = pct >= 0 ? '+' : '';
+
+        return `
+          <div class="search-result-item" data-symbol="${sym}">
+            <strong>${sym}</strong>
+            <span>
+              Rs ${isFinite(ltp) ? fmtNumber(ltp, 2) : '—'}
+              <small class="${cls}" style="font-weight:900;">
+                (${sign}${isFinite(pct) ? pct.toFixed(2) : '—'}%)
+              </small>
+            </span>
+          </div>
+        `;
+      }).join('');
+
+      tradeSearchResults.style.display = 'block';
+    }
+
+    tradeSearch?.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      const q = tradeSearch.value.trim();
+      if (q.length < 2) {
+        if (tradeSearchResults) tradeSearchResults.style.display = 'none';
+        return;
+      }
+
+      searchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search/?q=${encodeURIComponent(q)}`);
+          const json = await res.json();
+          const list = Array.isArray(json?.data) ? json.data : [];
+          renderSearchDropdown(list);
+        } catch (e) {
+          console.error('search error', e);
+        }
+      }, 250);
+    });
+
+    tradeSearchResults?.addEventListener('click', (e) => {
+      const item = e.target.closest('.search-result-item');
+      if (!item) return;
+      const sym = item.getAttribute('data-symbol');
+      if (!sym) return;
+
+      // close dropdown + fill
+      tradeSearch.value = sym;
+      tradeSearchResults.style.display = 'none';
+      applySelectedQuote(sym);
+      hideMsg();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!tradeSearchResults || !tradeSearch) return;
+      if (!tradeSearch.contains(e.target) && !tradeSearchResults.contains(e.target)) {
+        tradeSearchResults.style.display = 'none';
+      }
+    });
+
+    clearSearch?.addEventListener('click', () => {
+      tradeSearch.value = '';
+      tradeSearchResults.style.display = 'none';
+      // keep current symbol unchanged
+    });
+
+    // ==========================
+    // Use LTP button
+    // ==========================
+    document.getElementById('btnUseLtp')?.addEventListener('click', () => {
+      if (!selectedSymbol) return setMsg('Select a stock first.', 'warning');
+      const live = latestMap.get(selectedSymbol);
+      const ltp = Number(live?.ltp);
+      if (!isFinite(ltp) || ltp <= 0) return setMsg('LTP not available for this stock right now.', 'warning');
+      priceInput.value = ltp.toFixed(2);
+      updateEstimate();
+      hideMsg();
+    });
+
+    // estimate update
+    function updateEstimate() {
+      const qty = Number(qtyInput?.value || 0);
+      const price = Number(priceInput?.value || 0);
+      const est = qty > 0 && price > 0 ? qty * price : NaN;
+      estValueChip.innerHTML = `<i class="fa-solid fa-calculator"></i> Est: ${isFinite(est) ? 'Rs ' + fmtNumber(est, 2) : 'Rs —'}`;
+    }
+    qtyInput?.addEventListener('input', updateEstimate);
+    priceInput?.addEventListener('input', updateEstimate);
+
+    // ==========================
+    // Order Book: USER buy/sell history only
+    // Endpoint you implement in Django:
+    // GET /api/trade/history/?symbol=SHPC  -> user's trades/orders
+    // ==========================
+    async function loadUserOrderHistory(symbol) {
       const tbody = document.getElementById('orderBookTbody');
       const countEl = document.getElementById('orderBookCount');
       const asofEl = document.getElementById('orderBookAsOf');
-
       if (!tbody) return;
 
       try {
-        // Your endpoint exists in urls: /api/history/?symbol=XXXX
-        const res = await fetch(`/api/history/?symbol=${encodeURIComponent(symbol)}`);
+        const res = await fetch(`/api/trade/history/?symbol=${encodeURIComponent(symbol)}`);
         const json = await res.json();
-
         const rows = Array.isArray(json?.data) ? json.data : [];
-        const show = rows.slice(-20).reverse(); // last 20
 
-        if (!show.length) {
+        // newest first
+        rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        if (!rows.length) {
           tbody.innerHTML = `
-            <tr><td colspan="4" class="text-muted p-3 ps-3">No history found for ${symbol}.</td></tr>
+            <tr>
+              <td colspan="6" class="text-muted p-3 ps-3">No BUY/SELL history for ${symbol}.</td>
+            </tr>
           `;
           if (countEl) countEl.textContent = '0';
           if (asofEl) asofEl.textContent = new Date().toLocaleString();
           return;
         }
 
-        // Try to map common fields. If your API uses different keys, update these 3 lines.
-        // expected: { date/time, ltp } OR { timestamp, close }
-        const mapped = show.map((x, idx) => {
-          const t = x.time || x.timestamp || x.date || x.tran_date || x.datetime || '';
-          const ltp = x.ltp ?? x.close ?? x.price ?? x.value ?? null;
-          return { sn: idx + 1, t, ltp };
-        });
+        tbody.innerHTML = rows.slice(0, 30).map(r => {
+          const side = String(r.side || '').toUpperCase();
+          const sideCls = side === 'BUY' ? 'text-success' : (side === 'SELL' ? 'text-danger' : 'text-muted');
 
-        tbody.innerHTML = mapped.map(r => `
-          <tr>
-            <td class="ps-3">${r.sn}</td>
-            <td>${r.t ? String(r.t) : '—'}</td>
-            <td><span class="symbol-pill"><i class="fa-solid fa-tag"></i>${symbol}</span></td>
-            <td class="text-end pe-3">${r.ltp !== null && r.ltp !== undefined ? 'Rs ' + fmtNumber(r.ltp, 2) : '—'}</td>
-          </tr>
-        `).join('');
+          return `
+            <tr>
+              <td class="ps-3">${r.created_at || '—'}</td>
+              <td><span class="symbol-pill"><i class="fa-solid fa-tag"></i>${r.symbol || symbol}</span></td>
+              <td class="${sideCls}" style="font-weight:900;">${side || '—'}</td>
+              <td class="text-end">${r.qty != null ? fmtInt(r.qty) : '—'}</td>
+              <td class="text-end">Rs ${r.price != null ? fmtNumber(r.price, 2) : '—'}</td>
+              <td class="text-end pe-3">${r.status || '—'}</td>
+            </tr>
+          `;
+        }).join('');
 
-        if (countEl) countEl.textContent = String(mapped.length);
+        if (countEl) countEl.textContent = String(Math.min(rows.length, 30));
         if (asofEl) asofEl.textContent = new Date().toLocaleString();
-
-        // Also fill Open/High/Low/Prev placeholders if your history includes them
-        // If your API returns these directly, map them here.
-        safeText('stOpen', json?.meta?.open ?? '—');
-        safeText('stHigh', json?.meta?.high ?? '—');
-        safeText('stLow', json?.meta?.low ?? '—');
-        safeText('stPrev', json?.meta?.prev_close ?? '—');
-
       } catch (e) {
-        console.error('loadHistoryIntoOrderBook error', e);
-        tbody.innerHTML = `<tr><td colspan="4" class="text-muted p-3 ps-3">Error loading history.</td></tr>`;
+        console.error('User order history load error:', e);
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-muted p-3 ps-3">Error loading your order history.</td>
+          </tr>
+        `;
       }
     }
 
-    async function onSelectSymbol(symbol, ltp) {
-      selectedSymbol = symbol;
-      if (symbolInput) symbolInput.value = symbol;
+    // ==========================
+    // Place Order (frontend only)
+    // Replace with real POST:
+    // POST /api/trade/place/
+    // body: {symbol, side, qty, price}
+    // ==========================
+    document.getElementById('tradeForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMsg();
 
-      // set default price = ltp for convenience
-      if (priceInput && ltp !== null && ltp !== undefined && !isNaN(ltp)) {
-        priceInput.value = Number(ltp).toFixed(2);
-        updateEstimated();
-      }
+      const sym = String(symbolInput.value || '').trim();
+      const qty = Number(qtyInput.value || 0);
+      const price = Number(priceInput.value || 0);
 
-      await loadSelectedSymbolLiveCard(symbol);
-      await loadHistoryIntoOrderBook(symbol);
+      if (!sym) return setMsg('Please select a stock from search.', 'warning');
+      if (currentSide !== 'BUY' && currentSide !== 'SELL') return setMsg('Please choose Buy or Sell.', 'warning');
+      if (!Number.isFinite(qty) || qty <= 0) return setMsg('Enter a valid quantity.', 'warning');
+      if (!Number.isFinite(price) || price <= 0) return setMsg('Enter a valid price.', 'warning');
 
-      // Top 5 Buy/Sell - placeholder
-      const tb = document.getElementById('topBuyTbody');
-      const ts = document.getElementById('topSellTbody');
-      if (tb) tb.innerHTML = `<tr><td colspan="3" class="text-muted p-3 ps-3">Connect Top Buy API for ${symbol}.</td></tr>`;
-      if (ts) ts.innerHTML = `<tr><td colspan="3" class="text-muted p-3 ps-3">Connect Top Sell API for ${symbol}.</td></tr>`;
-    }
+      // Demo-only message (you can wire this to real endpoint)
+      setMsg(`✅ Ready to ${currentSide} ${qty} shares of ${sym} @ Rs ${price.toFixed(2)}. (Connect POST /api/trade/place/ to execute)`, 'success');
 
-    if (sIn) {
-      sIn.addEventListener('input', () => {
-        clearTimeout(sT);
-        const q = sIn.value.trim();
-        if (q.length < 2) {
-          if (rBox) rBox.style.display = 'none';
-          return;
-        }
-        sT = setTimeout(async () => {
-          const res = await fetch(`/api/search/?q=${encodeURIComponent(q)}`);
-          const d = await res.json();
-          const list = d.data || [];
-          if (rBox && list.length > 0) {
-            rBox.innerHTML = list.map(s => {
-              const pct = Number(s.change_pct || 0);
-              const cls = pct >= 0 ? 'text-success' : 'text-danger';
-              const sign = pct >= 0 ? '+' : '';
-              return `
-                <div class="search-result-item" data-symbol="${s.symbol}" data-ltp="${s.ltp}">
-                  <strong>${s.symbol}</strong>
-                  <span>
-                    Rs ${fmtNumber(s.ltp, 2)}
-                    <small class="${cls}">(${sign}${fmtNumber(pct, 2)}%)</small>
-                  </span>
-                </div>
-              `;
-            }).join('');
-            rBox.style.display = 'block';
-          } else if (rBox) {
-            rBox.style.display = 'none';
-          }
-        }, 200);
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!rBox) return;
-        if (!sIn.contains(e.target) && !rBox.contains(e.target)) rBox.style.display = 'none';
-      });
-
-      if (rBox) {
-        rBox.addEventListener('click', async (e) => {
-          const item = e.target.closest('.search-result-item');
-          if (!item) return;
-          const symbol = item.getAttribute('data-symbol');
-          const ltp = Number(item.getAttribute('data-ltp'));
-          rBox.style.display = 'none';
-          if (sIn) sIn.value = symbol;
-
-          await onSelectSymbol(symbol, ltp);
+      // OPTIONAL: if you implement place endpoint, uncomment:
+      /*
+      try {
+        const res = await fetch('/api/trade/place/', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({symbol: sym, side: currentSide, qty, price})
         });
+        const json = await res.json();
+        if (!json.success) return setMsg(json.message || 'Order failed.', 'danger');
+        setMsg('✅ Order placed successfully!', 'success');
+        await loadUserOrderHistory(sym);
+      } catch (err) {
+        setMsg('Order error.', 'danger');
+      }
+      */
+    });
+
+    // ==========================
+    // Sidebar toggle
+    // ==========================
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (toggleBtn && sidebar) toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
+
+    // ==========================
+    // Init + refresh
+    // ==========================
+    async function initTradePage() {
+      applySideUI();
+      await updateNavbarBar();
+      await refreshLatest();
+
+      // If trade page opened with query ?symbol=SHPC
+      const params = new URLSearchParams(window.location.search);
+      const qsym = params.get('symbol');
+      if (qsym) {
+        tradeSearch.value = qsym.toUpperCase();
+        applySelectedQuote(qsym.toUpperCase());
       }
     }
 
-    // Refresh order book button
-    const refreshBookBtn = document.getElementById('refreshBookBtn');
-    if (refreshBookBtn) {
-      refreshBookBtn.addEventListener('click', async () => {
-        if (!selectedSymbol) return;
-        await loadSelectedSymbolLiveCard(selectedSymbol);
-        await loadHistoryIntoOrderBook(selectedSymbol);
-      });
-    }
-
-    // ==========================
-    // Auto refresh (navbar + selected symbol panels)
-    // ==========================
-    async function refreshAll() {
+    initTradePage();
+    setInterval(async () => {
       try {
         await updateNavbarBar();
-        if (selectedSymbol) {
-          await loadSelectedSymbolLiveCard(selectedSymbol);
-          // keep orderbook live too
-          await loadHistoryIntoOrderBook(selectedSymbol);
-        }
+        await refreshLatest();
+        // if selected symbol, refresh order history too (optional)
+        if (selectedSymbol) await loadUserOrderHistory(selectedSymbol);
       } catch (e) {
-        console.error('refreshAll error', e);
+        console.error('trade refresh error', e);
       }
-    }
-
-    refreshAll();
-    setInterval(refreshAll, 10000);
+    }, 10000);
   </script>
 </body>
-
 </html>

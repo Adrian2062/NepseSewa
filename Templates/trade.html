@@ -3,749 +3,1259 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trade - NepseSewa</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trade - NepseSewa</title>
 
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet" />
+  <!-- CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
 
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        :root {
-            --primary: #10b981;
-            --primary-dark: #059669;
-            --primary-light: #d1fae5;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --light: #f3f4f6;
-            --dark: #1f2937;
-            --border: #e5e7eb;
-            --muted: #6b7280;
-            --bg: #f9fafb;
-        }
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-light: #d1fae5;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --light: #f3f4f6;
+      --dark: #1f2937;
+      --border: #e5e7eb;
+      --muted: #6b7280;
+      --bg: #f9fafb;
+    }
 
-        body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg);
-            color: var(--dark);
-        }
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--dark);
+    }
 
-        /* ===== NAVBAR (same as dashboard) ===== */
-        .navbar {
-            background: #fff;
-            border-bottom: 1px solid var(--border);
-            padding: 0.65rem 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 1040;
-            min-height: 70px;
-        }
+    /* ========== NAVBAR ========== */
+    .navbar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1040;
+      min-height: 70px;
+    }
 
-        .navbar-brand {
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: var(--primary) !important;
-            letter-spacing: -0.4px;
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-        }
+    .navbar-brand {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--primary) !important;
+      letter-spacing: -0.4px;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
 
-        .navbar-brand i { color: var(--primary); }
+    .navbar-brand i {
+      color: var(--primary);
+    }
 
-        .search-box .input-group {
-            background: var(--light);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            transition: all 0.2s ease;
-            overflow: hidden;
-        }
+    /* CENTER BAR */
+    .navbar-summary-integrated {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-grow: 1;
+      justify-content: center;
+      margin: 0 1.5rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
 
-        .search-box .input-group:focus-within {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
-        }
+    .navbar-summary-integrated::-webkit-scrollbar {
+      display: none;
+    }
 
-        .search-box .form-control {
-            border: none;
-            background: transparent;
-            font-size: 0.9rem;
-            padding: 0.6rem 0.9rem;
-        }
+    .nav-index-item {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+      min-width: 115px;
+    }
 
-        .search-box .form-control:focus { box-shadow: none; }
+    .nav-index-name {
+      font-size: 0.70rem;
+      font-weight: 800;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
 
-        .search-results-dropdown {
-            position: absolute;
-            top: 44px;
-            right: 0;
-            left: 0;
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
-            overflow: hidden;
-            display: none;
-            z-index: 2000;
-        }
+    .nav-index-value {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #111827;
+    }
 
-        .search-result-item {
-            padding: 0.75rem 0.9rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.9rem;
-        }
+    .nav-index-change {
+      font-size: 0.80rem;
+      font-weight: 700;
+    }
 
-        .search-result-item:last-child { border-bottom: none; }
-        .search-result-item:hover { background: var(--primary-light); }
+    .nav-v-separator {
+      width: 1px;
+      height: 34px;
+      background: #e5e7eb;
+      flex-shrink: 0;
+    }
 
-        .user-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 0.85rem;
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.30);
-        }
+    .nav-session-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+    }
 
-        .dropdown-menu {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
-            padding: 0.5rem 0;
-        }
+    .nav-session-info .nav-index-value {
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
 
-        .dropdown-item { padding: 0.70rem 1.0rem; font-size: 0.9rem; }
-        .dropdown-item:hover { background: var(--primary-light); color: var(--primary); }
+    .nav-market-totals {
+      display: flex;
+      flex-direction: column;
+      min-width: 260px;
+      text-align: right;
+    }
 
-        /* ===== SIDEBAR (same) ===== */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 220px;
-            background: #fff;
-            border-right: 1px solid var(--border);
-            padding-top: 70px;
-            z-index: 1030;
-        }
+    .nav-total-item {
+      font-size: 1.0rem;
+      font-weight: 800;
+      color: #2563eb;
+      line-height: 1.2;
+    }
 
-        .sidebar .nav-pills { gap: 0.25rem; padding: 0 0.5rem; }
+    /* Search */
+    .search-box .input-group {
+      background: var(--light);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+      overflow: hidden;
+    }
 
-        .sidebar .nav-pills::before {
-            content: 'Main Menu';
-            display: block;
-            padding: 0 1rem;
-            margin: 1rem 0 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--muted);
-        }
+    .search-box .input-group:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
+    }
 
-        .nav-link {
-            color: var(--muted) !important;
-            border-radius: 0 15px 15px 0;
-            padding: 0.95rem 1.25rem !important;
-            transition: all 0.25s ease;
-            font-weight: 600;
-            font-size: 0.95rem;
-            margin: 0.35rem 0.5rem 0.35rem 0 !important;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
+    .search-box .form-control {
+      border: none;
+      background: transparent;
+      font-size: 0.9rem;
+      padding: 0.6rem 0.9rem;
+    }
 
-        .nav-link:hover {
-            background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.06) 100%);
-            color: var(--primary) !important;
-            transform: translateX(4px);
-        }
+    .search-box .form-control:focus {
+      box-shadow: none;
+    }
 
-        .nav-link.active {
-            background: linear-gradient(90deg, rgba(16, 185, 129, 0.20) 0%, rgba(16, 185, 129, 0.08) 100%);
-            color: var(--primary) !important;
-            border-right: 3px solid var(--primary);
-            font-weight: 800;
-        }
+    .search-results-dropdown {
+      position: absolute;
+      top: 44px;
+      right: 0;
+      left: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
+      overflow: hidden;
+      display: none;
+      z-index: 2000;
+    }
 
-        .main-content { margin-left: 220px; padding: 1.5rem 1.5rem 2rem; }
+    .search-result-item {
+      padding: 0.75rem 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
 
-        /* ===== CARDS ===== */
-        .card {
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: all 0.25s ease;
-            overflow: hidden;
-        }
-        .card:hover { border-color: var(--primary); box-shadow: 0 10px 26px rgba(16,185,129,0.10); }
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
 
-        .card-header {
-            background: #fff;
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 1.25rem;
-        }
-        .card-title { font-weight: 900; font-size: 0.95rem; margin: 0; }
-        .card-body { padding: 1.25rem; }
+    .search-result-item:hover {
+      background: var(--primary-light);
+    }
 
-        /* ===== TRADE LAYOUT (TMS-like) ===== */
-        .trade-shell {
-            border: 2px solid rgba(16,185,129,.25);
-            border-radius: 16px;
-            overflow: hidden;
-            background: #fff;
-        }
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.30);
+    }
 
-        .trade-shell-topbar {
-            background: linear-gradient(135deg, rgba(16,185,129,0.16) 0%, rgba(5,150,105,0.06) 100%);
-            border-bottom: 1px solid var(--border);
-            padding: .9rem 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
+    .dropdown-menu {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+      padding: 0.5rem 0;
+    }
 
-        .trade-symbol {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.1;
-        }
-        .trade-symbol strong { font-size: 1.05rem; font-weight: 900; }
-        .trade-symbol span { font-size: .85rem; color: var(--muted); font-weight: 800; }
+    .dropdown-item {
+      padding: 0.70rem 1.0rem;
+      font-size: 0.9rem;
+    }
 
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            gap: .45rem;
-            padding: .35rem .65rem;
-            border-radius: 999px;
-            font-weight: 900;
-            font-size: .78rem;
-            border: 1px solid var(--border);
-            background: #fff;
-            white-space: nowrap;
-        }
+    .dropdown-item:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
 
-        .pill-success { border-color: rgba(16,185,129,.25); background: rgba(16,185,129,.08); color: var(--primary-dark); }
-        .pill-danger  { border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.08); color: #b91c1c; }
+    /* ========== LAYOUT ========== */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #fff;
+      border-right: 1px solid var(--border);
+      padding-top: 70px;
+      z-index: 1030;
+    }
 
-        .buy-sell-switch {
-            display: flex;
-            align-items: center;
-            gap: .6rem;
-            font-weight: 900;
-        }
+    .sidebar .nav-pills {
+      gap: 0.25rem;
+      padding: 0 0.5rem;
+    }
 
-        .switch-wrap {
-            width: 52px;
-            height: 28px;
-            border-radius: 999px;
-            background: #ef4444; /* default SELL */
-            position: relative;
-            cursor: pointer;
-            border: 1px solid rgba(0,0,0,.05);
-        }
-        .switch-knob {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #fff;
-            position: absolute;
-            top: 1px;
-            left: 2px;
-            transition: all .2s ease;
-            box-shadow: 0 6px 16px rgba(0,0,0,.15);
-        }
-        .switch-wrap.buy { background: #10b981; }
-        .switch-wrap.buy .switch-knob { left: 26px; }
+    .sidebar .nav-pills::before {
+      content: 'Main Menu';
+      display: block;
+      padding: 0 1rem;
+      margin: 1rem 0 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
 
-        .trade-grid {
-            display: grid;
-            grid-template-columns: 1.05fr 0.95fr;
-            gap: 0;
-        }
+    .nav-link {
+      color: var(--muted) !important;
+      border-radius: 0 15px 15px 0;
+      padding: 0.95rem 1.25rem !important;
+      transition: all 0.25s ease;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin: 0.35rem 0.5rem 0.35rem 0 !important;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
 
-        .trade-left, .trade-right {
-            padding: 1.1rem;
-        }
+    .nav-link:hover {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.06) 100%);
+      color: var(--primary) !important;
+      transform: translateX(4px);
+    }
 
-        .trade-left { border-right: 1px solid var(--border); }
+    .nav-link.active {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.20) 0%, rgba(16, 185, 129, 0.08) 100%);
+      color: var(--primary) !important;
+      border-right: 3px solid var(--primary);
+      font-weight: 800;
+    }
 
-        .form-label {
-            font-size: .75rem;
-            font-weight: 900;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: .7px;
-            margin-bottom: .35rem;
-        }
+    .main-content {
+      margin-left: 220px;
+      padding: 1.5rem 1.5rem 2rem;
+    }
 
-        .form-control, .form-select {
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            font-weight: 700;
-            padding: .6rem .8rem;
-        }
+    /* Cards */
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
 
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
-        }
+    .card-header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+    }
 
-        .btn-primary-theme {
-            border: none;
-            border-radius: 12px;
-            font-weight: 900;
-            padding: .7rem 1rem;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        }
+    .card-title {
+      font-weight: 900;
+      font-size: 1rem;
+      margin: 0;
+    }
 
-        .btn-outline-theme {
-            border-radius: 12px;
-            font-weight: 900;
-            padding: .7rem 1rem;
-            border: 1px solid rgba(16,185,129,.35);
-            color: var(--primary-dark);
-            background: #fff;
-        }
+    .card-body {
+      padding: 1.25rem;
+    }
 
-        .trade-mini-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: .6rem;
-            margin-top: 1rem;
-        }
-        .mini {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: .7rem .75rem;
-            background: #fff;
-        }
-        .mini small {
-            display: block;
-            color: var(--muted);
-            font-weight: 900;
-            font-size: .72rem;
-            text-transform: uppercase;
-            letter-spacing: .6px;
-        }
-        .mini div {
-            font-weight: 900;
-            margin-top: .15rem;
-        }
+    /* Trade Header Box */
+    .trade-shell {
+      border: 2px solid rgba(16, 185, 129, .25);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+    }
 
-        .split-panels {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: .9rem;
-            margin-top: 1rem;
-        }
+    .trade-topbar {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.10) 0%, rgba(5, 150, 105, 0.05) 100%);
+      padding: .9rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
 
-        .panel-head {
-            padding: .6rem .9rem;
-            font-weight: 900;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: .45rem;
-            border-radius: 12px 12px 0 0;
-        }
-        .panel-head.buy { background: #2563eb; }
-        .panel-head.sell { background: #ef4444; }
+    .trade-topbar .mini-stat {
+      display: flex;
+      gap: .6rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
 
-        .panel-body {
-            border: 1px solid var(--border);
-            border-top: none;
-            border-radius: 0 0 12px 12px;
-            overflow: hidden;
-            background: #fff;
-        }
+    .pill {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .35rem .65rem;
+      font-weight: 900;
+      font-size: .85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+    }
 
-        table {
-            width: 100%;
-            margin: 0;
-            border-collapse: collapse;
-        }
+    .pill i {
+      color: #111827;
+      opacity: .85;
+    }
 
-        th {
-            font-size: .72rem;
-            text-transform: uppercase;
-            letter-spacing: .65px;
-            font-weight: 900;
-            color: var(--muted);
-            background: #f9fafb;
-            border-bottom: 1px solid var(--border);
-            padding: .6rem .7rem;
-        }
+    /* 3-state toggle: SELL | (blank middle) | BUY  */
+    .trade-side-toggle {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      user-select: none;
+    }
 
-        td {
-            padding: .62rem .7rem;
-            border-bottom: 1px solid var(--border);
-            font-weight: 700;
-            font-size: .9rem;
-        }
+    .side-label {
+      font-weight: 900;
+      letter-spacing: .6px;
+      font-size: .9rem;
+    }
 
-        tr:last-child td { border-bottom: none; }
+    .side-sell {
+      color: var(--danger);
+    }
 
-        .orderbook-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: .75rem;
-            margin-bottom: .6rem;
-        }
+    .side-buy {
+      color: var(--success);
+    }
 
-        .orderbook-head h6 {
-            margin: 0;
-            font-weight: 900;
-        }
+    .triple-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+    }
 
-        .refresh-btn {
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            background: #fff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .refresh-btn:hover { background: var(--primary-light); border-color: rgba(16,185,129,.25); }
+    .triple-toggle .tbtn {
+      width: 46px;
+      height: 34px;
+      border: 0;
+      background: transparent;
+      font-weight: 900;
+      cursor: pointer;
+      transition: all .18s ease;
+      display: grid;
+      place-items: center;
+      font-size: .95rem;
+    }
 
-        /* responsive */
-        @media (max-width: 992px) {
-            .sidebar {
-                left: -100%;
-                top: 70px;
-                height: calc(100vh - 70px);
-                transition: left 0.25s ease;
-                box-shadow: 6px 0 18px rgba(0, 0, 0, 0.14);
-            }
-            .sidebar.show { left: 0; }
-            .main-content { margin-left: 0; padding: 1rem; }
-            .trade-grid { grid-template-columns: 1fr; }
-            .trade-left { border-right: none; border-bottom: 1px solid var(--border); }
-            .trade-mini-stats { grid-template-columns: repeat(2, 1fr); }
-        }
-    </style>
+    .triple-toggle .tbtn:hover {
+      background: rgba(0, 0, 0, .04);
+    }
+
+    .triple-toggle .tbtn.active {
+      color: #fff;
+    }
+
+    .triple-toggle[data-side="SELL"] .tbtn.active {
+      background: var(--danger);
+    }
+
+    .triple-toggle[data-side="BUY"] .tbtn.active {
+      background: var(--success);
+    }
+
+    .triple-toggle[data-side="NEUTRAL"] .tbtn.active {
+      background: #6b7280;
+    }
+
+    /* Form inputs */
+    .form-label {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+      font-weight: 900;
+      margin-bottom: .4rem;
+    }
+
+    .form-select,
+    .form-control {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: .65rem .8rem;
+      font-weight: 700;
+    }
+
+    .btn-neo {
+      border-radius: 12px;
+      font-weight: 900;
+      padding: .7rem 1rem;
+      border: none;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+    }
+
+    .btn-neo-outline {
+      border-radius: 12px;
+      font-weight: 900;
+      padding: .7rem 1rem;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #111827;
+    }
+
+    .btn-neo:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    /* Order book table */
+    .table thead th {
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+      font-weight: 900;
+      border-bottom: 1px solid var(--border) !important;
+    }
+
+    .table tbody td {
+      border-top: 1px solid var(--border) !important;
+      vertical-align: middle;
+      font-weight: 700;
+    }
+
+    .symbol-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .25rem .55rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-weight: 900;
+    }
+
+    /* responsive */
+    @media (max-width: 992px) {
+      .sidebar {
+        left: -100%;
+        top: 70px;
+        height: calc(100vh - 70px);
+        transition: left 0.25s ease;
+        box-shadow: 6px 0 18px rgba(0, 0, 0, 0.14);
+      }
+
+      .sidebar.show {
+        left: 0;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+      }
+
+      .navbar-summary-integrated {
+        display: none !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light">
-        <div class="container-fluid px-2">
-            <button class="btn btn-light d-lg-none me-2" id="sidebarToggle" type="button">
-                <i class="fas fa-bars"></i>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light">
+    <div class="container-fluid px-2">
+      <button class="btn btn-light d-lg-none me-2" id="sidebarToggle" type="button">
+        <i class="fas fa-bars"></i>
+      </button>
+
+      <a class="navbar-brand" href="{% url 'dashboard' %}">
+        <i class="fas fa-chart-line"></i> NepseSewa
+      </a>
+
+      <!-- CENTER: indices/status/turnover/volume -->
+      <div class="navbar-summary-integrated d-none d-lg-flex">
+        <div class="d-flex gap-4" id="barIndices">
+          <div class="nav-index-item">
+            <span class="nav-index-name">NEPSE</span>
+            <span class="nav-index-value">...</span>
+            <span class="nav-index-change text-muted">Loading...</span>
+          </div>
+        </div>
+
+        <div class="nav-v-separator"></div>
+
+        <div class="nav-session-info">
+          <span class="nav-index-name">Active Sessions</span>
+          <span class="nav-index-value" id="barSessionStatus">Loading...</span>
+        </div>
+
+        <div class="nav-v-separator"></div>
+
+        <div class="nav-market-totals">
+          <div class="nav-total-item" id="barTotalTurnover">Turnover: ...</div>
+          <div class="nav-total-item" id="barTotalVolume">Volume: ...</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: search + user -->
+      <div class="d-flex align-items-center gap-3 ms-auto">
+        <div class="search-box position-relative d-none d-md-block" style="min-width: 320px;">
+          <div class="input-group input-group-sm">
+            <input type="text" id="stockSearch" class="form-control" placeholder="Search stocks (e.g. NBL)..."
+              autocomplete="off">
+            <button class="btn btn-light" type="button">
+              <i class="fas fa-search"></i>
             </button>
-
-            <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="fas fa-chart-line"></i> NepseSewa
-            </a>
-
-            <!-- RIGHT: search + user -->
-            <div class="d-flex align-items-center gap-3 ms-auto">
-                <div class="search-box position-relative d-none d-md-block" style="min-width: 320px;">
-                    <div class="input-group input-group-sm">
-                        <input type="text" id="stockSearch" class="form-control"
-                            placeholder="Search stocks (e.g. NBL)..." autocomplete="off">
-                        <button class="btn btn-light" type="button">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                    <div id="searchResults" class="search-results-dropdown"></div>
-                </div>
-
-                <div class="dropdown">
-                    <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
-                        <div class="user-avatar me-2">
-                            {{ user.first_name|first }}{{ user.last_name|first }}
-                        </div>
-                        <span class="d-none d-lg-inline text-dark fw-bold" style="font-size: 0.9rem;">
-                            {{ user.first_name }}
-                        </span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                    </ul>
-                </div>
-            </div>
+          </div>
+          <div id="searchResults" class="search-results-dropdown"></div>
         </div>
-    </nav>
 
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <ul class="nav nav-pills flex-column">
-            <li class="nav-item px-2">
-                <a href="{% url 'dashboard' %}" class="nav-link">
-                    <i class="fas fa-home"></i><span>Dashboard</span>
-                </a>
+        <div class="dropdown">
+          <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
+            <div class="user-avatar me-2">
+              {{ user.first_name|first }}{{ user.last_name|first }}
+            </div>
+            <span class="d-none d-lg-inline text-dark fw-bold" style="font-size: 0.9rem;">
+              {{ user.first_name }}
+            </span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+            <li>
+              <hr class="dropdown-divider">
             </li>
-            <li class="nav-item px-2">
-                <a href="{% url 'portfolio' %}" class="nav-link">
-                    <i class="fas fa-chart-pie"></i><span>Portfolio</span>
-                </a>
-            </li>
-            <li class="nav-item px-2">
-                <a href="{% url 'trade' %}" class="nav-link active">
-                    <i class="fas fa-exchange-alt"></i><span>Trade</span>
-                </a>
-            </li>
-            <li class="nav-item px-2">
-                <a href="{% url 'market' %}" class="nav-link">
-                    <i class="fas fa-layer-group"></i><span>All Stocks</span>
-                </a>
-            </li>
-            <li class="nav-item px-2">
-                <a href="{% url 'watchlist' %}" class="nav-link">
-                    <i class="fas fa-star"></i><span>Watchlist</span>
-                </a>
-            </li>
-            <li class="nav-item px-2">
-                <a href="{% url 'learn' %}" class="nav-link">
-                    <i class="fas fa-graduation-cap"></i><span>Learn</span>
-                </a>
-            </li>
-            <li class="nav-item px-2">
-                <a href="{% url 'settings' %}" class="nav-link">
-                    <i class="fas fa-cog"></i><span>Settings</span>
-                </a>
-            </li>
-        </ul>
+            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <ul class="nav nav-pills flex-column">
+      <li class="nav-item px-2">
+        <a href="{% url 'dashboard' %}" class="nav-link">
+          <i class="fas fa-home"></i><span>Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'portfolio' %}" class="nav-link">
+          <i class="fas fa-chart-pie"></i><span>Portfolio</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'trade' %}" class="nav-link active">
+          <i class="fas fa-exchange-alt"></i><span>Trade</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'market' %}" class="nav-link">
+          <i class="fas fa-layer-group"></i><span>All Stocks</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'watchlist' %}" class="nav-link">
+          <i class="fas fa-star"></i><span>Watchlist</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'learn' %}" class="nav-link">
+          <i class="fas fa-graduation-cap"></i><span>Learn</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'settings' %}" class="nav-link">
+          <i class="fas fa-cog"></i><span>Settings</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content">
+    <div class="mb-3">
+      <h3 class="mb-0" style="font-weight: 900;">Trade</h3>
+      <div class="text-muted fw-bold">Order Entry • Search a stock • History in Order Book</div>
     </div>
 
-    <!-- Main -->
-    <div class="main-content">
-        <div class="mb-3">
-            <h4 class="mb-0" style="font-weight:900;">Trade</h4>
-            <div class="text-muted" style="font-weight:800;">Order Entry • Top 5 Buy/Sell • Order Book</div>
+    <div class="trade-shell">
+      <!-- Top green bar -->
+      <div class="trade-topbar">
+        <div class="fw-bold text-muted">
+          <i class="fa-solid fa-minus me-2"></i>
+          Select a stock from search
         </div>
 
-        <div class="trade-shell">
-            <!-- top bar -->
-            <div class="trade-shell-topbar">
-                <div class="trade-symbol">
-                    <strong id="uiSymbol">—</strong>
-                    <span id="uiCompany">Select a stock from search</span>
-                </div>
-
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="pill" id="uiLTP"><i class="fa-solid fa-tag"></i> LTP: —</span>
-                    <span class="pill" id="uiChange"><i class="fa-solid fa-chart-line"></i> —</span>
-                    <span class="pill" id="uiVolume"><i class="fa-solid fa-bolt"></i> Vol: —</span>
-                </div>
-
-                <div class="buy-sell-switch">
-                    <span id="labelSell" class="text-danger">SELL</span>
-                    <div id="modeSwitch" class="switch-wrap">
-                        <div class="switch-knob"></div>
-                    </div>
-                    <span id="labelBuy" class="text-success">BUY</span>
-                </div>
-            </div>
-
-            <!-- grid -->
-            <div class="trade-grid">
-                <!-- LEFT: Order Entry + Market mini stats + Top5 buy/sell -->
-                <div class="trade-left">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Product Type</label>
-                            <select class="form-select" id="productType">
-                                <option value="CNC" selected>CNC</option>
-                                <option value="MARGIN">MARGIN</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Order Type</label>
-                            <select class="form-select" id="orderType">
-                                <option value="LMT" selected>LMT</option>
-                                <option value="MKT">MKT</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Validity</label>
-                            <select class="form-select" id="validity">
-                                <option value="DAY" selected>DAY</option>
-                                <option value="GTC">GTC</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Symbol</label>
-                            <input type="text" class="form-control" id="symbolInput" placeholder="e.g. NBL" />
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Quantity</label>
-                            <input type="number" class="form-control" id="qtyInput" min="1" value="10" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Price (NPR)</label>
-                            <input type="number" class="form-control" id="priceInput" min="0" step="0.01"
-                                placeholder="Auto if MKT" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Estimated Amount</label>
-                            <input type="text" class="form-control" id="estAmount" value="—" disabled />
-                        </div>
-
-                        <div class="col-12 d-flex gap-2 mt-1">
-                            <button class="btn btn-primary-theme" id="placeOrderBtn">
-                                <i class="fas fa-paper-plane me-2"></i>Place Order
-                            </button>
-                            <button class="btn btn-outline-theme" id="cancelBtn">
-                                <i class="fas fa-times me-2"></i>Cancel
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- mini stats -->
-                    <div class="trade-mini-stats">
-                        <div class="mini">
-                            <small>Open</small>
-                            <div id="mOpen">—</div>
-                        </div>
-                        <div class="mini">
-                            <small>High</small>
-                            <div id="mHigh">—</div>
-                        </div>
-                        <div class="mini">
-                            <small>Low</small>
-                            <div id="mLow">—</div>
-                        </div>
-                        <div class="mini">
-                            <small>Prev Close</small>
-                            <div id="mPrevClose">—</div>
-                        </div>
-                    </div>
-
-                    <!-- top 5 buy/sell -->
-                    <div class="split-panels">
-                        <div>
-                            <div class="panel-head buy"><i class="fas fa-arrow-up"></i> TOP 5 BUY</div>
-                            <div class="panel-body">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Qty</th>
-                                            <th>Price</th>
-                                            <th>Orders</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="topBuyBody">
-                                        <tr><td colspan="3" class="text-muted" style="padding: .9rem;">Select a stock…</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="panel-head sell"><i class="fas fa-arrow-down"></i> TOP 5 SELL</div>
-                            <div class="panel-body">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Price</th>
-                                            <th>Qty</th>
-                                            <th>Orders</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="topSellBody">
-                                        <tr><td colspan="3" class="text-muted" style="padding: .9rem;">Select a stock…</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- RIGHT: Order Book -->
-                <div class="trade-right">
-                    <div class="orderbook-head">
-                        <h6 style="font-weight:900;">Order Book</h6>
-                        <button class="refresh-btn" id="refreshOrderBook" title="Refresh">
-                            <i class="fas fa-rotate"></i>
-                        </button>
-                    </div>
-
-                    <div class="card" style="border-radius: 12px;">
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>S.N</th>
-                                            <th>Action</th>
-                                            <th>Status</th>
-                                            <th>Symbol</th>
-                                            <th>Type</th>
-                                            <th>Qty</th>
-                                            <th>Price</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="orderBookBody">
-                                        <tr>
-                                            <td colspan="7" class="text-muted" style="padding: 1rem;">
-                                                No records (connect to your trades/orders API).
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center p-2 border-top"
-                                style="border-color: var(--border) !important;">
-                                <small class="text-muted fw-bold" id="orderBookCount">0 items</small>
-                                <small class="text-muted fw-bold" id="orderBookAsOf">As of —</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="text-muted mt-3" style="font-weight:800;font-size:.9rem;">
-                        Tip: Click a stock from search to load top buy/sell + stats.
-                    </div>
-                </div>
-            </div>
+        <div class="mini-stat">
+          <span class="pill"><i class="fa-solid fa-tag"></i> LTP: <span id="miniLtp">—</span></span>
+          <span class="pill"><i class="fa-solid fa-chart-line"></i> Chg: <span id="miniChg">—</span></span>
+          <span class="pill"><i class="fa-solid fa-bolt"></i> Vol: <span id="miniVol">—</span></span>
         </div>
+
+        <!-- SELL | (blank) | BUY : default middle -->
+        <div class="trade-side-toggle">
+          <span class="side-label side-sell">SELL</span>
+
+          <div class="triple-toggle" id="sideToggle" data-side="NEUTRAL">
+            <button type="button" class="tbtn" data-side="SELL" title="SELL">S</button>
+            <button type="button" class="tbtn active" data-side="NEUTRAL" title="(default)">&nbsp;</button>
+            <button type="button" class="tbtn" data-side="BUY" title="BUY">B</button>
+          </div>
+
+          <span class="side-label side-buy">BUY</span>
+
+          <!-- hidden value (SELL | NEUTRAL | BUY) -->
+          <input type="hidden" id="orderSide" value="NEUTRAL">
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="p-3">
+        <div class="row g-3">
+          <!-- Left: Order Entry -->
+          <div class="col-lg-7">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Product Type</label>
+                <select class="form-select" id="productType">
+                  <option value="CNC">CNC</option>
+                  <option value="MARGIN">MARGIN</option>
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Order Type</label>
+                <select class="form-select" id="orderType">
+                  <option value="LMT" selected>LMT</option>
+                  <option value="MKT">MKT</option>
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">Validity</label>
+                <select class="form-select" id="validity">
+                  <option value="DAY" selected>DAY</option>
+                  <option value="IOC">IOC</option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Symbol (search from navbar)</label>
+                <input class="form-control" id="symbolInput" placeholder="Select from search..." readonly />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Price (NPR)</label>
+                <input class="form-control" id="priceInput" type="number" step="0.01" placeholder="0" />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Quantity</label>
+                <input class="form-control" id="qtyInput" type="number" step="1" placeholder="0" />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Estimated Amount</label>
+                <input class="form-control" id="estAmount" placeholder="—" readonly />
+              </div>
+
+              <div class="col-12 d-flex gap-2">
+                <button class="btn-neo" id="placeOrderBtn" disabled>
+                  <i class="fa-solid fa-paper-plane me-2"></i>Place Order
+                </button>
+                <button class="btn-neo-outline" id="cancelBtn" type="button">
+                  <i class="fa-solid fa-xmark me-2"></i>Cancel
+                </button>
+              </div>
+
+              <!-- Stats (from history/latest if available) -->
+              <div class="col-12">
+                <div class="row g-2 mt-1">
+                  <div class="col-6 col-md-3">
+                    <div class="card">
+                      <div class="card-body">
+                        <div class="form-label mb-1">Open</div>
+                        <div class="fw-bold" id="stOpen">—</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <div class="card">
+                      <div class="card-body">
+                        <div class="form-label mb-1">High</div>
+                        <div class="fw-bold" id="stHigh">—</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <div class="card">
+                      <div class="card-body">
+                        <div class="form-label mb-1">Low</div>
+                        <div class="fw-bold" id="stLow">—</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <div class="card">
+                      <div class="card-body">
+                        <div class="form-label mb-1">Prev Close</div>
+                        <div class="fw-bold" id="stPrev">—</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top 5 Buy/Sell (placeholder) -->
+              <div class="col-12">
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <div class="card">
+                      <div class="card-header" style="background:#2563eb;color:#fff;">
+                        <div class="fw-bold"><i class="fa-solid fa-arrow-up me-2"></i>TOP 5 BUY</div>
+                      </div>
+                      <div class="card-body p-0">
+                        <div class="table-responsive">
+                          <table class="table mb-0">
+                            <thead>
+                              <tr>
+                                <th class="ps-3">Qty</th>
+                                <th>Price</th>
+                                <th class="pe-3 text-end">Orders</th>
+                              </tr>
+                            </thead>
+                            <tbody id="topBuyTbody">
+                              <tr>
+                                <td colspan="3" class="text-muted p-3 ps-3">Select a stock...</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="card">
+                      <div class="card-header" style="background:#ef4444;color:#fff;">
+                        <div class="fw-bold"><i class="fa-solid fa-arrow-down me-2"></i>TOP 5 SELL</div>
+                      </div>
+                      <div class="card-body p-0">
+                        <div class="table-responsive">
+                          <table class="table mb-0">
+                            <thead>
+                              <tr>
+                                <th class="ps-3">Price</th>
+                                <th>Qty</th>
+                                <th class="pe-3 text-end">Orders</th>
+                              </tr>
+                            </thead>
+                            <tbody id="topSellTbody">
+                              <tr>
+                                <td colspan="3" class="text-muted p-3 ps-3">Select a stock...</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Right: Order Book (History) -->
+          <div class="col-lg-5">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <h5 class="card-title">Order Book</h5>
+                <button class="btn btn-light btn-sm" id="refreshBookBtn" title="Refresh">
+                  <i class="fa-solid fa-rotate"></i>
+                </button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table mb-0">
+                    <thead>
+                      <tr>
+                        <th class="ps-3">S.N</th>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th class="text-end pe-3">LTP</th>
+                      </tr>
+                    </thead>
+                    <tbody id="orderBookTbody">
+                      <tr>
+                        <td colspan="4" class="text-muted p-3 ps-3">
+                          No records (select a stock from search).
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="d-flex justify-content-between px-3 py-2 border-top">
+                  <div class="text-muted fw-bold"><span id="orderBookCount">0</span> items</div>
+                  <div class="text-muted fw-bold">As of <span id="orderBookAsOf">—</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-muted fw-bold mt-2" style="font-size:.9rem;">
+              Tip: Click a stock from search to load stats + history into Order Book.
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
-    <!-- JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'js/nepse-trade.js' %}"></script>
+  </div>
 
-    <script>
-        // Sidebar toggle (same as dashboard)
-        const sidebar = document.getElementById('sidebar');
-        const toggleBtn = document.getElementById('sidebarToggle');
-        if (toggleBtn && sidebar) {
-            toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ==========================
+    // Helpers
+    // ==========================
+    function fmtNumber(n, digits = 2) {
+      if (n === null || n === undefined || isNaN(n)) return '—';
+      return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+    function fmtInt(n) {
+      if (n === null || n === undefined || isNaN(n)) return '—';
+      return Number(n).toLocaleString();
+    }
+    function safeText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+    function isMarketActive(latestIso, minutes = 5) {
+      try {
+        const t = new Date(latestIso).getTime();
+        const now = Date.now();
+        return (now - t) <= minutes * 60 * 1000;
+      } catch {
+        return false;
+      }
+    }
+
+    // ==========================
+    // Sidebar toggle
+    // ==========================
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (toggleBtn && sidebar) {
+      toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
+    }
+
+    // ==========================
+    // Navbar center bar
+    // ==========================
+    async function updateNavbarBar() {
+      const nepseRes = await fetch('/api/nepse-index/');
+      const nepseJson = await nepseRes.json();
+
+      const sectorRes = await fetch('/api/sector-indices/');
+      const sectorJson = await sectorRes.json();
+
+      const summaryRes = await fetch('/api/market-summary/');
+      const summaryJson = await summaryRes.json();
+
+      const barIndices = document.getElementById('barIndices');
+
+      let nepseVal = null, nepseChg = null;
+      if (nepseJson && nepseJson.success) {
+        nepseVal = nepseJson.data.value;
+        nepseChg = nepseJson.data.change_pct;
+      }
+
+      let sensitive = null, floatIdx = null;
+      if (sectorJson && sectorJson.success && Array.isArray(sectorJson.data)) {
+        sensitive = sectorJson.data.find(x => (x.name || '').toLowerCase().includes('sensitive'));
+        floatIdx = sectorJson.data.find(x => (x.name || '').toLowerCase().includes('float'));
+      }
+
+      if (barIndices) {
+        const parts = [];
+
+        parts.push(`
+          <div class="nav-index-item">
+            <span class="nav-index-name">NEPSE</span>
+            <span class="nav-index-value">${nepseVal !== null ? fmtNumber(nepseVal, 2) : '—'}</span>
+            <span class="nav-index-change ${nepseChg !== null && nepseChg >= 0 ? 'text-success' : 'text-danger'}">
+              ${nepseChg !== null ? (nepseChg >= 0 ? '+' : '') + fmtNumber(nepseChg, 2) + '%' : '—'}
+            </span>
+          </div>
+        `);
+
+        if (sensitive) {
+          parts.push(`
+            <div class="nav-index-item">
+              <span class="nav-index-name">SENSITIVE</span>
+              <span class="nav-index-value">${fmtNumber(sensitive.value, 2)}</span>
+              <span class="nav-index-change ${Number(sensitive.change_pct) >= 0 ? 'text-success' : 'text-danger'}">
+                ${(Number(sensitive.change_pct) >= 0 ? '+' : '') + fmtNumber(sensitive.change_pct, 2)}%
+              </span>
+            </div>
+          `);
         }
-    </script>
+
+        if (floatIdx) {
+          parts.push(`
+            <div class="nav-index-item">
+              <span class="nav-index-name">FLOAT</span>
+              <span class="nav-index-value">${fmtNumber(floatIdx.value, 2)}</span>
+              <span class="nav-index-change ${Number(floatIdx.change_pct) >= 0 ? 'text-success' : 'text-danger'}">
+                ${(Number(floatIdx.change_pct) >= 0 ? '+' : '') + fmtNumber(floatIdx.change_pct, 2)}%
+              </span>
+            </div>
+          `);
+        }
+
+        barIndices.innerHTML = parts.join('');
+      }
+
+      const turnoverEl = document.getElementById('barTotalTurnover');
+      const volumeEl = document.getElementById('barTotalVolume');
+      const statusEl = document.getElementById('barSessionStatus');
+
+      if (summaryJson && summaryJson.success) {
+        const d = summaryJson.data;
+
+        if (turnoverEl) turnoverEl.textContent = `Turnover: ${fmtNumber(d.total_turnover, 2)}`;
+        if (volumeEl) volumeEl.textContent = `Volume: ${fmtInt(d.total_traded_shares)}`;
+
+        const active = isMarketActive(d.timestamp, 5);
+        if (statusEl) statusEl.textContent = active ? 'CONTINUOUS' : 'NO ACTIVE SESSIONS';
+      }
+    }
+
+    // ==========================
+    // 3-state side toggle (middle is BLANK)
+    // ==========================
+    const sideToggle = document.getElementById('sideToggle');
+    const orderSide = document.getElementById('orderSide');
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
+
+    function setSide(side) {
+      if (!sideToggle || !orderSide) return;
+      sideToggle.querySelectorAll('.tbtn').forEach(b => b.classList.remove('active'));
+      const btn = sideToggle.querySelector(`.tbtn[data-side="${side}"]`);
+      if (btn) btn.classList.add('active');
+
+      sideToggle.setAttribute('data-side', side);
+      orderSide.value = side;
+
+      // Disable order button while neutral
+      if (placeOrderBtn) placeOrderBtn.disabled = (side === 'NEUTRAL');
+    }
+
+    if (sideToggle) {
+      sideToggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('.tbtn');
+        if (!btn) return;
+        setSide(btn.dataset.side);
+      });
+      setSide('NEUTRAL'); // default middle
+    }
+
+    // ==========================
+    // Trade calculations
+    // ==========================
+    const priceInput = document.getElementById('priceInput');
+    const qtyInput = document.getElementById('qtyInput');
+    const estAmount = document.getElementById('estAmount');
+
+    function updateEstimated() {
+      const p = Number(priceInput?.value || 0);
+      const q = Number(qtyInput?.value || 0);
+      const amt = p * q;
+      if (estAmount) estAmount.value = isFinite(amt) && amt > 0 ? `Rs ${fmtNumber(amt, 2)}` : '—';
+    }
+    if (priceInput) priceInput.addEventListener('input', updateEstimated);
+    if (qtyInput) qtyInput.addEventListener('input', updateEstimated);
+
+    // Cancel
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        if (priceInput) priceInput.value = '';
+        if (qtyInput) qtyInput.value = '';
+        updateEstimated();
+        setSide('NEUTRAL');
+      });
+    }
+
+    // Place order (UI only; connect to your Django POST later)
+    if (placeOrderBtn) {
+      placeOrderBtn.addEventListener('click', () => {
+        const sym = document.getElementById('symbolInput')?.value?.trim();
+        const side = orderSide?.value;
+        if (!sym) return alert('Select a stock from search first.');
+        if (side === 'NEUTRAL') return alert('Select BUY or SELL.');
+        alert(`Demo: ${side} order for ${sym} (connect to your backend POST).`);
+      });
+    }
+
+    // ==========================
+    // Search (navbar) -> fills trade symbol + loads history into orderbook
+    // ==========================
+    const sIn = document.getElementById('stockSearch');
+    const rBox = document.getElementById('searchResults');
+    const symbolInput = document.getElementById('symbolInput');
+
+    let sT = null;
+    let selectedSymbol = null;
+
+    async function loadSelectedSymbolLiveCard(symbol) {
+      // pull from /api/latest/ to fill mini stats quickly
+      try {
+        const res = await fetch('/api/latest/');
+        const json = await res.json();
+        const arr = Array.isArray(json?.data) ? json.data : [];
+        const item = arr.find(x => String(x.symbol).toUpperCase() === String(symbol).toUpperCase());
+
+        if (!item) {
+          safeText('miniLtp', '—');
+          safeText('miniChg', '—');
+          safeText('miniVol', '—');
+          return;
+        }
+
+        safeText('miniLtp', `Rs ${fmtNumber(item.ltp, 2)}`);
+        const chg = Number(item.change_pct || 0);
+        safeText('miniChg', `${chg >= 0 ? '+' : ''}${fmtNumber(chg, 2)}%`);
+        safeText('miniVol', fmtInt(item.volume));
+      } catch (e) {
+        console.error('loadSelectedSymbolLiveCard error', e);
+      }
+    }
+
+    async function loadHistoryIntoOrderBook(symbol) {
+      const tbody = document.getElementById('orderBookTbody');
+      const countEl = document.getElementById('orderBookCount');
+      const asofEl = document.getElementById('orderBookAsOf');
+
+      if (!tbody) return;
+
+      try {
+        // Your endpoint exists in urls: /api/history/?symbol=XXXX
+        const res = await fetch(`/api/history/?symbol=${encodeURIComponent(symbol)}`);
+        const json = await res.json();
+
+        const rows = Array.isArray(json?.data) ? json.data : [];
+        const show = rows.slice(-20).reverse(); // last 20
+
+        if (!show.length) {
+          tbody.innerHTML = `
+            <tr><td colspan="4" class="text-muted p-3 ps-3">No history found for ${symbol}.</td></tr>
+          `;
+          if (countEl) countEl.textContent = '0';
+          if (asofEl) asofEl.textContent = new Date().toLocaleString();
+          return;
+        }
+
+        // Try to map common fields. If your API uses different keys, update these 3 lines.
+        // expected: { date/time, ltp } OR { timestamp, close }
+        const mapped = show.map((x, idx) => {
+          const t = x.time || x.timestamp || x.date || x.tran_date || x.datetime || '';
+          const ltp = x.ltp ?? x.close ?? x.price ?? x.value ?? null;
+          return { sn: idx + 1, t, ltp };
+        });
+
+        tbody.innerHTML = mapped.map(r => `
+          <tr>
+            <td class="ps-3">${r.sn}</td>
+            <td>${r.t ? String(r.t) : '—'}</td>
+            <td><span class="symbol-pill"><i class="fa-solid fa-tag"></i>${symbol}</span></td>
+            <td class="text-end pe-3">${r.ltp !== null && r.ltp !== undefined ? 'Rs ' + fmtNumber(r.ltp, 2) : '—'}</td>
+          </tr>
+        `).join('');
+
+        if (countEl) countEl.textContent = String(mapped.length);
+        if (asofEl) asofEl.textContent = new Date().toLocaleString();
+
+        // Also fill Open/High/Low/Prev placeholders if your history includes them
+        // If your API returns these directly, map them here.
+        safeText('stOpen', json?.meta?.open ?? '—');
+        safeText('stHigh', json?.meta?.high ?? '—');
+        safeText('stLow', json?.meta?.low ?? '—');
+        safeText('stPrev', json?.meta?.prev_close ?? '—');
+
+      } catch (e) {
+        console.error('loadHistoryIntoOrderBook error', e);
+        tbody.innerHTML = `<tr><td colspan="4" class="text-muted p-3 ps-3">Error loading history.</td></tr>`;
+      }
+    }
+
+    async function onSelectSymbol(symbol, ltp) {
+      selectedSymbol = symbol;
+      if (symbolInput) symbolInput.value = symbol;
+
+      // set default price = ltp for convenience
+      if (priceInput && ltp !== null && ltp !== undefined && !isNaN(ltp)) {
+        priceInput.value = Number(ltp).toFixed(2);
+        updateEstimated();
+      }
+
+      await loadSelectedSymbolLiveCard(symbol);
+      await loadHistoryIntoOrderBook(symbol);
+
+      // Top 5 Buy/Sell - placeholder
+      const tb = document.getElementById('topBuyTbody');
+      const ts = document.getElementById('topSellTbody');
+      if (tb) tb.innerHTML = `<tr><td colspan="3" class="text-muted p-3 ps-3">Connect Top Buy API for ${symbol}.</td></tr>`;
+      if (ts) ts.innerHTML = `<tr><td colspan="3" class="text-muted p-3 ps-3">Connect Top Sell API for ${symbol}.</td></tr>`;
+    }
+
+    if (sIn) {
+      sIn.addEventListener('input', () => {
+        clearTimeout(sT);
+        const q = sIn.value.trim();
+        if (q.length < 2) {
+          if (rBox) rBox.style.display = 'none';
+          return;
+        }
+        sT = setTimeout(async () => {
+          const res = await fetch(`/api/search/?q=${encodeURIComponent(q)}`);
+          const d = await res.json();
+          const list = d.data || [];
+          if (rBox && list.length > 0) {
+            rBox.innerHTML = list.map(s => {
+              const pct = Number(s.change_pct || 0);
+              const cls = pct >= 0 ? 'text-success' : 'text-danger';
+              const sign = pct >= 0 ? '+' : '';
+              return `
+                <div class="search-result-item" data-symbol="${s.symbol}" data-ltp="${s.ltp}">
+                  <strong>${s.symbol}</strong>
+                  <span>
+                    Rs ${fmtNumber(s.ltp, 2)}
+                    <small class="${cls}">(${sign}${fmtNumber(pct, 2)}%)</small>
+                  </span>
+                </div>
+              `;
+            }).join('');
+            rBox.style.display = 'block';
+          } else if (rBox) {
+            rBox.style.display = 'none';
+          }
+        }, 200);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!rBox) return;
+        if (!sIn.contains(e.target) && !rBox.contains(e.target)) rBox.style.display = 'none';
+      });
+
+      if (rBox) {
+        rBox.addEventListener('click', async (e) => {
+          const item = e.target.closest('.search-result-item');
+          if (!item) return;
+          const symbol = item.getAttribute('data-symbol');
+          const ltp = Number(item.getAttribute('data-ltp'));
+          rBox.style.display = 'none';
+          if (sIn) sIn.value = symbol;
+
+          await onSelectSymbol(symbol, ltp);
+        });
+      }
+    }
+
+    // Refresh order book button
+    const refreshBookBtn = document.getElementById('refreshBookBtn');
+    if (refreshBookBtn) {
+      refreshBookBtn.addEventListener('click', async () => {
+        if (!selectedSymbol) return;
+        await loadSelectedSymbolLiveCard(selectedSymbol);
+        await loadHistoryIntoOrderBook(selectedSymbol);
+      });
+    }
+
+    // ==========================
+    // Auto refresh (navbar + selected symbol panels)
+    // ==========================
+    async function refreshAll() {
+      try {
+        await updateNavbarBar();
+        if (selectedSymbol) {
+          await loadSelectedSymbolLiveCard(selectedSymbol);
+          // keep orderbook live too
+          await loadHistoryIntoOrderBook(selectedSymbol);
+        }
+      } catch (e) {
+        console.error('refreshAll error', e);
+      }
+    }
+
+    refreshAll();
+    setInterval(refreshAll, 10000);
+  </script>
 </body>
 
 </html>

@@ -424,3 +424,7 @@ def api_sector_indices(request):
 def stocks(request):
     # just render page; it will load data using /api/latest/
     return render(request, "stocks.html")
+
+@login_required
+def trade(request):
+    return render(request, 'trade.html')

@@ -1,6 +1,0 @@
-{% for stock in all_stocks %}
-<div class="ticker-item">
-    <strong>{{ stock.symbol }}:</strong>
-    <span class="{% if stock.change_pct >= 0 %}text-success{% else %}text-danger{% endif %}">{% if stock.change_pct >= 0 %}+{% endif %}{{ stock.change_pct|floatformat:2 }}%</span>
-</div>
-{% endfor %}

@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/sector-indices/', views.api_sector_indices, name='api_sector_indices'),
     path('stocks/', views.stocks, name='stocks'),
     path('api/trade/history/', views.api_trade_history, name='api_trade_history'),
+    path('api/trade/place/', views.api_place_order, name='api_place_order'),
 
 
 ]

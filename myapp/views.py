@@ -461,3 +461,78 @@ def api_trade_history(request):
     } for t in qs]
 
     return JsonResponse({"success": True, "data": data})
+
+
+@require_http_methods(["POST"])
+@login_required
+def api_place_order(request):
+    """
+    POST /api/trade/place/
+    body: {symbol, side, qty, price}
+    """
+    import json
+    try:
+        data = json.loads(request.body)
+        symbol = (data.get('symbol') or '').strip().upper()
+        side = (data.get('side') or '').strip().upper()
+        
+        try:
+            qty = int(data.get('qty', 0))
+            price = float(data.get('price', 0.0))
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'Invalid quantity or price.'})
+
+        if not symbol:
+            return JsonResponse({'success': False, 'message': 'Symbol is required.'})
+        
+        if side not in ['BUY', 'SELL']:
+            return JsonResponse({'success': False, 'message': 'Invalid side (BUY/SELL).'})
+            
+        if qty <= 0:
+            return JsonResponse({'success': False, 'message': 'Quantity must be positive.'})
+            
+        if price <= 0:
+            return JsonResponse({'success': False, 'message': 'Price must be positive.'})
+
+        user = request.user
+        total_cost = qty * price
+
+        if side == 'BUY':
+            # Convert to Decimal for precise calculation
+            from decimal import Decimal
+            cost_decimal = Decimal(str(total_cost))
+            
+            if user.virtual_balance < cost_decimal:
+                 return JsonResponse({
+                    'success': False, 
+                    'message': f'Insufficient balance. Your limit is Rs {user.virtual_balance:,.2f} but order cost is Rs {total_cost:,.2f}.'
+                })
+            
+            user.virtual_balance -= cost_decimal
+            user.save()
+
+        elif side == 'SELL':
+            # For now, we don't check portfolio holdings (as per request simplicity/focus on BUY limit)
+            # But we should credit the user
+            from decimal import Decimal
+            cost_decimal = Decimal(str(total_cost))
+            user.virtual_balance += cost_decimal
+            user.save()
+
+        # Create Trade
+        Trade.objects.create(
+            user=user,
+            symbol=symbol,
+            side=side,
+            qty=qty,
+            price=price,
+            status='COMPLETED'
+        )
+
+        return JsonResponse({
+            'success': True, 
+            'message': f'Order placed successfully! {side} {qty} {symbol} @ {price}'
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})

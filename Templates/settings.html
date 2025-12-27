@@ -1,0 +1,772 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings - NepseSewa</title>
+
+  <!-- CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --primary-light: #d1fae5;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --light: #f3f4f6;
+      --dark: #1f2937;
+      --border: #e5e7eb;
+      --muted: #6b7280;
+      --bg: #f9fafb;
+    }
+
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--dark);
+    }
+
+    /* navbar */
+    .navbar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1040;
+      min-height: 70px;
+    }
+    .navbar-brand {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--primary) !important;
+      letter-spacing: -0.4px;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .navbar-summary-integrated {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-grow: 1;
+      justify-content: center;
+      margin: 0 1.5rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .navbar-summary-integrated::-webkit-scrollbar { display: none; }
+
+    .nav-index-item { display:flex; flex-direction:column; line-height:1.15; min-width:115px; }
+    .nav-index-name { font-size:.70rem; font-weight:800; color:#9ca3af; text-transform:uppercase; letter-spacing:.8px; }
+    .nav-index-value { font-size:1.05rem; font-weight:800; color:#111827; }
+    .nav-index-change { font-size:.80rem; font-weight:700; }
+    .nav-v-separator { width:1px; height:34px; background:#e5e7eb; flex-shrink:0; }
+    .nav-session-info { display:flex; flex-direction:column; min-width:180px; }
+    .nav-session-info .nav-index-value { font-size:.95rem; font-weight:800; }
+    .nav-market-totals { display:flex; flex-direction:column; min-width:260px; text-align:right; }
+    .nav-total-item { font-size:1.0rem; font-weight:800; color:#2563eb; line-height:1.2; }
+
+    /* search */
+    .search-box .input-group {
+      background: var(--light);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+      overflow: hidden;
+    }
+    .search-box .input-group:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
+    }
+    .search-box .form-control {
+      border: none;
+      background: transparent;
+      font-size: 0.9rem;
+      padding: 0.6rem 0.9rem;
+    }
+    .search-box .form-control:focus { box-shadow: none; }
+
+    .search-results-dropdown {
+      position: absolute;
+      top: 44px;
+      right: 0;
+      left: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
+      overflow: hidden;
+      display: none;
+      z-index: 2000;
+    }
+    .search-result-item {
+      padding: 0.75rem 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .search-result-item:last-child { border-bottom:none; }
+    .search-result-item:hover { background: var(--primary-light); }
+
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.30);
+    }
+    .dropdown-menu {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+      padding: 0.5rem 0;
+    }
+    .dropdown-item { padding: 0.70rem 1.0rem; font-size: 0.9rem; }
+    .dropdown-item:hover { background: var(--primary-light); color: var(--primary); }
+
+    /* layout */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 220px;
+      background: #fff;
+      border-right: 1px solid var(--border);
+      padding-top: 70px;
+      z-index: 1030;
+    }
+    .sidebar .nav-pills { gap: 0.25rem; padding: 0 0.5rem; }
+    .sidebar .nav-pills::before {
+      content: 'Main Menu';
+      display: block;
+      padding: 0 1rem;
+      margin: 1rem 0 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .nav-link {
+      color: var(--muted) !important;
+      border-radius: 0 15px 15px 0;
+      padding: 0.95rem 1.25rem !important;
+      transition: all 0.25s ease;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin: 0.35rem 0.5rem 0.35rem 0 !important;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .nav-link:hover {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.06) 100%);
+      color: var(--primary) !important;
+      transform: translateX(4px);
+    }
+    .nav-link.active {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.20) 0%, rgba(16, 185, 129, 0.08) 100%);
+      color: var(--primary) !important;
+      border-right: 3px solid var(--primary);
+      font-weight: 800;
+    }
+    .main-content { margin-left: 220px; padding: 1.5rem 1.5rem 2rem; }
+
+    @media (max-width: 992px) {
+      .sidebar {
+        left: -100%;
+        top: 70px;
+        height: calc(100vh - 70px);
+        transition: left 0.25s ease;
+        box-shadow: 6px 0 18px rgba(0, 0, 0, 0.14);
+      }
+      .sidebar.show { left: 0; }
+      .main-content { margin-left: 0; padding: 1rem; }
+      .navbar-summary-integrated { display: none !important; }
+    }
+
+    /* page header */
+    .hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 1.6rem 1.6rem;
+      box-shadow: 0 10px 28px rgba(16, 185, 129, 0.20);
+      margin-bottom: 1.25rem;
+    }
+    .hero h4 { font-weight: 900; margin-bottom: .25rem; }
+    .hero p { margin: 0; opacity: .92; font-weight: 600; }
+
+    /* cards */
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      background: #fff;
+    }
+    .card-header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+    }
+    .card-title { font-weight: 800; font-size: 0.95rem; margin: 0; }
+
+    .soft-input {
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .65rem .85rem;
+      font-size: .9rem;
+    }
+    .soft-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, .10);
+      outline: none;
+    }
+
+    .hint { color: var(--muted); font-size: .85rem; font-weight: 600; }
+    .section-title { font-weight: 900; font-size: .95rem; margin: 0; }
+
+    .toggle-row {
+      display:flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: .85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .toggle-row + .toggle-row { margin-top: .75rem; }
+    .toggle-row:hover { background: var(--primary-light); transition: background .15s ease; }
+
+    .switch.form-check-input {
+      width: 44px;
+      height: 22px;
+      cursor: pointer;
+    }
+
+    .danger-zone {
+      border: 1px solid rgba(239,68,68,.25);
+      background: rgba(239,68,68,.06);
+    }
+    .danger-zone .btn { font-weight: 900; border-radius: 12px; }
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light">
+    <div class="container-fluid px-2">
+      <button class="btn btn-light d-lg-none me-2" id="sidebarToggle" type="button">
+        <i class="fas fa-bars"></i>
+      </button>
+
+      <a class="navbar-brand" href="{% url 'dashboard' %}">
+        <i class="fas fa-chart-line"></i> NepseSewa
+      </a>
+
+      <!-- CENTER -->
+      <div class="navbar-summary-integrated d-none d-lg-flex">
+        <div class="d-flex gap-4" id="barIndices">
+          <div class="nav-index-item">
+            <span class="nav-index-name">NEPSE</span>
+            <span class="nav-index-value">...</span>
+            <span class="nav-index-change text-muted">Loading...</span>
+          </div>
+        </div>
+
+        <div class="nav-v-separator"></div>
+
+        <div class="nav-session-info">
+          <span class="nav-index-name">Active Sessions</span>
+          <span class="nav-index-value" id="barSessionStatus">Loading...</span>
+        </div>
+
+        <div class="nav-v-separator"></div>
+
+        <div class="nav-market-totals">
+          <div class="nav-total-item" id="barTotalTurnover">Turnover: ...</div>
+          <div class="nav-total-item" id="barTotalVolume">Volume: ...</div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="d-flex align-items-center gap-3 ms-auto">
+        <div class="search-box position-relative d-none d-md-block" style="min-width: 320px;">
+          <div class="input-group input-group-sm">
+            <input type="text" id="stockSearch" class="form-control" placeholder="Search stocks (e.g. NBL)..."
+              autocomplete="off">
+            <button class="btn btn-light" type="button">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+          <div id="searchResults" class="search-results-dropdown"></div>
+        </div>
+
+        <div class="dropdown">
+          <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
+            <div class="user-avatar me-2">
+              {{ user.first_name|first }}{{ user.last_name|first }}
+            </div>
+            <span class="d-none d-lg-inline text-dark fw-bold" style="font-size: 0.9rem;">
+              {{ user.first_name }}
+            </span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <ul class="nav nav-pills flex-column">
+      <li class="nav-item px-2">
+        <a href="{% url 'dashboard' %}" class="nav-link">
+          <i class="fas fa-home"></i><span>Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'portfolio' %}" class="nav-link">
+          <i class="fas fa-chart-pie"></i><span>Portfolio</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'trade' %}" class="nav-link">
+          <i class="fas fa-exchange-alt"></i><span>Trade</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'market' %}" class="nav-link">
+          <i class="fas fa-layer-group"></i><span>All Stocks</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'watchlist' %}" class="nav-link">
+          <i class="fas fa-star"></i><span>Watchlist</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'learn' %}" class="nav-link">
+          <i class="fas fa-graduation-cap"></i><span>Learn</span>
+        </a>
+      </li>
+      <li class="nav-item px-2">
+        <a href="{% url 'settings' %}" class="nav-link active">
+          <i class="fas fa-cog"></i><span>Settings</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <h4>Settings ⚙️</h4>
+          <p>Manage your profile, preferences, and security.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="btn btn-light" href="{% url 'dashboard' %}" style="font-weight:900;border-radius:12px;">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+          </a>
+          <button class="btn btn-success" id="saveAllBtn" style="font-weight:900;border-radius:12px;">
+            <i class="fas fa-save me-2"></i>Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+
+      <!-- Left: Profile + Preferences -->
+      <div class="col-lg-7">
+
+        <!-- Profile -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-user-circle text-success me-2"></i>Profile</h5>
+            <span class="hint">Update your account info</span>
+          </div>
+          <div class="card-body p-4">
+            <form id="profileForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="section-title mb-2">First Name</label>
+                  <input class="soft-input w-100" name="first_name" value="{{ user.first_name }}" placeholder="First name" />
+                </div>
+                <div class="col-md-6">
+                  <label class="section-title mb-2">Last Name</label>
+                  <input class="soft-input w-100" name="last_name" value="{{ user.last_name }}" placeholder="Last name" />
+                </div>
+                <div class="col-12">
+                  <label class="section-title mb-2">Email</label>
+                  <input class="soft-input w-100" type="email" name="email" value="{{ user.email }}" placeholder="Email" />
+                  <div class="hint mt-2">We’ll use this for account recovery and notifications.</div>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="section-title mb-2">Phone (optional)</label>
+                  <input class="soft-input w-100" name="phone" placeholder="98XXXXXXXX" />
+                </div>
+                <div class="col-md-6">
+                  <label class="section-title mb-2">Default Currency</label>
+                  <select class="soft-input w-100" name="currency">
+                    <option value="NPR" selected>NPR (Rs)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-sliders-h text-info me-2"></i>Preferences</h5>
+            <span class="hint">Control your experience</span>
+          </div>
+          <div class="card-body p-4">
+            <div class="toggle-row">
+              <div>
+                <div class="section-title">Enable Market Notifications</div>
+                <div class="hint">Get alerts for big moves and signals.</div>
+              </div>
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input switch" type="checkbox" id="notifToggle" checked>
+              </div>
+            </div>
+
+            <div class="toggle-row">
+              <div>
+                <div class="section-title">Email Updates</div>
+                <div class="hint">Weekly summary + learning tips.</div>
+              </div>
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input switch" type="checkbox" id="emailToggle">
+              </div>
+            </div>
+
+            <div class="toggle-row">
+              <div>
+                <div class="section-title">Show Buy/Sell Confidence</div>
+                <div class="hint">Display confidence score on watchlist.</div>
+              </div>
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input switch" type="checkbox" id="confidenceToggle" checked>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+              <div class="col-md-6">
+                <label class="section-title mb-2">Default Timeframe</label>
+                <select class="soft-input w-100" id="timeframeSelect">
+                  <option value="1D">1 Day</option>
+                  <option value="1W" selected>1 Week</option>
+                  <option value="1M">1 Month</option>
+                  <option value="3M">3 Months</option>
+                  <option value="1Y">1 Year</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="section-title mb-2">Risk Profile</label>
+                <select class="soft-input w-100" id="riskSelect">
+                  <option value="Low">Low</option>
+                  <option value="Medium" selected>Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Security + Danger zone -->
+      <div class="col-lg-5">
+
+        <!-- Security -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-lock text-warning me-2"></i>Security</h5>
+            <span class="hint">Keep your account safe</span>
+          </div>
+          <div class="card-body p-4">
+            <div class="toggle-row">
+              <div>
+                <div class="section-title">Two-Factor Authentication</div>
+                <div class="hint">Extra protection for login.</div>
+              </div>
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input switch" type="checkbox" id="twoFaToggle">
+              </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <form id="passwordForm">
+              <div class="mb-3">
+                <label class="section-title mb-2">Current Password</label>
+                <input class="soft-input w-100" type="password" name="current_password" placeholder="••••••••" />
+              </div>
+              <div class="mb-3">
+                <label class="section-title mb-2">New Password</label>
+                <input class="soft-input w-100" type="password" name="new_password" placeholder="New password" />
+              </div>
+              <div class="mb-3">
+                <label class="section-title mb-2">Confirm New Password</label>
+                <input class="soft-input w-100" type="password" name="confirm_password" placeholder="Confirm new password" />
+              </div>
+
+              <button type="button" class="btn btn-outline-success w-100" id="changePasswordBtn"
+                style="font-weight:900;border-radius:12px;">
+                <i class="fas fa-key me-2"></i>Change Password
+              </button>
+              <div class="hint mt-2" id="passMsg"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card danger-zone">
+          <div class="card-header" style="background:transparent;">
+            <h5 class="card-title mb-0 text-danger"><i class="fas fa-triangle-exclamation me-2"></i>Danger Zone</h5>
+          </div>
+          <div class="card-body p-4">
+            <div class="mb-3">
+              <div class="section-title text-danger">Reset Virtual Balance</div>
+              <div class="hint">Resets your virtual balance and portfolio (demo action).</div>
+              <button class="btn btn-outline-danger mt-2 w-100" data-bs-toggle="modal" data-bs-target="#resetModal">
+                <i class="fas fa-rotate-left me-2"></i>Reset
+              </button>
+            </div>
+
+            <div>
+              <div class="section-title text-danger">Delete Account</div>
+              <div class="hint">This permanently deletes your account and data.</div>
+              <button class="btn btn-danger mt-2 w-100" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fas fa-trash me-2"></i>Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="text-muted mt-3" style="font-weight:600;">
+      Note: This is UI. Connect forms to Django views (POST) for real save/update.
+    </div>
+  </div>
+
+  <!-- Reset Modal -->
+  <div class="modal fade" id="resetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;border:1px solid var(--border);">
+        <div class="modal-header">
+          <h5 class="modal-title" style="font-weight:900;">Reset Virtual Balance?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="hint">This will reset your virtual portfolio and balance. (Demo UI)</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-outline-danger" id="confirmResetBtn">
+            <i class="fas fa-rotate-left me-2"></i>Confirm Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:16px;border:1px solid var(--border);">
+        <div class="modal-header">
+          <h5 class="modal-title" style="font-weight:900;">Delete Account?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="hint mb-2">This cannot be undone. Type <b>DELETE</b> to confirm.</div>
+          <input class="soft-input w-100" id="deleteConfirmInput" placeholder="Type DELETE" />
+          <div class="hint mt-2" id="deleteMsg"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-danger" id="confirmDeleteBtn" disabled>
+            <i class="fas fa-trash me-2"></i>Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (toggleBtn && sidebar) toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
+
+    // Demo save button (replace with form submit)
+    const saveBtn = document.getElementById('saveAllBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        saveBtn.innerHTML = '<i class="fas fa-check me-2"></i>Saved';
+        saveBtn.classList.remove('btn-success');
+        saveBtn.classList.add('btn-outline-success');
+        setTimeout(() => {
+          saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Changes';
+          saveBtn.classList.remove('btn-outline-success');
+          saveBtn.classList.add('btn-success');
+        }, 1400);
+      });
+    }
+
+    // Password demo validation
+    const changeBtn = document.getElementById('changePasswordBtn');
+    const passMsg = document.getElementById('passMsg');
+    if (changeBtn) {
+      changeBtn.addEventListener('click', () => {
+        const form = document.getElementById('passwordForm');
+        const newP = form?.querySelector('[name="new_password"]')?.value || '';
+        const conf = form?.querySelector('[name="confirm_password"]')?.value || '';
+
+        if (!passMsg) return;
+
+        if (newP.length < 6) {
+          passMsg.textContent = '❌ Password must be at least 6 characters.';
+          passMsg.style.color = '#ef4444';
+          return;
+        }
+        if (newP !== conf) {
+          passMsg.textContent = '❌ New password and confirm password do not match.';
+          passMsg.style.color = '#ef4444';
+          return;
+        }
+        passMsg.textContent = '✅ Password looks valid (demo). Connect backend to update.';
+        passMsg.style.color = '#059669';
+      });
+    }
+
+    // Delete confirm input
+    const delInput = document.getElementById('deleteConfirmInput');
+    const delBtn = document.getElementById('confirmDeleteBtn');
+    const delMsg = document.getElementById('deleteMsg');
+    if (delInput && delBtn) {
+      delInput.addEventListener('input', () => {
+        const ok = delInput.value.trim().toUpperCase() === 'DELETE';
+        delBtn.disabled = !ok;
+        if (delMsg) {
+          delMsg.textContent = ok ? 'Ready to delete (demo).' : '';
+          delMsg.style.color = ok ? '#059669' : '#6b7280';
+        }
+      });
+    }
+
+    // Reset demo
+    const resetBtn = document.getElementById('confirmResetBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        resetBtn.innerHTML = '<i class="fas fa-check me-2"></i>Reset Done';
+        resetBtn.classList.add('disabled');
+      });
+    }
+
+    // OPTIONAL: same search dropdown behavior (needs /api/search/)
+    const sIn = document.getElementById('stockSearch');
+    const rBox = document.getElementById('searchResults');
+    let sT;
+
+    function fmtNumber(n, digits = 2) {
+      if (n === null || n === undefined || isNaN(n)) return '—';
+      return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    if (sIn) {
+      sIn.addEventListener('input', () => {
+        clearTimeout(sT);
+        const q = sIn.value.trim();
+        if (q.length < 2) { if (rBox) rBox.style.display = 'none'; return; }
+
+        sT = setTimeout(async () => {
+          try {
+            const res = await fetch(`/api/search/?q=${encodeURIComponent(q)}`);
+            const d = await res.json();
+            const list = Array.isArray(d.data) ? d.data : [];
+
+            if (rBox && list.length > 0) {
+              rBox.innerHTML = list.map(s => `
+                <div class="search-result-item" onclick="window.location.href='/trade/?symbol=${s.symbol}'">
+                  <strong>${s.symbol}</strong>
+                  <span>
+                    Rs ${fmtNumber(s.ltp, 2)}
+                    <small class="${Number(s.change_pct) >= 0 ? 'text-success' : 'text-danger'}">
+                      (${Number(s.change_pct) >= 0 ? '+' : ''}${fmtNumber(s.change_pct, 2)}%)
+                    </small>
+                  </span>
+                </div>
+              `).join('');
+              rBox.style.display = 'block';
+            } else if (rBox) {
+              rBox.style.display = 'none';
+            }
+          } catch {
+            if (rBox) rBox.style.display = 'none';
+          }
+        }, 250);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!rBox) return;
+        if (!sIn.contains(e.target) && !rBox.contains(e.target)) rBox.style.display = 'none';
+      });
+    }
+
+    // OPTIONAL: Navbar bar indices live (copy your dashboard updateNavbarBar() if needed)
+  </script>
+</body>
+
+</html>

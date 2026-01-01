@@ -4,8 +4,8 @@ from myapp import views
 
 
 urlpatterns = [
+    path('', include('myapp.urls')),   # Moved before admin.site.urls to prioritize custom admin routes
     path('admin/', admin.site.urls),
-    path('', include('myapp.urls')),   # <== IMPORTANT
     path('login/', views.login_view, name='login'),
     path('accounts/', include('allauth.urls')),
 

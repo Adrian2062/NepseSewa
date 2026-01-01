@@ -1,0 +1,66 @@
+<nav class="navbar navbar-expand-lg navbar-light app-navbar">
+  <div class="container-fluid px-2">
+    <button class="btn btn-light d-lg-none me-2" id="sidebarToggle" type="button">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <a class="navbar-brand" href="{% url 'dashboard' %}">
+      <i class="fas fa-chart-line"></i> NepseSewa
+    </a>
+
+    <!-- Center bar (desktop only) -->
+    <div class="navbar-summary-integrated d-none d-lg-flex">
+      <div class="d-flex gap-4" id="barIndices">
+        <div class="nav-index-item">
+          <span class="nav-index-name">NEPSE</span>
+          <span class="nav-index-value">...</span>
+          <span class="nav-index-change text-muted">Loading...</span>
+        </div>
+      </div>
+
+      <div class="nav-v-separator"></div>
+
+      <div class="nav-session-info">
+        <span class="nav-index-name">Active Sessions</span>
+        <span class="nav-index-value" id="barSessionStatus">Loading...</span>
+      </div>
+
+      <div class="nav-v-separator"></div>
+
+      <div class="nav-market-totals">
+        <div class="nav-total-item" id="barTotalTurnover">Turnover: ...</div>
+        <div class="nav-total-item" id="barTotalVolume">Volume: ...</div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <div class="search-box position-relative d-none d-md-block" style="min-width: 320px;">
+        <div class="input-group input-group-sm">
+          <input type="text" id="stockSearch" class="form-control"
+                 placeholder="Search stocks (e.g. NBL)..." autocomplete="off">
+          <button class="btn btn-light" type="button"><i class="fas fa-search"></i></button>
+        </div>
+        <div id="searchResults" class="search-results-dropdown"></div>
+      </div>
+
+      <div class="dropdown">
+        <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
+          <div class="user-avatar me-2">
+            {{ user.first_name|default:"U"|first }}{{ user.last_name|default:""|first }}
+          </div>
+          <span class="d-none d-lg-inline text-dark fw-bold" style="font-size:0.9rem;">
+            {{ user.first_name|default:"User" }}
+          </span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
+          <li><a class="dropdown-item" href="{% url 'settings' %}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
+            <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>

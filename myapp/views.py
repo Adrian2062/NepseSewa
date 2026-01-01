@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
-from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary
+from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio
 
 User = get_user_model()
 

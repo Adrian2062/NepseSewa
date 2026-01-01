@@ -136,7 +136,141 @@ class MarketSummary(models.Model):
             return f"{self.total_traded_shares:,.0f}"
         return "N/A"
 
+# ============= ORDER MODEL (PENDING/OPEN ORDERS) =============
+class Order(models.Model):
+    """Represents a pending or partially filled order"""
+    SIDE_CHOICES = [
+        ('BUY', 'BUY'),
+        ('SELL', 'SELL'),
+    ]
+
+    STATUS_CHOICES = [
+        ('OPEN', 'OPEN'),           # Not filled at all
+        ('PARTIAL', 'PARTIAL'),     # Partially filled
+        ('FILLED', 'FILLED'),       # Completely filled
+        ('CANCELLED', 'CANCELLED'), # Cancelled by user
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='orders'
+    )
+    symbol = models.CharField(max_length=50, db_index=True)
+    side = models.CharField(max_length=4, choices=SIDE_CHOICES, db_index=True)
+    qty = models.PositiveIntegerField()
+    filled_qty = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=12, decimal_places=2)  # Limit price
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='OPEN', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'orders'
+        ordering = ['created_at']  # Time priority (oldest first)
+        indexes = [
+            models.Index(fields=['symbol', 'side', 'status', 'created_at']),
+            models.Index(fields=['user', 'status', '-created_at']),
+            models.Index(fields=['symbol', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} {self.side} {self.symbol} {self.filled_qty}/{self.qty} @ {self.price}"
+
+    @property
+    def remaining_qty(self):
+        """Calculate remaining quantity to be filled"""
+        return self.qty - self.filled_qty
+
+    @property
+    def is_fully_filled(self):
+        """Check if order is completely filled"""
+        return self.filled_qty >= self.qty
+
+
+# ============= PORTFOLIO MODEL (USER HOLDINGS) =============
+class Portfolio(models.Model):
+    """Track user's stock holdings"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='portfolio'
+    )
+    symbol = models.CharField(max_length=50, db_index=True)
+    quantity = models.PositiveIntegerField(default=0)
+    avg_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'portfolio'
+        unique_together = [['user', 'symbol']]
+        indexes = [
+            models.Index(fields=['user', 'symbol']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.symbol}: {self.quantity} @ {self.avg_price}"
+
+
+# ============= TRADE EXECUTION MODEL (COMPLETED TRADES) =============
+class TradeExecution(models.Model):
+    """Log of executed trades (matches between buy and sell orders)"""
+    buy_order = models.ForeignKey(
+        'Order',
+        on_delete=models.CASCADE,
+        related_name='buy_executions'
+    )
+    sell_order = models.ForeignKey(
+        'Order',
+        on_delete=models.CASCADE,
+        related_name='sell_executions'
+    )
+    symbol = models.CharField(max_length=50, db_index=True)
+    executed_qty = models.PositiveIntegerField()
+    executed_price = models.DecimalField(max_digits=12, decimal_places=2)
+    executed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'trade_executions'
+        ordering = ['-executed_at']
+        indexes = [
+            models.Index(fields=['symbol', '-executed_at']),
+            models.Index(fields=['-executed_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.symbol} {self.executed_qty} @ {self.executed_price} on {self.executed_at}"
+
+
+# ============= MARKET SESSION MODEL =============
+class MarketSession(models.Model):
+    """Manage market trading sessions and hours"""
+    SESSION_STATUS_CHOICES = [
+        ('PRE_OPEN', 'PRE_OPEN'),       # Future: 9:00-11:00
+        ('CONTINUOUS', 'CONTINUOUS'),   # 11:00-15:00
+        ('CLOSED', 'CLOSED'),           # Outside trading hours
+        ('PAUSED', 'PAUSED'),           # Admin paused
+    ]
+
+    session_date = models.DateField(unique=True, db_index=True)
+    status = models.CharField(max_length=15, choices=SESSION_STATUS_CHOICES, default='CLOSED')
+    opened_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'market_sessions'
+        ordering = ['-session_date']
+
+    def __str__(self):
+        return f"{self.session_date} - {self.status}"
+
+
+# ============= LEGACY TRADE MODEL (KEPT FOR BACKWARD COMPATIBILITY) =============
 class Trade(models.Model):
+    """Legacy model - kept for backward compatibility with existing data"""
     SIDE_CHOICES = [
         ('BUY', 'BUY'),
         ('SELL', 'SELL'),

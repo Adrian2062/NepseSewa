@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import trading_api
+from . import admin_views
 
 urlpatterns = [
     path('', views.landing_page, name='landing'),
@@ -25,8 +27,22 @@ urlpatterns = [
     path('api/market-summary/', views.api_market_summary, name='api_market_summary'),
     path('api/sector-indices/', views.api_sector_indices, name='api_sector_indices'),
     path('stocks/', views.stocks, name='stocks'),
+    
+    # Legacy trade endpoints (kept for backward compatibility)
     path('api/trade/history/', views.api_trade_history, name='api_trade_history'),
-    path('api/trade/place/', views.api_place_order, name='api_place_order'),
+    path('api/trade/place/', views.api_place_order, name='api_place_order_legacy'),
+    
+    # New Trading Engine API Endpoints
+    path('api/orderbook/<str:symbol>/', trading_api.api_orderbook, name='api_orderbook'),
+    path('api/market/session/', trading_api.api_market_session, name='api_market_session'),
+    path('api/trade/orders/', trading_api.api_user_orders, name='api_user_orders'),
+    path('api/trade/cancel/<int:order_id>/', trading_api.api_cancel_order, name='api_cancel_order'),
+    path('api/trade/place-new/', trading_api.api_place_order_new, name='api_place_order_new'),
+    path('api/trade/executions/', trading_api.api_trade_executions, name='api_trade_executions'),
 
-
+    # Admin Dashboard
+    path('admin/trading/dashboard/', admin_views.trading_dashboard, name='admin_trading_dashboard'),
+    path('admin/trading/pause/', admin_views.pause_market_view, name='admin_pause_market'),
+    path('admin/trading/resume/', admin_views.resume_market_view, name='admin_resume_market'),
+    path('admin/scraper/run/', admin_views.run_scraper_view, name='admin_run_scraper'),
 ]

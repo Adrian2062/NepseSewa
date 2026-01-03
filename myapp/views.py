@@ -13,6 +13,8 @@ from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
 from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio
 
+
+
 User = get_user_model()
 
 # --- Email authentication backend ---
@@ -127,17 +129,32 @@ def login_view(request):
     context = get_nepse_context()
     
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        form_type = request.POST.get('form-type')
         
-        user = authenticate(request, username=email, password=password)
-        
-        if user is not None:
-            login(request, user)
-            next_url = request.GET.get('next', 'dashboard')
-            return redirect(next_url)
+        if form_type == 'register':
+            form = RegistrationForm(request.POST)
+            if form.is_valid():
+                user = form.save()
+                login(request, user, backend='myapp.views.EmailBackend')
+                messages.success(request, "Registration successful!")
+                return redirect('dashboard')
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
         else:
-            messages.error(request, 'Invalid email or password')
+            # Login logic
+            email = request.POST.get('email')
+            password = request.POST.get('password')
+            
+            user = authenticate(request, username=email, password=password)
+            
+            if user is not None:
+                login(request, user)
+                next_url = request.GET.get('next', 'dashboard')
+                return redirect(next_url)
+            else:
+                messages.error(request, 'Invalid email or password')
     
     return render(request, 'login.html', context)
 

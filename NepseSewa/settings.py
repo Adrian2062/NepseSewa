@@ -197,8 +197,7 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # Allow login with email or username
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_UNIQUE_EMAIL = True
 
 # Email verification (optional - no verification needed)
@@ -208,7 +207,7 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'
 SOCIALACCOUNT_ADAPTER = 'allauth.socialaccount.adapter.DefaultSocialAccountAdapter'
 
 # Prevent showing allauth's default signup page
-ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE = False
+ACCOUNT_SIGNUP_FIELDS = ['email']
 
 # ========== OPTIONAL: Google OAuth Credentials ==========
 # Store these securely in environment variables in production
@@ -230,5 +229,26 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 100,
 }
+
+
+
+
+
+
+# Email Configuration (Development - Saves to 'emails' folder)
+# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+# EMAIL_FILE_PATH = BASE_DIR / "emails"
+
+# Email Configuration (Production/Real Emails)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+# You must generate an App Password for this to work: https://myaccount.google.com/apppasswords
+EMAIL_HOST_USER = 'adrianpoudyal@gmail.com'  # Replace with your actual Gmail
+EMAIL_HOST_PASSWORD = 'rdrbpwoygnadghxs'  # The 16-character code from Google
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
 
 

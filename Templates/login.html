@@ -483,8 +483,8 @@
                         <input class="form-check-input" type="checkbox" id="remember">
                         <label class="form-check-label small text-muted" for="remember">Remember me</label>
                     </div>
-                    <a href="#" class="small text-danger text-decoration-none"
-                        onclick="showForgot(); return false;">Forgot Password?</a>
+                    <a href="{% url 'password_reset' %}" class="small text-danger text-decoration-none">Forgot
+                        Password?</a>
                 </div>
 
                 <button type="submit" class="btn btn-success w-100 mb-3">
@@ -571,32 +571,6 @@
                 </div>
             </form>
 
-            <!-- Forgot Password Form -->
-            <form id="forgotForm" class="form-container">
-                <div class="form-title">
-                    <h3 class="text-danger">Reset Password</h3>
-                    <p>Enter your email to reset your password</p>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label">Email Address</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light"><i class="fas fa-envelope text-muted"></i></span>
-                        <input type="email" class="form-control" placeholder="your@email.com">
-                    </div>
-                    <div class="form-text">We'll send a password reset link to your email.</div>
-                </div>
-
-                <button type="submit" class="btn btn-danger w-100 mb-3">
-                    <i class="fas fa-paper-plane me-2"></i>Send Reset Link
-                </button>
-
-                <div class="text-center">
-                    <a href="#" class="text-success text-decoration-none fw-bold" onclick="showLogin(); return false;">
-                        <i class="fas fa-arrow-left me-1"></i>Back to Sign In
-                    </a>
-                </div>
-            </form>
         </div>
     </div>
 
@@ -612,10 +586,7 @@
             document.getElementById('registerForm').classList.add('active');
         }
 
-        function showForgot() {
-            hideAll();
-            document.getElementById('forgotForm').classList.add('active');
-        }
+
 
         function hideAll() {
             document.querySelectorAll('.form-container').forEach(f => f.classList.remove('active'));

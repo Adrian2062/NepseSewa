@@ -11,6 +11,8 @@ ALLOWED_HOSTS = []
 
 
 INSTALLED_APPS = [
+    'unfold',
+    'unfold.contrib.filters',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -25,6 +27,56 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 ]
+
+# Unfold Admin Configuration
+UNFOLD = {
+    "SITE_TITLE": "NepseSewa Admin",
+    "SITE_HEADER": "NepseSewa Trading Engine",
+    "SITE_URL": "/",
+    "DASHBOARD_CALLBACK": "myapp.admin_views.dashboard_callback",  # Optional: For custom dashboard metrics
+    "COLORS": {
+        "primary": {
+            "50": "239 246 255",
+            "100": "219 234 254",
+            "200": "191 219 254",
+            "300": "147 197 253",
+            "400": "96 165 250",
+            "500": "59 130 246",
+            "600": "37 99 235",
+            "700": "29 78 216",
+            "800": "30 64 175",
+            "900": "30 58 138",
+            "950": "23 37 84",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": "Trading Operations",
+                "separator": True,
+                "items": [
+                    {
+                        "title": "Trading Dashboard",
+                        "icon": "bar_chart",  # Material Icon
+                        "link": "admin_trading_dashboard", # URL Name
+                    },
+                    {
+                        "title": "Orders",
+                        "icon": "list_alt",
+                        "link": "admin:myapp_order_changelist",
+                    },
+                    {
+                        "title": "Executions",
+                        "icon": "receipt_long",
+                        "link": "admin:myapp_tradeexecution_changelist",
+                    },
+                ],
+            },
+        ],
+    },
+}
 SITE_ID = 1
 
 MIDDLEWARE = [

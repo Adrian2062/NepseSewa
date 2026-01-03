@@ -13,6 +13,20 @@ import threading
 
 from .models import Order, TradeExecution, MarketSession, MarketSummary
 from .services.market_session import get_current_session, pause_market, resume_market, get_nepal_time
+from django.contrib.admin.sites import site
+
+def dashboard_callback(request, context):
+    """
+    Unfold dashboard callback (REQUIRED)
+    """
+    context.update({
+        "title": "NepseSewa Admin Dashboard",
+        "user": request.user,
+        "nepal_time": get_nepal_time(),
+        "app_list": site.get_app_list(request),
+    })
+    return context
+
 
 @staff_member_required
 def trading_dashboard(request):

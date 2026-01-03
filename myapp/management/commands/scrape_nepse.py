@@ -11,7 +11,6 @@ from django.utils import timezone
 import chromedriver_autoinstaller
 from myapp.models import NEPSEPrice, MarketIndex, MarketSummary, NEPSEIndex
 import re
-
 chromedriver_autoinstaller.install()
 
 class Command(BaseCommand):

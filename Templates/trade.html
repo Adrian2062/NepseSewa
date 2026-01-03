@@ -1,1328 +1,455 @@
+{% extends "layouts/app_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trade - NepseSewa</title>
-
-  <!-- CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet" />
-
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    :root {
-      --primary: #10b981;
-      --primary-dark: #059669;
-      --primary-light: #d1fae5;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --info: #3b82f6;
-      --light: #f3f4f6;
-      --dark: #1f2937;
-      --border: #e5e7eb;
-      --muted: #6b7280;
-      --bg: #f9fafb;
-    }
-
-    body {
-      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--dark);
-    }
-
-    /* NAVBAR */
-    .navbar {
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      padding: .65rem 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 1040;
-      min-height: 70px;
-    }
-
-    .navbar-brand {
-      font-size: 1.35rem;
-      font-weight: 800;
-      color: var(--primary) !important;
-      letter-spacing: -.4px;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-    }
-
-    .navbar-brand i {
-      color: var(--primary);
-    }
-
-    .navbar-summary-integrated {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      flex-grow: 1;
-      justify-content: center;
-      margin: 0 1.5rem;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .navbar-summary-integrated::-webkit-scrollbar {
-      display: none;
-    }
-
-    .nav-index-item {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.15;
-      min-width: 115px;
-    }
-
-    .nav-index-name {
-      font-size: .70rem;
-      font-weight: 800;
-      color: #9ca3af;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-    }
-
-    .nav-index-value {
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: #111827;
-    }
-
-    .nav-index-change {
-      font-size: .80rem;
-      font-weight: 700;
-    }
-
-    .nav-v-separator {
-      width: 1px;
-      height: 34px;
-      background: #e5e7eb;
-      flex-shrink: 0;
-    }
-
-    .nav-session-info {
-      display: flex;
-      flex-direction: column;
-      min-width: 180px;
-    }
-
-    .nav-session-info .nav-index-value {
-      font-size: .95rem;
-      font-weight: 800;
-    }
-
-    .nav-market-totals {
-      display: flex;
-      flex-direction: column;
-      min-width: 260px;
-      text-align: right;
-    }
-
-    .nav-total-item {
-      font-size: 1.0rem;
-      font-weight: 800;
-      color: #2563eb;
-      line-height: 1.2;
-    }
-
-    .user-avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: .85rem;
-      box-shadow: 0 6px 16px rgba(16, 185, 129, .30);
-    }
-
-    .dropdown-menu {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 14px 34px rgba(0, 0, 0, .12);
-      padding: .5rem 0;
-    }
-
-    .dropdown-item {
-      padding: .70rem 1rem;
-      font-size: .9rem;
-    }
-
-    .dropdown-item:hover {
-      background: var(--primary-light);
-      color: var(--primary);
-    }
-
-    /* SIDEBAR */
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: 220px;
-      background: #fff;
-      border-right: 1px solid var(--border);
-      padding-top: 70px;
-      z-index: 1030;
-    }
-
-    .sidebar .nav-pills {
-      gap: .25rem;
-      padding: 0 .5rem;
-    }
-
-    .sidebar .nav-pills::before {
-      content: 'Main Menu';
-      display: block;
-      padding: 0 1rem;
-      margin: 1rem 0 .5rem;
-      font-size: .75rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-    }
-
-    .nav-link {
-      color: var(--muted) !important;
-      border-radius: 0 15px 15px 0;
-      padding: .95rem 1.25rem !important;
-      transition: all .25s ease;
-      font-weight: 600;
-      font-size: .95rem;
-      margin: .35rem .5rem .35rem 0 !important;
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-    }
-
-    .nav-link:hover {
-      background: linear-gradient(90deg, rgba(16, 185, 129, .12) 0%, rgba(16, 185, 129, .06) 100%);
-      color: var(--primary) !important;
-      transform: translateX(4px);
-    }
-
-    .nav-link.active {
-      background: linear-gradient(90deg, rgba(16, 185, 129, .20) 0%, rgba(16, 185, 129, .08) 100%);
-      color: var(--primary) !important;
-      border-right: 3px solid var(--primary);
-      font-weight: 800;
-    }
-
-    /* MAIN */
-    .main-content {
-      margin-left: 220px;
-      padding: 1.5rem 1.5rem 2rem;
-    }
-
-    /* CARDS */
-    .card {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
-      transition: all .25s ease;
-      overflow: hidden;
-    }
-
-    .card:hover {
-      border-color: var(--primary);
-      box-shadow: 0 10px 26px rgba(16, 185, 129, .10);
-    }
-
-    .card-header {
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 1.25rem;
-    }
-
-    .card-title {
-      font-weight: 800;
-      font-size: .95rem;
-      margin: 0;
-    }
-
-    .card-body {
-      padding: 1.25rem;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: .45rem;
-      padding: .35rem .6rem;
-      border-radius: 999px;
-      font-weight: 800;
-      font-size: .78rem;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: #111827;
-    }
-
-    /* HERO */
-    .stock-hero {
-      background: linear-gradient(135deg, rgba(16, 185, 129, .12) 0%, rgba(5, 150, 105, .06) 100%);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.25rem;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .stock-hero h4 {
-      margin: 0;
-      font-weight: 900;
-      letter-spacing: -.3px;
-    }
-
-    .stock-hero .sub {
-      color: var(--muted);
-      font-weight: 700;
-      font-size: .92rem;
-    }
-
-    .quote-box {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .quote-item {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.2;
-    }
-
-    .quote-label {
-      font-size: .72rem;
-      font-weight: 900;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-    }
-
-    .quote-value {
-      font-size: 1.2rem;
-      font-weight: 900;
-      color: #111827;
-    }
-
-    .quote-change {
-      font-size: .9rem;
-      font-weight: 900;
-    }
-
-    /* BUY/SELL TOGGLE */
-    .side-toggle {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: .25rem;
-      display: inline-flex;
-      gap: .25rem;
-      align-items: center;
-    }
-
-    .side-btn {
-      border: none;
-      border-radius: 999px;
-      padding: .55rem 1rem;
-      font-weight: 900;
-      font-size: .9rem;
-      background: transparent;
-      color: #111827;
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      transition: all .15s ease;
-    }
-
-    .side-btn:hover {
-      background: rgba(16, 185, 129, .08);
-    }
-
-    .side-btn.active-buy {
-      background: rgba(16, 185, 129, .12);
-      color: var(--primary-dark);
-      border: 1px solid rgba(16, 185, 129, .25);
-    }
-
-    .side-btn.active-sell {
-      background: rgba(239, 68, 68, .10);
-      color: #b91c1c;
-      border: 1px solid rgba(239, 68, 68, .20);
-    }
-
-    .side-btn.middle {
-      background: #fff;
-      border: 1px solid var(--border);
-      opacity: .9;
-    }
-
-    /* SEARCH (only inside trade card) */
-    .trade-search {
-      position: relative;
-    }
-
-    .trade-search .input-group {
-      background: var(--light);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      transition: all .2s ease;
-      overflow: hidden;
-    }
-
-    .trade-search .input-group:focus-within {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, .10);
-    }
-
-    .trade-search .form-control {
-      border: none;
-      background: transparent;
-      font-size: .95rem;
-      padding: .75rem .95rem;
-      font-weight: 700;
-    }
-
-    .trade-search .form-control:focus {
-      box-shadow: none;
-    }
-
-    .search-results-dropdown {
-      position: absolute;
-      top: 52px;
-      right: 0;
-      left: 0;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, .15);
-      overflow-y: auto;
-      max-height: 300px;
-      display: none;
-      z-index: 9999;
-    }
-
-    .search-result-item {
-      padding: .75rem .9rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: .75rem;
-      border-bottom: 1px solid var(--border);
-      font-size: .95rem;
-      font-weight: 700;
-      color: #1f2937;
-      background: #fff;
-    }
-
-    .search-result-item:last-child {
-      border-bottom: none;
-    }
-
-    .search-result-item:hover {
-      background: var(--primary-light);
-    }
-
-    /* INFO GRID */
-    .stock-info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid rgba(0, 0, 0, .06);
-    }
-
-    .info-label {
-      font-size: .7rem;
-      font-weight: 800;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .info-value {
-      font-size: .95rem;
-      font-weight: 800;
-      color: #111827;
-    }
-
-    /* ORDER BOOK TABLE */
-    .table thead th {
-      font-size: .78rem;
-      text-transform: uppercase;
-      letter-spacing: .6px;
-      color: var(--muted);
-      font-weight: 900;
-      border-bottom: 1px solid var(--border) !important;
-    }
-
-    .table tbody td {
-      border-top: 1px solid var(--border) !important;
-      vertical-align: middle;
-      font-weight: 650;
-    }
-
-    .symbol-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: .45rem;
-      padding: .3rem .55rem;
-      border-radius: 999px;
-      font-weight: 900;
-      border: 1px solid rgba(16, 185, 129, .25);
-      background: rgba(16, 185, 129, .08);
-      color: var(--primary-dark);
-      font-size: .82rem;
-    }
-
-    @media (max-width: 992px) {
-      .sidebar {
-        left: -100%;
-        top: 70px;
-        height: calc(100vh - 70px);
-        transition: left .25s ease;
-        box-shadow: 6px 0 18px rgba(0, 0, 0, .14);
-      }
-
-      .sidebar.show {
-        left: 0;
-      }
-
-      .main-content {
-        margin-left: 0;
-        padding: 1rem;
-      }
-
-      .navbar-summary-integrated {
-        display: none !important;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-light">
-    <div class="container-fluid px-2">
-      <button class="btn btn-light d-lg-none me-2" id="sidebarToggle" type="button">
-        <i class="fas fa-bars"></i>
-      </button>
-
-      <a class="navbar-brand" href="{% url 'dashboard' %}">
-        <i class="fas fa-chart-line"></i> NepseSewa
-      </a>
-
-      <!-- CENTER BAR -->
-      <div class="navbar-summary-integrated d-none d-lg-flex">
-        <div class="d-flex gap-4" id="barIndices">
-          <div class="nav-index-item">
-            <span class="nav-index-name">NEPSE</span>
-            <span class="nav-index-value">...</span>
-            <span class="nav-index-change text-muted">Loading...</span>
-          </div>
-        </div>
-
-        <div class="nav-v-separator"></div>
-
-        <div class="nav-session-info">
-          <span class="nav-index-name">Active Sessions</span>
-          <span class="nav-index-value" id="barSessionStatus">Loading...</span>
-        </div>
-
-        <div class="nav-v-separator"></div>
-
-        <div class="nav-market-totals">
-          <div class="nav-total-item" id="barTotalTurnover">Turnover: ...</div>
-          <div class="nav-total-item" id="barTotalVolume">Volume: ...</div>
-        </div>
-      </div>
-
-      <!-- RIGHT: user only -->
-      <div class="d-flex align-items-center gap-3 ms-auto">
-        <div class="dropdown">
-          <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
-            <div class="user-avatar me-2">
-              {{ user.first_name|first }}{{ user.last_name|first }}
-            </div>
-            <span class="d-none d-lg-inline text-dark fw-bold" style="font-size: 0.9rem;">
-              {{ user.first_name }}
-            </span>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
-            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout</a>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-    </div>
-  </nav>
-
-  <!-- Sidebar -->
-  <div class="sidebar" id="sidebar">
-    <ul class="nav nav-pills flex-column">
-      <li class="nav-item px-2"><a href="{% url 'dashboard' %}" class="nav-link"><i
-            class="fas fa-home"></i><span>Dashboard</span></a></li>
-      <li class="nav-item px-2"><a href="{% url 'portfolio' %}" class="nav-link"><i
-            class="fas fa-chart-pie"></i><span>Portfolio</span></a></li>
-      <li class="nav-item px-2"><a href="{% url 'trade' %}" class="nav-link active"><i
-            class="fas fa-exchange-alt"></i><span>Trade</span></a></li>
-      <li class="nav-item px-2"><a href="{% url 'market' %}" class="nav-link"><i
-            class="fas fa-layer-group"></i><span>All Stocks</span></a></li>
-      <li class="nav-item px-2"><a href="{% url 'watchlist' %}" class="nav-link"><i
-            class="fas fa-star"></i><span>Watchlist</span></a></li>
-      <li class="nav-item px-2"><a href="{% url 'learn' %}" class="nav-link"><i
-            class="fas fa-graduation-cap"></i><span>Learn</span></a></li>
-      <li class="nav-item px-2"><a href="{% url 'settings' %}" class="nav-link"><i
-            class="fas fa-cog"></i><span>Settings</span></a></li>
-    </ul>
+{% block title %}Trade - NepseSewa{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Trade page specific styles */
+  .stock-hero {
+    background: linear-gradient(135deg, rgba(16, 185, 129, .12) 0%, rgba(5, 150, 105, .06) 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .stock-hero h4 {
+    margin: 0;
+    font-weight: 900;
+    letter-spacing: -.3px;
+  }
+
+  .stock-hero .sub {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: .92rem;
+  }
+
+  .quote-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .quote-item {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .quote-label {
+    font-size: .72rem;
+    font-weight: 900;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+  }
+
+  .quote-value {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #111827;
+  }
+
+  .quote-change {
+    font-size: .9rem;
+    font-weight: 900;
+  }
+
+  /* Side Toggle */
+  .side-toggle {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .25rem;
+    display: inline-flex;
+    gap: .25rem;
+    align-items: center;
+  }
+
+  .side-btn {
+    border: none;
+    border-radius: 999px;
+    padding: .55rem 1rem;
+    font-weight: 900;
+    font-size: .9rem;
+    background: transparent;
+    color: #111827;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    transition: all .15s ease;
+  }
+
+  .side-btn:hover {
+    background: rgba(16, 185, 129, .08);
+  }
+
+  .side-btn.active-buy {
+    background: rgba(16, 185, 129, .12);
+    color: var(--primary-dark);
+    border: 1px solid rgba(16, 185, 129, .25);
+  }
+
+  .side-btn.active-sell {
+    background: rgba(239, 68, 68, .10);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, .20);
+  }
+
+  .side-btn.middle {
+    background: #fff;
+    border: 1px solid var(--border);
+    opacity: .9;
+  }
+
+  /* Trade Search */
+  .trade-search {
+    position: relative;
+  }
+
+  .trade-search .input-group {
+    background: var(--light);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    transition: all .2s ease;
+    overflow: hidden;
+  }
+
+  .trade-search .input-group:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, .10);
+  }
+
+  .trade-search .form-control {
+    border: none;
+    background: transparent;
+    font-size: .95rem;
+    padding: .75rem .95rem;
+    font-weight: 700;
+  }
+
+  .trade-search .form-control:focus {
+    box-shadow: none;
+  }
+
+  .search-results-dropdown {
+    position: absolute;
+    top: 52px;
+    right: 0;
+    left: 0;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .15);
+    overflow-y: auto;
+    max-height: 300px;
+    display: none;
+    z-index: 9999;
+  }
+
+  .search-result-item {
+    padding: .75rem .9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: .95rem;
+    font-weight: 700;
+    color: #1f2937;
+    background: #fff;
+  }
+
+  .search-result-item:last-child {
+    border-bottom: none;
+  }
+
+  .search-result-item:hover {
+    background: var(--primary-light);
+  }
+
+  /* Info Grid */
+  .stock-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, .06);
+  }
+
+  .info-label {
+    font-size: .7rem;
+    font-weight: 800;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  .info-value {
+    font-size: .95rem;
+    font-weight: 800;
+    color: #111827;
+  }
+
+  /* Symbol Pill */
+  .symbol-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .3rem .55rem;
+    border-radius: 999px;
+    font-weight: 900;
+    border: 1px solid rgba(16, 185, 129, .25);
+    background: rgba(16, 185, 129, .08);
+    color: var(--primary-dark);
+    font-size: .82rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header + Quote -->
+<div class="stock-hero">
+  <div>
+    <h4>Trade Stocks</h4>
+    <div class="sub">Search a stock • Choose Buy/Sell • Place order • See your history in Order Book</div>
   </div>
 
-  <!-- ✅ MAIN (everything must be inside this) -->
-  <div class="main-content">
+  <div class="quote-box">
+    <div class="quote-item">
+      <span class="quote-label">Selected</span>
+      <span class="quote-value" id="selSymbol">—</span>
+    </div>
+    <div class="quote-item">
+      <span class="quote-label">LTP</span>
+      <span class="quote-value" id="selLtp">Rs —</span>
+    </div>
+    <div class="quote-item">
+      <span class="quote-label">Change</span>
+      <span class="quote-change" id="selChange">—</span>
+    </div>
+  </div>
+</div>
 
-    <!-- Header + Quote -->
-    <div class="stock-hero">
-      <div>
-        <h4>Trade Stocks</h4>
-        <div class="sub">Search a stock • Choose Buy/Sell • Place order • See your history in Order Book</div>
+<!-- Info Grid (optional) -->
+<div class="stock-info-grid" id="stockInfoGrid" style="display:none;">
+  <div>
+    <div class="info-label">Open</div>
+    <div class="info-value" id="valOpen">—</div>
+  </div>
+  <div>
+    <div class="info-label">High</div>
+    <div class="info-value" id="valHigh">—</div>
+  </div>
+  <div>
+    <div class="info-label">Low</div>
+    <div class="info-value" id="valLow">—</div>
+  </div>
+  <div>
+    <div class="info-label">Prev Close</div>
+    <div class="info-value" id="valPrev">—</div>
+  </div>
+  <div>
+    <div class="info-label">Volume</div>
+    <div class="info-value" id="valVol">—</div>
+  </div>
+  <div>
+    <div class="info-label">52W High</div>
+    <div class="info-value" id="val52H">—</div>
+  </div>
+  <div>
+    <div class="info-label">52W Low</div>
+    <div class="info-value" id="val52L">—</div>
+  </div>
+</div>
+
+<div class="row mt-3">
+  <!-- LEFT -->
+  <div class="col-lg-7 mb-3">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="card-title mb-0">Place Order</h5>
+
+        <div class="side-toggle" title="Choose side">
+          <button id="btnBuy" class="side-btn" type="button"><i class="fa-solid fa-arrow-up"></i> Buy</button>
+          <button id="btnMid" class="side-btn middle" type="button"><i class="fa-solid fa-minus"></i></button>
+          <button id="btnSell" class="side-btn" type="button"><i class="fa-solid fa-arrow-down"></i> Sell</button>
+        </div>
       </div>
 
-      <div class="quote-box">
-        <div class="quote-item">
-          <span class="quote-label">Selected</span>
-          <span class="quote-value" id="selSymbol">—</span>
+      <div class="card-body">
+        <div class="trade-search mb-3">
+          <div class="input-group">
+            <span class="input-group-text bg-transparent border-0" style="font-weight:900;">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input id="tradeSearch" type="text" class="form-control" placeholder="Search stock (e.g. SHPC, NBL)..."
+              autocomplete="off" />
+            <button class="btn btn-light" type="button" id="clearSearch" title="Clear">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <div id="tradeSearchResults" class="search-results-dropdown"></div>
         </div>
-        <div class="quote-item">
-          <span class="quote-label">LTP</span>
-          <span class="quote-value" id="selLtp">Rs —</span>
+
+        <form id="tradeForm">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-bold">Symbol</label>
+            <input id="symbolInput" class="form-control" type="text" placeholder="Select from search" readonly />
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Quantity</label>
+              <input id="qtyInput" class="form-control" type="number" min="1" step="1" value="10" required />
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">Price (Rs)</label>
+              <input id="priceInput" class="form-control" type="number" min="0" step="0.01"
+                placeholder="Use LTP or enter" required />
+              <div class="text-muted mt-1" style="font-weight:700;font-size:.85rem;">
+                Tip: click “Use LTP” to auto-fill.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-success" id="btnUseLtp"
+              style="border-radius:12px;font-weight:900;">
+              <i class="fa-solid fa-bolt me-2"></i>Use LTP
+            </button>
+
+            <button type="submit" class="btn btn-success ms-auto" id="btnPlaceOrder"
+              style="border-radius:12px;font-weight:900;padding:.65rem 1rem;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);border:none;">
+              <i class="fa-solid fa-check me-2"></i>Place Order
+            </button>
+          </div>
+
+          <div class="mt-3">
+            <span class="chip" id="sideChip"><i class="fa-solid fa-circle-info"></i> Select Buy or Sell</span>
+            <span class="chip ms-2" id="estValueChip"><i class="fa-solid fa-calculator"></i> Est: Rs —</span>
+          </div>
+
+          <div class="alert alert-warning mt-3 mb-0" id="tradeMsg" style="display:none;font-weight:700;"></div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="col-lg-5 mb-3">
+    <!-- Market Depth Card -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="card-title mb-0"><i class="fas fa-layer-group me-2"></i>Market Depth</h5>
+        <span class="chip" id="marketStatusChip"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading...</span>
+      </div>
+
+      <div class="card-body p-0" id="marketDepthContainer" style="display:none;">
+        <!-- Top 5 Sell Orders (Asks) -->
+        <div class="p-3 border-bottom">
+          <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--danger);"><i
+              class="fa-solid fa-arrow-down me-1"></i>TOP 5 SELL ORDERS</h6>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th style="font-size:.75rem;">Price</th>
+                  <th class="text-end" style="font-size:.75rem;">Qty</th>
+                </tr>
+              </thead>
+              <tbody id="asksTbody">
+                <tr>
+                  <td colspan="2" class="text-center text-muted">No sell orders</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="quote-item">
-          <span class="quote-label">Change</span>
-          <span class="quote-change" id="selChange">—</span>
+
+        <!-- Top 5 Buy Orders (Bids) -->
+        <div class="p-3">
+          <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--primary);"><i
+              class="fa-solid fa-arrow-up me-1"></i>TOP 5 BUY ORDERS</h6>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th style="font-size:.75rem;">Price</th>
+                  <th class="text-end" style="font-size:.75rem;">Qty</th>
+                </tr>
+              </thead>
+              <tbody id="bidsTbody">
+                <tr>
+                  <td colspan="2" class="text-center text-muted">No buy orders</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+      </div>
+
+      <div class="card-body text-center" id="marketDepthPlaceholder">
+        <p class="text-muted mb-0"><i class="fa-solid fa-chart-line me-2"></i>Select a stock to view market depth
+        </p>
       </div>
     </div>
 
-    <!-- Info Grid (optional) -->
-    <div class="stock-info-grid" id="stockInfoGrid" style="display:none;">
-      <div>
-        <div class="info-label">Open</div>
-        <div class="info-value" id="valOpen">—</div>
+    <!-- Order Book Card -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="card-title mb-0">Order Book</h5>
+        <div class="d-flex align-items-center gap-2">
+          <span class="chip"><i class="fa-solid fa-list"></i> <span id="orderBookCount">0</span></span>
+          <span class="chip"><i class="fa-solid fa-clock"></i> <span id="orderBookAsOf">—</span></span>
+        </div>
       </div>
-      <div>
-        <div class="info-label">High</div>
-        <div class="info-value" id="valHigh">—</div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead>
+              <tr>
+                <th class="ps-3">Time</th>
+                <th>Symbol</th>
+                <th>Side</th>
+                <th class="text-end">Qty</th>
+                <th class="text-end">Price</th>
+                <th class="text-end pe-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="orderBookTbody">
+              <tr>
+                <td colspan="6" class="text-muted p-3 ps-3">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div>
-        <div class="info-label">Low</div>
-        <div class="info-value" id="valLow">—</div>
-      </div>
-      <div>
-        <div class="info-label">Prev Close</div>
-        <div class="info-value" id="valPrev">—</div>
-      </div>
-      <div>
-        <div class="info-label">Volume</div>
-        <div class="info-value" id="valVol">—</div>
-      </div>
-      <div>
-        <div class="info-label">52W High</div>
-        <div class="info-value" id="val52H">—</div>
-      </div>
-      <div>
-        <div class="info-label">52W Low</div>
-        <div class="info-value" id="val52L">—</div>
+
+      <div class="card-body border-top">
+        <div class="text-muted" style="font-weight:700;font-size:.9rem;">
+          Shows your complete BUY/SELL history.
+        </div>
       </div>
     </div>
+  </div>
 
-    <!-- ✅ Row must be inside main-content -->
-    <div class="row mt-3">
-      <!-- LEFT -->
-      <div class="col-lg-7 mb-3">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="card-title mb-0">Place Order</h5>
+</div>
+{% endblock %}
 
-            <div class="side-toggle" title="Choose side">
-              <button id="btnBuy" class="side-btn" type="button"><i class="fa-solid fa-arrow-up"></i> Buy</button>
-              <button id="btnMid" class="side-btn middle" type="button"><i class="fa-solid fa-minus"></i></button>
-              <button id="btnSell" class="side-btn" type="button"><i class="fa-solid fa-arrow-down"></i> Sell</button>
-            </div>
-          </div>
-
-          <div class="card-body">
-            <div class="trade-search mb-3">
-              <div class="input-group">
-                <span class="input-group-text bg-transparent border-0" style="font-weight:900;">
-                  <i class="fa-solid fa-magnifying-glass"></i>
-                </span>
-                <input id="tradeSearch" type="text" class="form-control" placeholder="Search stock (e.g. SHPC, NBL)..."
-                  autocomplete="off" />
-                <button class="btn btn-light" type="button" id="clearSearch" title="Clear">
-                  <i class="fa-solid fa-xmark"></i>
-                </button>
-              </div>
-              <div id="tradeSearchResults" class="search-results-dropdown"></div>
-            </div>
-
-            <form id="tradeForm">
-              {% csrf_token %}
-              <div class="mb-3">
-                <label class="form-label fw-bold">Symbol</label>
-                <input id="symbolInput" class="form-control" type="text" placeholder="Select from search" readonly />
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Quantity</label>
-                  <input id="qtyInput" class="form-control" type="number" min="1" step="1" value="10" required />
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-bold">Price (Rs)</label>
-                  <input id="priceInput" class="form-control" type="number" min="0" step="0.01"
-                    placeholder="Use LTP or enter" required />
-                  <div class="text-muted mt-1" style="font-weight:700;font-size:.85rem;">
-                    Tip: click “Use LTP” to auto-fill.
-                  </div>
-                </div>
-              </div>
-
-              <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-outline-success" id="btnUseLtp"
-                  style="border-radius:12px;font-weight:900;">
-                  <i class="fa-solid fa-bolt me-2"></i>Use LTP
-                </button>
-
-                <button type="submit" class="btn btn-success ms-auto" id="btnPlaceOrder"
-                  style="border-radius:12px;font-weight:900;padding:.65rem 1rem;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);border:none;">
-                  <i class="fa-solid fa-check me-2"></i>Place Order
-                </button>
-              </div>
-
-              <div class="mt-3">
-                <span class="chip" id="sideChip"><i class="fa-solid fa-circle-info"></i> Select Buy or Sell</span>
-                <span class="chip ms-2" id="estValueChip"><i class="fa-solid fa-calculator"></i> Est: Rs —</span>
-              </div>
-
-              <div class="alert alert-warning mt-3 mb-0" id="tradeMsg" style="display:none;font-weight:700;"></div>
-            </form>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT -->
-      <div class="col-lg-5 mb-3">
-        <!-- Market Depth Card -->
-        <div class="card mb-3">
-          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="card-title mb-0"><i class="fas fa-layer-group me-2"></i>Market Depth</h5>
-            <span class="chip" id="marketStatusChip"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading...</span>
-          </div>
-
-          <div class="card-body p-0" id="marketDepthContainer" style="display:none;">
-            <!-- Top 5 Sell Orders (Asks) -->
-            <div class="p-3 border-bottom">
-              <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--danger);"><i
-                  class="fa-solid fa-arrow-down me-1"></i>TOP 5 SELL ORDERS</h6>
-              <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                  <thead>
-                    <tr>
-                      <th style="font-size:.75rem;">Price</th>
-                      <th class="text-end" style="font-size:.75rem;">Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody id="asksTbody">
-                    <tr>
-                      <td colspan="2" class="text-center text-muted">No sell orders</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Top 5 Buy Orders (Bids) -->
-            <div class="p-3">
-              <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--primary);"><i
-                  class="fa-solid fa-arrow-up me-1"></i>TOP 5 BUY ORDERS</h6>
-              <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                  <thead>
-                    <tr>
-                      <th style="font-size:.75rem;">Price</th>
-                      <th class="text-end" style="font-size:.75rem;">Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody id="bidsTbody">
-                    <tr>
-                      <td colspan="2" class="text-center text-muted">No buy orders</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="card-body text-center" id="marketDepthPlaceholder">
-            <p class="text-muted mb-0"><i class="fa-solid fa-chart-line me-2"></i>Select a stock to view market depth
-            </p>
-          </div>
-        </div>
-
-        <!-- Order Book Card -->
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="card-title mb-0">Order Book</h5>
-            <div class="d-flex align-items-center gap-2">
-              <span class="chip"><i class="fa-solid fa-list"></i> <span id="orderBookCount">0</span></span>
-              <span class="chip"><i class="fa-solid fa-clock"></i> <span id="orderBookAsOf">—</span></span>
-            </div>
-          </div>
-
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="table mb-0">
-                <thead>
-                  <tr>
-                    <th class="ps-3">Time</th>
-                    <th>Symbol</th>
-                    <th>Side</th>
-                    <th class="text-end">Qty</th>
-                    <th class="text-end">Price</th>
-                    <th class="text-end pe-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody id="orderBookTbody">
-                  <tr>
-                    <td colspan="6" class="text-muted p-3 ps-3">Loading...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card-body border-top">
-            <div class="text-muted" style="font-weight:700;font-size:.9rem;">
-              Shows your complete BUY/SELL history.
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /row -->
-  </div><!-- /main-content -->
-
-  <!-- JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-  <script>
-    function fmtNumber(n, digits = 2) {
-      if (n === null || n === undefined || isNaN(n)) return '—';
-      return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    }
-    function fmtInt(n) {
-      if (n === null || n === undefined || isNaN(n)) return '—';
-      return Number(n).toLocaleString();
-    }
-    function isMarketActive(latestIso, minutes = 5) {
-      try {
-        const t = new Date(latestIso).getTime();
-        return (Date.now() - t) <= minutes * 60 * 1000;
-      } catch { return false; }
-    }
-    function safeText(el, text) { if (el) el.textContent = text; }
-
-    function setMsg(text, type = 'warning') {
-      const msg = document.getElementById('tradeMsg');
-      if (!msg) return;
-      msg.className = `alert alert-${type} mt-3 mb-0`;
-      msg.textContent = text;
-      msg.style.display = 'block';
-    }
-    function hideMsg() {
-      const msg = document.getElementById('tradeMsg');
-      if (msg) msg.style.display = 'none';
-    }
-
-    async function updateNavbarBar() {
-      const [nepseRes, sectorRes, summaryRes] = await Promise.all([
-        fetch('/api/nepse-index/'),
-        fetch('/api/sector-indices/'),
-        fetch('/api/market-summary/')
-      ]);
-
-      const nepseJson = await nepseRes.json();
-      const sectorJson = await sectorRes.json();
-      const summaryJson = await summaryRes.json();
-
-      const barIndices = document.getElementById('barIndices');
-
-      let nepseVal = null, nepseChg = null;
-      if (nepseJson?.success) { nepseVal = nepseJson.data.value; nepseChg = nepseJson.data.change_pct; }
-
-      let sensitive = null, floatIdx = null;
-      if (sectorJson?.success && Array.isArray(sectorJson.data)) {
-        sensitive = sectorJson.data.find(x => (x.name || '').toLowerCase().includes('sensitive'));
-        floatIdx = sectorJson.data.find(x => (x.name || '').toLowerCase().includes('float'));
-      }
-
-      if (barIndices) {
-        const parts = [];
-        parts.push(`
-          <div class="nav-index-item">
-            <span class="nav-index-name">NEPSE</span>
-            <span class="nav-index-value">${nepseVal !== null ? fmtNumber(nepseVal, 2) : '—'}</span>
-            <span class="nav-index-change ${nepseChg !== null && nepseChg >= 0 ? 'text-success' : 'text-danger'}">
-              ${nepseChg !== null ? (nepseChg >= 0 ? '+' : '') + fmtNumber(nepseChg, 2) + '%' : '—'}
-            </span>
-          </div>
-        `);
-
-        if (sensitive) {
-          parts.push(`
-            <div class="nav-index-item">
-              <span class="nav-index-name">SENSITIVE</span>
-              <span class="nav-index-value">${fmtNumber(sensitive.value, 2)}</span>
-              <span class="nav-index-change ${Number(sensitive.change_pct) >= 0 ? 'text-success' : 'text-danger'}">
-                ${(Number(sensitive.change_pct) >= 0 ? '+' : '') + fmtNumber(sensitive.change_pct, 2)}%
-              </span>
-            </div>
-          `);
-        }
-
-        if (floatIdx) {
-          parts.push(`
-            <div class="nav-index-item">
-              <span class="nav-index-name">FLOAT</span>
-              <span class="nav-index-value">${fmtNumber(floatIdx.value, 2)}</span>
-              <span class="nav-index-change ${Number(floatIdx.change_pct) >= 0 ? 'text-success' : 'text-danger'}">
-                ${(Number(floatIdx.change_pct) >= 0 ? '+' : '') + fmtNumber(floatIdx.change_pct, 2)}%
-              </span>
-            </div>
-          `);
-        }
-
-        barIndices.innerHTML = parts.join('');
-      }
-
-      const turnoverEl = document.getElementById('barTotalTurnover');
-      const volumeEl = document.getElementById('barTotalVolume');
-      const statusEl = document.getElementById('barSessionStatus');
-
-      if (summaryJson?.success) {
-        const d = summaryJson.data;
-        if (turnoverEl) turnoverEl.textContent = `Turnover: ${fmtNumber(d.total_turnover, 2)}`;
-        if (volumeEl) volumeEl.textContent = `Volume: ${fmtInt(d.total_traded_shares)}`;
-        if (statusEl) statusEl.textContent = isMarketActive(d.timestamp, 5) ? 'CONTINUOUS' : 'NO ACTIVE SESSIONS';
-      }
-    }
-
-    // ===== Trade state =====
-    let currentSide = 'MID';
-    let selectedSymbol = '';
-    let latestMap = new Map();
-
-    const btnBuy = document.getElementById('btnBuy');
-    const btnMid = document.getElementById('btnMid');
-    const btnSell = document.getElementById('btnSell');
-    const sideChip = document.getElementById('sideChip');
-
-    const tradeSearch = document.getElementById('tradeSearch');
-    const tradeSearchResults = document.getElementById('tradeSearchResults');
-    const clearSearch = document.getElementById('clearSearch');
-
-    const symbolInput = document.getElementById('symbolInput');
-    const qtyInput = document.getElementById('qtyInput');
-    const priceInput = document.getElementById('priceInput');
-
-    const selSymbolEl = document.getElementById('selSymbol');
-    const selLtpEl = document.getElementById('selLtp');
-    const selChangeEl = document.getElementById('selChange');
-    const estValueChip = document.getElementById('estValueChip');
-
-    function applySideUI() {
-      btnBuy.classList.remove('active-buy');
-      btnSell.classList.remove('active-sell');
-      btnMid.classList.remove('middle');
-
-      if (currentSide === 'BUY') {
-        btnBuy.classList.add('active-buy');
-        sideChip.innerHTML = `<i class="fa-solid fa-arrow-up"></i> BUY mode`;
-        sideChip.style.borderColor = 'rgba(16,185,129,.25)';
-        sideChip.style.background = 'rgba(16,185,129,.08)';
-        sideChip.style.color = 'var(--primary-dark)';
-      } else if (currentSide === 'SELL') {
-        btnSell.classList.add('active-sell');
-        sideChip.innerHTML = `<i class="fa-solid fa-arrow-down"></i> SELL mode`;
-        sideChip.style.borderColor = 'rgba(239,68,68,.20)';
-        sideChip.style.background = 'rgba(239,68,68,.08)';
-        sideChip.style.color = '#b91c1c';
-      } else {
-        btnMid.classList.add('middle');
-        sideChip.innerHTML = `<i class="fa-solid fa-circle-info"></i> Select Buy or Sell`;
-        sideChip.style.borderColor = 'var(--border)';
-        sideChip.style.background = '#fff';
-        sideChip.style.color = '#111827';
-      }
-    }
-
-    btnBuy?.addEventListener('click', () => { currentSide = 'BUY'; applySideUI(); hideMsg(); });
-    btnSell?.addEventListener('click', () => { currentSide = 'SELL'; applySideUI(); hideMsg(); });
-    btnMid?.addEventListener('click', () => { currentSide = 'MID'; applySideUI(); hideMsg(); });
-
-    async function refreshLatest() {
-      const res = await fetch('/api/latest/');
-      const json = await res.json();
-      const arr = Array.isArray(json?.data) ? json.data : [];
-      latestMap = new Map(arr.map(x => [String(x.symbol), x]));
-      if (selectedSymbol) applySelectedQuote(selectedSymbol);
-    }
-
-    function applySelectedQuote(sym) {
-      selectedSymbol = sym;
-      if (symbolInput) symbolInput.value = sym;
-      if (tradeSearch && tradeSearch.value !== sym) tradeSearch.value = sym;
-
-      safeText(selSymbolEl, sym);
-
-      const live = latestMap.get(sym);
-      const ltp = Number(live?.ltp);
-      const pct = Number(live?.change_pct);
-
-      safeText(selLtpEl, `Rs ${isFinite(ltp) ? fmtNumber(ltp, 2) : '—'}`);
-
-      if (isFinite(pct)) {
-        const cls = pct >= 0 ? 'text-success' : 'text-danger';
-        const sign = pct >= 0 ? '+' : '';
-        selChangeEl.classList.remove('text-success', 'text-danger', 'text-muted');
-        selChangeEl.classList.add(cls);
-        safeText(selChangeEl, `${sign}${pct.toFixed(2)}%`);
-      } else {
-        selChangeEl.classList.remove('text-success', 'text-danger');
-        selChangeEl.classList.add('text-muted');
-        safeText(selChangeEl, '—');
-      }
-
-      const grid = document.getElementById('stockInfoGrid');
-      if (grid) grid.style.display = 'grid';
-
-      updateEstimate();
-    }
-
-    // Search
-    let searchTimer;
-    function renderSearchDropdown(list) {
-      if (!tradeSearchResults) return;
-      if (!list.length) { tradeSearchResults.style.display = 'none'; tradeSearchResults.innerHTML = ''; return; }
-
-      tradeSearchResults.innerHTML = list.slice(0, 12).map(s => {
-        const sym = String(s.symbol);
-        const ltp = Number(s.ltp);
-        const pct = Number(s.change_pct);
-        const cls = pct >= 0 ? 'text-success' : 'text-danger';
-        const sign = pct >= 0 ? '+' : '';
-        return `
-          <div class="search-result-item" data-symbol="${sym}">
-            <strong>${sym}</strong>
-            <span>
-              Rs ${isFinite(ltp) ? fmtNumber(ltp, 2) : '—'}
-              <small class="${cls}" style="font-weight:900;">
-                (${sign}${isFinite(pct) ? pct.toFixed(2) : '—'}%)
-              </small>
-            </span>
-          </div>
-        `;
-      }).join('');
-      tradeSearchResults.style.display = 'block';
-    }
-
-    tradeSearch?.addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      const q = tradeSearch.value.trim();
-      if (q.length < 2) { if (tradeSearchResults) tradeSearchResults.style.display = 'none'; return; }
-
-      searchTimer = setTimeout(async () => {
-        const res = await fetch(`/api/search/?q=${encodeURIComponent(q)}`);
-        const json = await res.json();
-        renderSearchDropdown(Array.isArray(json?.data) ? json.data : []);
-      }, 250);
-    });
-
-    tradeSearchResults?.addEventListener('click', (e) => {
-      const item = e.target.closest('.search-result-item');
-      if (!item) return;
-      const sym = item.getAttribute('data-symbol');
-      tradeSearchResults.style.display = 'none';
-      applySelectedQuote(sym);
-      hideMsg();
-      loadUserOrderHistory(); // ✅ refresh orderbook
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!tradeSearchResults || !tradeSearch) return;
-      if (!tradeSearch.contains(e.target) && !tradeSearchResults.contains(e.target)) tradeSearchResults.style.display = 'none';
-    });
-
-    clearSearch?.addEventListener('click', () => {
-      tradeSearch.value = '';
-      tradeSearchResults.style.display = 'none';
-    });
-
-    // Use LTP
-    document.getElementById('btnUseLtp')?.addEventListener('click', () => {
-      if (!selectedSymbol) return setMsg('Select a stock first.', 'warning');
-      const live = latestMap.get(selectedSymbol);
-      const ltp = Number(live?.ltp);
-      if (!isFinite(ltp) || ltp <= 0) return setMsg('LTP not available right now.', 'warning');
-      priceInput.value = ltp.toFixed(2);
-      updateEstimate();
-      hideMsg();
-    });
-
-    function updateEstimate() {
-      const qty = Number(qtyInput?.value || 0);
-      const price = Number(priceInput?.value || 0);
-      const est = qty > 0 && price > 0 ? qty * price : NaN;
-      estValueChip.innerHTML = `<i class="fa-solid fa-calculator"></i> Est: ${isFinite(est) ? 'Rs ' + fmtNumber(est, 2) : 'Rs —'}`;
-    }
-    qtyInput?.addEventListener('input', updateEstimate);
-    priceInput?.addEventListener('input', updateEstimate);
-
-    // ✅ Order book: user history only
-    async function loadUserOrderHistory() {
-      const tbody = document.getElementById('orderBookTbody');
-      const countEl = document.getElementById('orderBookCount');
-      const asofEl = document.getElementById('orderBookAsOf');
-
-      try {
-        const res = await fetch('/api/trade/history/');
-        const json = await res.json();
-        const rows = Array.isArray(json?.data) ? json.data : [];
-
-        rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-        if (!rows.length) {
-          tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-4">No trade history found.</td></tr>`;
-          countEl.textContent = '0';
-          asofEl.textContent = new Date().toLocaleString();
-          return;
-        }
-
-        tbody.innerHTML = rows.slice(0, 50).map(r => {
-          const side = String(r.side || '').toUpperCase();
-          const sideCls = side === 'BUY' ? 'text-success' : (side === 'SELL' ? 'text-danger' : 'text-muted');
-          return `
-            <tr>
-              <td class="ps-3">${r.created_at || '—'}</td>
-              <td><span class="symbol-pill"><i class="fa-solid fa-tag"></i>${r.symbol}</span></td>
-              <td class="${sideCls}" style="font-weight:900;">${side || '—'}</td>
-              <td class="text-end">${r.qty != null ? fmtInt(r.qty) : '—'}</td>
-              <td class="text-end">Rs ${r.price != null ? fmtNumber(r.price, 2) : '—'}</td>
-              <td class="text-end pe-3">${r.status || '—'}</td>
-            </tr>
-          `;
-        }).join('');
-
-        countEl.textContent = String(rows.length);
-        asofEl.textContent = new Date().toLocaleString();
-      } catch (e) {
-        console.error(e);
-        tbody.innerHTML = `<tr><td colspan="6" class="text-muted p-3 ps-3">Error loading your order history.</td></tr>`;
-      }
-    }
-
-    // Place order
-    document.getElementById('tradeForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideMsg();
-
-      const sym = String(symbolInput.value || '').trim();
-      const qty = Number(qtyInput.value || 0);
-      const price = Number(priceInput.value || 0);
-
-      if (!sym) return setMsg('Please select a stock from search.', 'warning');
-      if (currentSide !== 'BUY' && currentSide !== 'SELL') return setMsg('Please choose Buy or Sell.', 'warning');
-      if (!Number.isFinite(qty) || qty <= 0) return setMsg('Enter a valid quantity.', 'warning');
-      if (!Number.isFinite(price) || price <= 0) return setMsg('Enter a valid price.', 'warning');
-
-      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-
-      try {
-        const res = await fetch('/api/trade/place/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-          body: JSON.stringify({ symbol: sym, side: currentSide, qty, price })
-        });
-        const json = await res.json();
-
-        if (!json.success) return setMsg(json.message || 'Order failed.', 'danger');
-
-        setMsg(json.message || '✅ Order placed successfully!', 'success');
-        await loadUserOrderHistory();
-      } catch (err) {
-        console.error(err);
-        setMsg('Order error. Check console.', 'danger');
-      }
-    });
-
-    // Sidebar toggle
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebarToggle');
-    if (toggleBtn && sidebar) toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
-
-    // ===== Market Session Management =====
-    let marketSession = { status: 'CLOSED', is_active: false };
-
-    async function fetchMarketSession() {
-      try {
-        const res = await fetch('/api/market/session/');
-        const json = await res.json();
-        if (json.success) {
-          marketSession = json.data;
-          updateMarketStatusUI();
-        }
-      } catch (e) {
-        console.error('Error fetching market session:', e);
-      }
-    }
-
-    function updateMarketStatusUI() {
-      const chip = document.getElementById('marketStatusChip');
-      const placeOrderBtn = document.getElementById('btnPlaceOrder');
-
-      if (!chip) return;
-
-      if (marketSession.status === 'CONTINUOUS' && marketSession.is_active) {
-        chip.innerHTML = '<i class="fa-solid fa-circle text-success me-1"></i> MARKET OPEN';
-        chip.style.borderColor = 'rgba(16,185,129,.25)';
-        chip.style.background = 'rgba(16,185,129,.08)';
-        chip.style.color = 'var(--primary-dark)';
-        if (placeOrderBtn) placeOrderBtn.disabled = false;
-      } else if (marketSession.status === 'PAUSED') {
-        chip.innerHTML = '<i class="fa-solid fa-pause-circle text-warning me-1"></i> PAUSED';
-        chip.style.borderColor = 'rgba(245,158,11,.25)';
-        chip.style.background = 'rgba(245,158,11,.08)';
-        chip.style.color = '#d97706';
-        if (placeOrderBtn) placeOrderBtn.disabled = true;
-      } else {
-        chip.innerHTML = '<i class="fa-solid fa-circle text-danger me-1"></i> MARKET CLOSED';
-        chip.style.borderColor = 'rgba(239,68,68,.25)';
-        chip.style.background = 'rgba(239,68,68,.08)';
-        chip.style.color = '#b91c1c';
-        if (placeOrderBtn) placeOrderBtn.disabled = true;
-      }
-    }
-
-    // ===== Market Depth Functions =====
-    async function fetchMarketDepth(symbol) {
-      if (!symbol) return;
-
-      try {
-        const res = await fetch(`/api/orderbook/${encodeURIComponent(symbol)}/`);
-        const json = await res.json();
-
-        if (json.success) {
-          renderMarketDepth(json.bids, json.asks);
-        }
-      } catch (e) {
-        console.error('Error fetching market depth:', e);
-      }
-    }
-
-    function renderMarketDepth(bids, asks) {
-      const bidsBody = document.getElementById('bidsTbody');
-      const asksBody = document.getElementById('asksTbody');
-      const container = document.getElementById('marketDepthContainer');
-      const placeholder = document.getElementById('marketDepthPlaceholder');
-
-      if (!bidsBody || !asksBody) return;
-
-      // Show container, hide placeholder
-      if (container) container.style.display = 'block';
-      if (placeholder) placeholder.style.display = 'none';
-
-      // Render Bids (Buy orders)
-      if (bids && bids.length > 0) {
-        bidsBody.innerHTML = bids.map(b => `
-          <tr>
-            <td style="font-weight:800;color:var(--primary);">Rs ${fmtNumber(b.price, 2)}</td>
-            <td class="text-end" style="font-weight:700;">${fmtInt(b.qty)}</td>
-          </tr>
-        `).join('');
-      } else {
-        bidsBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No buy orders</td></tr>';
-      }
-
-      // Render Asks (Sell orders)
-      if (asks && asks.length > 0) {
-        asksBody.innerHTML = asks.map(a => `
-          <tr>
-            <td style="font-weight:800;color:var(--danger);">Rs ${fmtNumber(a.price, 2)}</td>
-            <td class="text-end" style="font-weight:700;">${fmtInt(a.qty)}</td>
-          </tr>
-        `).join('');
-      } else {
-        asksBody.innerHTML = '<tr><td colspan="2" class="text-center text-muted">No sell orders</td></tr>';
-      }
-    }
-
-    // Init
-    async function initTradePage() {
-      applySideUI();
-      await updateNavbarBar();
-      await refreshLatest();
-      await loadUserOrderHistory();
-      await fetchMarketSession();
-
-      const params = new URLSearchParams(window.location.search);
-      const qsym = params.get('symbol');
-      if (qsym) {
-        applySelectedQuote(qsym.toUpperCase());
-        await fetchMarketDepth(qsym.toUpperCase());
-      }
-    }
-
-    initTradePage();
-    setInterval(async () => {
-      await updateNavbarBar();
-      await refreshLatest();
-      await loadUserOrderHistory();
-      await fetchMarketSession();
-      if (selectedSymbol) await fetchMarketDepth(selectedSymbol);
-    }, 3000);
-  </script>
-</body>
-
-</html>
+{% block extra_js %}
+<script src="{% static 'js/trade.js' %}"></script>
+{% endblock %}

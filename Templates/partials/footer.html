@@ -1,0 +1,132 @@
+<style>
+    /* Footer Styles */
+    .footer {
+        background: #1a1d23;
+        color: white;
+        padding: 4rem 0 2rem;
+        margin-top: auto;
+        /* Push to bottom if flex container */
+    }
+
+    .footer h5 {
+        color: white;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+    }
+
+    .footer h6 {
+        color: white;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .footer ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .footer ul li {
+        margin-bottom: 0.5rem;
+    }
+
+    .footer ul li a {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .footer ul li a:hover {
+        color: white;
+    }
+
+    .social-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .social-links a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        transition: background 0.3s ease;
+        color: white;
+        text-decoration: none;
+    }
+
+    .social-links a:hover {
+        background: #3ca479;
+        /* medium-green */
+        transform: translateY(-2px);
+    }
+
+    .footer-bottom {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 2rem;
+        margin-top: 3rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+    }
+</style>
+
+<footer class="footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <h5><i class="fas fa-chart-line me-2"></i>NepseSewa</h5>
+                <p>
+                    The premier virtual stock exchange platform for learning and practicing
+                    stock trading with real NEPSE market data.
+                </p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6>Platform</h6>
+                <ul>
+                    <li><a href="{% url 'landing' %}#features">Features</a></li>
+                    <li><a href="{% url 'landing' %}#market">Market Data</a></li>
+                    <li><a href="{% url 'landing' %}#how-it-works">How It Works</a></li>
+                    <li><a href="{% url 'login' %}">Login</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6>Resources</h6>
+                <ul>
+                    <li><a href="#">Learning Center</a></li>
+                    <li><a href="#">Market Analysis</a></li>
+                    <li><a href="#">Trading Tips</a></li>
+                    <li><a href="#">FAQ</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6>Company</h6>
+                <ul>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Contact</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-2 col-md-6 mb-4">
+                <h6>Support</h6>
+                <ul>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Community</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                    <li><a href="#">Status</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2023 NepseSewa. All rights reserved.</p>
+        </div>
+    </div>
+</footer>

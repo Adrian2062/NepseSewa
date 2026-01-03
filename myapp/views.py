@@ -67,6 +67,11 @@ def get_nepse_context():
             'symbol', 'ltp', 'change_pct'
         ))
 
+        # Top Turnover (Active Stocks)
+        top_turnover = list(latest_prices.order_by('-turnover')[:5].values(
+            'symbol', 'ltp', 'change_pct', 'turnover'
+        ))
+
         # --- LIVE DATA FETCHING ---
         try:
             nepse_index = NEPSEIndex.objects.latest('timestamp')
@@ -97,6 +102,7 @@ def get_nepse_context():
             },
             'top_gainers': top_gainers,
             'top_losers': top_losers,
+            'top_turnover': top_turnover,
             'last_update': latest_time,
             # Added live indices
             'nepse_index': nepse_index,
@@ -110,7 +116,8 @@ def get_nepse_context():
             'has_data': False,
             'market_stats': {},
             'top_gainers': [],
-            'top_losers': []
+            'top_losers': [],
+            'top_turnover': []
         }
 
 
@@ -169,38 +176,41 @@ def password_reset(request):
 @login_required
 def dashboard(request):
     context = get_nepse_context()
+    context['active_page'] = 'dashboard'
     return render(request, 'dashboard.html', context)
 
 
 @login_required
 def portfolio(request):
-    return render(request, 'portfolio.html')
+    return render(request, 'portfolio.html', {'active_page': 'portfolio'})
 
 
 @login_required
 def trade(request):
-    return render(request, 'trade.html')
+    context = {'active_page': 'trade'}
+    return render(request, 'trade.html', context)
 
 
 @login_required
 def market(request):
     context = get_nepse_context()
+    context['active_page'] = 'market'
     return render(request, 'market.html', context)
 
 
 @login_required
 def watchlist(request):
-    return render(request, 'watchlist.html')
+    return render(request, 'watchlist.html', {'active_page': 'watchlist'})
 
 
 @login_required
 def learn(request):
-    return render(request, 'learn.html')
+    return render(request, 'learn.html', {'active_page': 'learn'})
 
 
 @login_required
 def settings_view(request):
-    return render(request, 'settings.html')
+    return render(request, 'settings.html', {'active_page': 'settings'})
 
 
 def logout_view(request):
@@ -369,14 +379,29 @@ from .models import NEPSEIndex, MarketSummary, MarketIndex
 
 @require_http_methods(["GET"])
 def api_nepse_index(request):
-    """Get latest NEPSE Index value"""
+    """Get latest NEPSE Index value with daily change"""
     try:
         latest = NEPSEIndex.objects.latest('timestamp')
+        
+        # Calculate daily change
+        # Find the last record from a previous date (yesterday's close)
+        previous_close = NEPSEIndex.objects.filter(
+            timestamp__date__lt=latest.timestamp.date()
+        ).order_by('-timestamp').first()
+
+        if previous_close and previous_close.index_value:
+            change = latest.index_value - previous_close.index_value
+            change_pct = (change / previous_close.index_value) * 100
+        else:
+            # Fallback if no previous day data (e.g. first day of scraping)
+            # Try to use the percentage_change field if it exists and is non-zero
+            change_pct = float(latest.percentage_change or 0)
+
         return JsonResponse({
             'success': True,
             'data': {
                 'value': float(latest.index_value),
-                'change_pct': float(latest.percentage_change),
+                'change_pct': float(change_pct),
                 'timestamp': latest.timestamp.isoformat(),
             }
         })
@@ -553,3 +578,278 @@ def api_place_order(request):
 
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+
+# Add these new API endpoints to your existing views.py
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
+from django.contrib.auth.backends import ModelBackend
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods, require_GET
+from django.db.models import Max
+from datetime import datetime, timedelta
+from django.utils import timezone
+from .forms import RegistrationForm
+from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Trade
+
+User = get_user_model()
+
+# ... [Keep all your existing code: EmailBackend, get_nepse_context, landing_page, 
+#      login_view, password_reset, dashboard, portfolio, trade, market, watchlist, 
+#      learn, settings_view, logout_view, api_latest_nepse, api_top_gainers, 
+#      api_top_losers, api_market_stats, api_symbol_history, api_search_symbol,
+#      api_nepse_index, api_market_summary, api_sector_indices, stocks, 
+#      api_trade_history, api_place_order] ...
+
+# ========== NEW DATE-FILTERED API ENDPOINTS ==========
+
+@require_http_methods(["GET"])
+def api_market_data_by_date(request):
+    """
+    Get market data filtered by date
+    GET /api/market-data/?date=2025-01-04
+    """
+    date_str = request.GET.get('date', None)
+    
+    if date_str:
+        try:
+            filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({
+                'error': 'Invalid date format. Use YYYY-MM-DD'
+            }, status=400)
+    else:
+        filter_date = timezone.now().date()
+    
+    try:
+        # Get NEPSE Index for that date
+        nepse_index = NEPSEIndex.objects.filter(
+            timestamp__date=filter_date
+        ).order_by('-timestamp').first()
+        
+        # Get sector indices for that date
+        sector_indices = MarketIndex.objects.filter(
+            timestamp__date=filter_date
+        ).exclude(index_name='NEPSE Index').order_by('index_name')
+        
+        # Get market summary for that date
+        market_summary = MarketSummary.objects.filter(
+            timestamp__date=filter_date
+        ).order_by('-timestamp').first()
+        
+        # Get all stock prices for that date (get the latest timestamp for that day)
+        latest_time_for_date = NEPSEPrice.objects.filter(
+            timestamp__date=filter_date
+        ).aggregate(Max('timestamp'))['timestamp__max']
+        
+        stocks = []
+        if latest_time_for_date:
+            stocks = list(NEPSEPrice.objects.filter(
+                timestamp=latest_time_for_date
+            ).values(
+                'symbol', 'open', 'high', 'low', 'close', 'ltp',
+                'change_pct', 'volume', 'turnover', 'timestamp'
+            ).order_by('symbol'))
+        
+        response_data = {
+            'success': True,
+            'date': str(filter_date),
+            'has_data': bool(stocks or nepse_index or sector_indices.exists() or market_summary),
+            'nepse_index': {
+                'value': float(nepse_index.index_value),
+                'change_pct': float(nepse_index.percentage_change),
+                'timestamp': nepse_index.timestamp.isoformat()
+            } if nepse_index else None,
+            'market_summary': {
+                'total_turnover': float(market_summary.total_turnover or 0),
+                'total_traded_shares': float(market_summary.total_traded_shares or 0),
+                'total_transactions': int(market_summary.total_transactions or 0),
+                'total_scrips': int(market_summary.total_scrips or 0),
+                'timestamp': market_summary.timestamp.isoformat()
+            } if market_summary else None,
+            'sector_indices': [
+                {
+                    'name': idx.index_name,
+                    'value': float(idx.value),
+                    'change_pct': float(idx.change_pct),
+                    'timestamp': idx.timestamp.isoformat()
+                }
+                for idx in sector_indices
+            ],
+            'stocks': stocks,
+            'total_stocks': len(stocks),
+            'timestamp': latest_time_for_date.isoformat() if latest_time_for_date else None
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def api_available_dates(request):
+    """
+    Get list of dates that have scraped data
+    GET /api/available-dates/
+    """
+    try:
+        # Get distinct dates from NEPSEPrice model
+        dates = NEPSEPrice.objects.dates('timestamp', 'day', order='DESC')
+        
+        date_list = [date.strftime('%Y-%m-%d') for date in dates]
+        
+        return JsonResponse({
+            'success': True,
+            'dates': date_list,
+            'total_days': len(date_list),
+            'latest_date': date_list[0] if date_list else None,
+            'oldest_date': date_list[-1] if date_list else None
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def api_stock_history_range(request, symbol):
+    """
+    Get historical data for a specific stock
+    GET /api/stock-history/NABIL/?days=30
+    GET /api/stock-history/NABIL/?start_date=2025-01-01&end_date=2025-01-31
+    """
+    try:
+        symbol = symbol.upper()
+        
+        # Check for date range parameters
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        days = int(request.GET.get('days', 30))
+        
+        if start_date_str and end_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        else:
+            end_date = timezone.now()
+            start_date = end_date - timedelta(days=days)
+        
+        # Get history for date range
+        history = NEPSEPrice.objects.filter(
+            symbol=symbol,
+            timestamp__gte=start_date,
+            timestamp__lte=end_date
+        ).order_by('timestamp')
+        
+        if not history.exists():
+            return JsonResponse({
+                'success': False,
+                'error': f'No data found for symbol {symbol}'
+            }, status=404)
+        
+        return JsonResponse({
+            'success': True,
+            'symbol': symbol,
+            'start_date': start_date.strftime('%Y-%m-%d'),
+            'end_date': end_date.strftime('%Y-%m-%d'),
+            'data_points': history.count(),
+            'history': [
+                {
+                    'date': h.timestamp.strftime('%Y-%m-%d'),
+                    'time': h.timestamp.strftime('%H:%M:%S'),
+                    'timestamp': h.timestamp.isoformat(),
+                    'open': float(h.open or 0),
+                    'high': float(h.high or 0),
+                    'low': float(h.low or 0),
+                    'close': float(h.close or 0),
+                    'ltp': float(h.ltp or 0),
+                    'volume': float(h.volume or 0),
+                    'turnover': float(h.turnover or 0),
+                    'change_pct': float(h.change_pct or 0)
+                }
+                for h in history
+            ]
+        })
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid date format. Use YYYY-MM-DD'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@require_http_methods(["GET"])
+def api_date_range_summary(request):
+    """
+    Get summary statistics for a date range
+    GET /api/date-range-summary/?start_date=2025-01-01&end_date=2025-01-31
+    """
+    try:
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        
+        if not start_date_str or not end_date_str:
+            return JsonResponse({
+                'success': False,
+                'error': 'Both start_date and end_date are required'
+            }, status=400)
+        
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+        
+        # Get all dates with data in range
+        dates_with_data = NEPSEPrice.objects.filter(
+            timestamp__date__gte=start_date.date(),
+            timestamp__date__lte=end_date.date()
+        ).dates('timestamp', 'day')
+        
+        # Get NEPSE index values for the range
+        nepse_indices = NEPSEIndex.objects.filter(
+            timestamp__date__gte=start_date.date(),
+            timestamp__date__lte=end_date.date()
+        ).order_by('timestamp')
+        
+        first_index = nepse_indices.first()
+        last_index = nepse_indices.last()
+        
+        index_change = None
+        index_change_pct = None
+        if first_index and last_index:
+            index_change = float(last_index.index_value - first_index.index_value)
+            index_change_pct = (index_change / first_index.index_value) * 100
+        
+        return JsonResponse({
+            'success': True,
+            'start_date': start_date_str,
+            'end_date': end_date_str,
+            'trading_days': len(dates_with_data),
+            'dates': [d.strftime('%Y-%m-%d') for d in dates_with_data],
+            'nepse_index_summary': {
+                'first_value': float(first_index.index_value) if first_index else None,
+                'last_value': float(last_index.index_value) if last_index else None,
+                'change': index_change,
+                'change_pct': index_change_pct
+            } if first_index and last_index else None
+        })
+        
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid date format. Use YYYY-MM-DD'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

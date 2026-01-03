@@ -1,806 +1,233 @@
+{% extends "layouts/app_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Learn - NepseSewa</title>
+{% block title %}Learn - NepseSewa{% endblock %}
 
-  <!-- CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet" />
+{% block extra_css %}
+<style>
+  /* Learn Page Styles */
+  .hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 2rem 1.6rem;
+    box-shadow: 0 10px 28px rgba(16, 185, 129, 0.20);
+    margin-bottom: 2rem;
+  }
 
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+  .hero h4 {
+    font-weight: 900;
+    margin-bottom: .5rem;
+    font-size: 1.8rem;
+  }
 
-    :root {
-      --primary: #10b981;
-      --primary-dark: #059669;
-      --primary-light: #d1fae5;
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --info: #3b82f6;
-      --light: #f3f4f6;
-      --dark: #1f2937;
-      --border: #e5e7eb;
-      --muted: #6b7280;
-      --bg: #f9fafb;
-    }
+  .hero p {
+    opacity: .92;
+    font-weight: 600;
+    font-size: 1.05rem;
+    max-width: 600px;
+  }
 
-    body {
-      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--dark);
-    }
+  .lesson-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all .2s;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
 
-    /* navbar */
-    .navbar {
-      background: #fff;
-      border-bottom: 1px solid var(--border);
-      padding: 0.65rem 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 1040;
-      min-height: 70px;
-    }
+  .lesson-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .08);
+    border-color: var(--primary);
+  }
 
-    .navbar-brand {
-      font-size: 1.35rem;
-      font-weight: 800;
-      color: var(--primary) !important;
-      letter-spacing: -0.4px;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-    }
+  .lesson-img {
+    height: 140px;
+    background: var(--light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 3rem;
+  }
 
-    .navbar-summary-integrated {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      flex-grow: 1;
-      justify-content: center;
-      margin: 0 1.5rem;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
+  .lesson-body {
+    padding: 1.25rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
 
-    .navbar-summary-integrated::-webkit-scrollbar { display: none; }
+  .lesson-title {
+    font-weight: 800;
+    font-size: 1.1rem;
+    margin-bottom: .5rem;
+    color: #1f2937;
+  }
 
-    .nav-index-item { display:flex; flex-direction:column; line-height:1.15; min-width:115px; }
-    .nav-index-name { font-size:.70rem; font-weight:800; color:#9ca3af; text-transform:uppercase; letter-spacing:.8px; }
-    .nav-index-value { font-size:1.05rem; font-weight:800; color:#111827; }
-    .nav-index-change { font-size:.80rem; font-weight:700; }
-    .nav-v-separator { width:1px; height:34px; background:#e5e7eb; flex-shrink:0; }
-    .nav-session-info { display:flex; flex-direction:column; min-width:180px; }
-    .nav-session-info .nav-index-value { font-size:.95rem; font-weight:800; }
-    .nav-market-totals { display:flex; flex-direction:column; min-width:260px; text-align:right; }
-    .nav-total-item { font-size:1.0rem; font-weight:800; color:#2563eb; line-height:1.2; }
+  .lesson-desc {
+    color: var(--muted);
+    font-size: .9rem;
+    margin-bottom: 1rem;
+    flex-grow: 1;
+  }
 
-    /* search */
-    .search-box .input-group {
-      background: var(--light);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      transition: all 0.2s ease;
-      overflow: hidden;
-    }
-    .search-box .input-group:focus-within {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
-    }
-    .search-box .form-control {
-      border: none;
-      background: transparent;
-      font-size: 0.9rem;
-      padding: 0.6rem 0.9rem;
-    }
-    .search-box .form-control:focus { box-shadow: none; }
+  .progress-wrap {
+    margin-top: auto;
+  }
 
-    .search-results-dropdown {
-      position: absolute;
-      top: 44px;
-      right: 0;
-      left: 0;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.10);
-      overflow: hidden;
-      display: none;
-      z-index: 2000;
-    }
-    .search-result-item {
-      padding: 0.75rem 0.9rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
-    }
-    .search-result-item:last-child { border-bottom:none; }
-    .search-result-item:hover { background: var(--primary-light); }
+  .progress {
+    height: 6px;
+    border-radius: 99px;
+    background: #e5e7eb;
+    margin-bottom: .5rem;
+  }
 
-    .user-avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 0.85rem;
-      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.30);
-    }
-    .dropdown-menu {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
-      padding: 0.5rem 0;
-    }
-    .dropdown-item { padding: 0.70rem 1.0rem; font-size: 0.9rem; }
-    .dropdown-item:hover { background: var(--primary-light); color: var(--primary); }
+  .progress-bar {
+    background: var(--primary);
+    border-radius: 99px;
+  }
 
-    /* layout */
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: 220px;
-      background: #fff;
-      border-right: 1px solid var(--border);
-      padding-top: 70px;
-      z-index: 1030;
-    }
-    .sidebar .nav-pills { gap: 0.25rem; padding: 0 0.5rem; }
-    .sidebar .nav-pills::before {
-      content: 'Main Menu';
-      display: block;
-      padding: 0 1rem;
-      margin: 1rem 0 0.5rem;
-      font-size: 0.75rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-    }
-    .nav-link {
-      color: var(--muted) !important;
-      border-radius: 0 15px 15px 0;
-      padding: 0.95rem 1.25rem !important;
-      transition: all 0.25s ease;
-      font-weight: 600;
-      font-size: 0.95rem;
-      margin: 0.35rem 0.5rem 0.35rem 0 !important;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .nav-link:hover {
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.06) 100%);
-      color: var(--primary) !important;
-      transform: translateX(4px);
-    }
-    .nav-link.active {
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.20) 0%, rgba(16, 185, 129, 0.08) 100%);
-      color: var(--primary) !important;
-      border-right: 3px solid var(--primary);
-      font-weight: 800;
-    }
-    .main-content { margin-left: 220px; padding: 1.5rem 1.5rem 2rem; }
+  .qa-item {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
 
-    @media (max-width: 992px) {
-      .sidebar {
-        left: -100%;
-        top: 70px;
-        height: calc(100vh - 70px);
-        transition: left 0.25s ease;
-        box-shadow: 6px 0 18px rgba(0, 0, 0, 0.14);
-      }
-      .sidebar.show { left: 0; }
-      .main-content { margin-left: 0; padding: 1rem; }
-      .navbar-summary-integrated { display: none !important; }
-    }
+  .qa-question {
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: .5rem;
+    cursor: pointer;
+  }
 
-    /* page header */
-    .hero {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      border-radius: 16px;
-      padding: 1.6rem 1.6rem;
-      box-shadow: 0 10px 28px rgba(16, 185, 129, 0.20);
-      margin-bottom: 1.25rem;
-    }
-    .hero h4 { font-weight: 900; margin-bottom: .25rem; }
-    .hero p { margin: 0; opacity: .92; font-weight: 600; }
+  .qa-answer {
+    color: var(--muted);
+    font-size: .95rem;
+  }
+</style>
+{% endblock %}
 
-    /* cards */
-    .card {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
-      background: #fff;
-    }
-    .card-header {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 1.25rem;
-    }
-    .card-title { font-weight: 800; font-size: 0.95rem; margin: 0; }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      padding: .45rem .7rem;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #fff;
-      font-weight: 800;
-      font-size: .8rem;
-      color: #111827;
-    }
-
-    .lesson-card {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1rem;
-      background: #fff;
-      height: 100%;
-      transition: all .2s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,.04);
-    }
-    .lesson-card:hover {
-      border-color: rgba(16, 185, 129, .35);
-      box-shadow: 0 12px 28px rgba(16, 185, 129, .10);
-      transform: translateY(-2px);
-    }
-    .lesson-icon {
-      width: 46px; height: 46px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(16,185,129,.12);
-      color: var(--primary);
-      font-size: 1.15rem;
-      flex-shrink: 0;
-    }
-    .muted { color: var(--muted); font-size: .86rem; font-weight: 600; }
-    .lesson-title { font-weight: 900; margin: 0; }
-    .meta {
-      display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.65rem;
-    }
-    .tag {
-      font-size: .75rem;
-      font-weight: 800;
-      padding: .28rem .55rem;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(243,244,246,.9);
-      color: #111827;
-    }
-    .tag.beginner { background: rgba(16,185,129,.10); border-color: rgba(16,185,129,.25); color:#065f46; }
-    .tag.intermediate { background: rgba(59,130,246,.10); border-color: rgba(59,130,246,.25); color:#1e3a8a; }
-    .tag.advanced { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.25); color:#7f1d1d; }
-
-    .soft-input {
-      background: var(--light);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: .6rem .8rem;
-      font-size: .9rem;
-    }
-    .soft-input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, .10);
-      outline: none;
-    }
-
-    .progress-wrap {
-      background: rgba(16,185,129,.08);
-      border: 1px solid rgba(16,185,129,.18);
-      border-radius: 14px;
-      padding: 1rem 1.1rem;
-    }
-    .progress {
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.65);
-      border: 1px solid rgba(255,255,255,.35);
-    }
-    .progress-bar { background: var(--primary); }
-
-    .qa-item {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: .9rem 1rem;
-      background: #fff;
-    }
-    .qa-item:hover { background: var(--primary-light); transition: background .15s ease; }
-    .qa-q { font-weight: 900; margin-bottom: .15rem; }
-  </style>
-</head>
-
-<body>
-  <!-- Navbar (same as dashboard) -->
-  <nav class="navbar navbar-expand-lg navbar-light">
-    <div class="container-fluid px-2">
-      <button class="btn btn-light d-lg-none me-2" id="sidebarToggle" type="button">
-        <i class="fas fa-bars"></i>
-      </button>
-
-      <a class="navbar-brand" href="{% url 'dashboard' %}">
-        <i class="fas fa-chart-line"></i> NepseSewa
-      </a>
-
-      <!-- CENTER -->
-      <div class="navbar-summary-integrated d-none d-lg-flex">
-        <div class="d-flex gap-4" id="barIndices">
-          <div class="nav-index-item">
-            <span class="nav-index-name">NEPSE</span>
-            <span class="nav-index-value">...</span>
-            <span class="nav-index-change text-muted">Loading...</span>
-          </div>
-        </div>
-
-        <div class="nav-v-separator"></div>
-
-        <div class="nav-session-info">
-          <span class="nav-index-name">Active Sessions</span>
-          <span class="nav-index-value" id="barSessionStatus">Loading...</span>
-        </div>
-
-        <div class="nav-v-separator"></div>
-
-        <div class="nav-market-totals">
-          <div class="nav-total-item" id="barTotalTurnover">Turnover: ...</div>
-          <div class="nav-total-item" id="barTotalVolume">Volume: ...</div>
-        </div>
-      </div>
-
-      <!-- RIGHT -->
-      <div class="d-flex align-items-center gap-3 ms-auto">
-        <div class="search-box position-relative d-none d-md-block" style="min-width: 320px;">
-          <div class="input-group input-group-sm">
-            <input type="text" id="stockSearch" class="form-control" placeholder="Search stocks (e.g. NBL)..."
-              autocomplete="off">
-            <button class="btn btn-light" type="button">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
-          <div id="searchResults" class="search-results-dropdown"></div>
-        </div>
-
-        <div class="dropdown">
-          <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
-            <div class="user-avatar me-2">
-              {{ user.first_name|first }}{{ user.last_name|first }}
-            </div>
-            <span class="d-none d-lg-inline text-dark fw-bold" style="font-size: 0.9rem;">
-              {{ user.first_name }}
-            </span>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
-            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-            <li>
-              <hr class="dropdown-divider">
-            </li>
-            <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-          </ul>
-        </div>
-      </div>
+{% block content %}
+<!-- Hero -->
+<div class="hero">
+  <h4>NepseSewa Academy 🎓</h4>
+  <p>Master the stock market with our curated lessons, from basics to advanced trading strategies.</p>
+  <div class="mt-4">
+    <div class="input-group" style="max-width: 400px;">
+      <span class="input-group-text border-0 bg-white text-muted ps-3"><i class="fas fa-search"></i></span>
+      <input type="text" class="form-control border-0 py-2" placeholder="Search lessons..." style="font-weight:600;">
+      <button class="btn btn-light fw-bold text-primary">Search</button>
     </div>
-  </nav>
+  </div>
+</div>
 
-  <!-- Sidebar (same as dashboard) -->
-  <div class="sidebar" id="sidebar">
-    <ul class="nav nav-pills flex-column">
-      <li class="nav-item px-2">
-        <a href="{% url 'dashboard' %}" class="nav-link">
-          <i class="fas fa-home"></i><span>Dashboard</span>
-        </a>
-      </li>
-      <li class="nav-item px-2">
-        <a href="{% url 'portfolio' %}" class="nav-link">
-          <i class="fas fa-chart-pie"></i><span>Portfolio</span>
-        </a>
-      </li>
-      <li class="nav-item px-2">
-        <a href="{% url 'trade' %}" class="nav-link">
-          <i class="fas fa-exchange-alt"></i><span>Trade</span>
-        </a>
-      </li>
-      <li class="nav-item px-2">
-        <a href="{% url 'market' %}" class="nav-link">
-          <i class="fas fa-layer-group"></i><span>All Stocks</span>
-        </a>
-      </li>
-      <li class="nav-item px-2">
-        <a href="{% url 'watchlist' %}" class="nav-link">
-          <i class="fas fa-star"></i><span>Watchlist</span>
-        </a>
-      </li>
-      <li class="nav-item px-2">
-        <a href="{% url 'learn' %}" class="nav-link active">
-          <i class="fas fa-graduation-cap"></i><span>Learn</span>
-        </a>
-      </li>
-      <li class="nav-item px-2">
-        <a href="{% url 'settings' %}" class="nav-link">
-          <i class="fas fa-cog"></i><span>Settings</span>
-        </a>
-      </li>
-    </ul>
+<div class="row mb-5">
+  <div class="col-12 mb-3">
+    <h5 class="fw-bold"><i class="fas fa-book-open me-2 text-primary"></i>Latest Courses</h5>
   </div>
 
-  <!-- Main -->
-  <div class="main-content">
-
-    <!-- Hero -->
-    <div class="hero">
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-          <h4>Learn Trading & Investing 📚</h4>
-          <p>Start from basics, practice with quizzes, and level up your skills.</p>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          <span class="pill"><i class="fas fa-book-open text-success"></i> Lessons</span>
-          <span class="pill"><i class="fas fa-question-circle text-primary"></i> Quizzes</span>
-          <span class="pill"><i class="fas fa-shield-alt text-warning"></i> Risk</span>
-        </div>
+  <!-- Course 1 -->
+  <div class="col-md-6 col-lg-4 mb-4">
+    <div class="lesson-card">
+      <div class="lesson-img" style="background:#e0f2fe;color:#0ea5e9;">
+        <i class="fas fa-chart-line"></i>
       </div>
-
-      <div class="row g-3 mt-3">
-        <div class="col-lg-6">
-          <div class="progress-wrap">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div style="font-weight:900;">Your Learning Progress</div>
-              <div class="muted"><span id="progressPct">35</span>% completed</div>
-            </div>
-            <div class="progress">
-              <div class="progress-bar" id="progressBar" style="width:35%"></div>
-            </div>
-            <div class="muted mt-2">Complete lessons to unlock the next level.</div>
+      <div class="lesson-body">
+        <div class="lesson-title">Stock Market Basics</div>
+        <div class="lesson-desc">Learn how the NEPSE works, what are shares, and how to start investing safely.</div>
+        <div class="progress-wrap">
+          <div class="d-flex justify-content-between small fw-bold mb-1">
+            <span>Progress</span>
+            <span class="text-primary">40%</span>
           </div>
-        </div>
-        <div class="col-lg-6">
-          <div class="progress-wrap" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.18);">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div style="font-weight:900;">Recommended Next</div>
-              <div class="muted">Based on your progress</div>
-            </div>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-              <span class="pill"><i class="fas fa-play-circle text-info"></i> Candlesticks</span>
-              <span class="pill"><i class="fas fa-play-circle text-info"></i> Risk/Reward</span>
-              <span class="pill"><i class="fas fa-play-circle text-info"></i> Position sizing</span>
-            </div>
-            <div class="muted mt-2">Tip: learn risk first before trading real money.</div>
+          <div class="progress">
+            <div class="progress-bar" style="width: 40%"></div>
           </div>
+          <button class="btn btn-primary w-100 btn-sm mt-3 fw-bold rounded-3">Continue Learning</button>
         </div>
       </div>
     </div>
-
-    <!-- Search + filters -->
-    <div class="card mb-3">
-      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h5 class="card-title mb-0"><i class="fas fa-compass text-success me-2"></i>Explore Lessons</h5>
-        <div class="d-flex flex-wrap gap-2">
-          <input class="soft-input" id="lessonSearch" placeholder="Search lessons (e.g., RSI, candles...)" style="min-width:260px;">
-          <select class="soft-input" id="levelFilter">
-            <option value="">All Levels</option>
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
-          </select>
-          <select class="soft-input" id="topicFilter">
-            <option value="">All Topics</option>
-            <option value="Basics">Basics</option>
-            <option value="Technical">Technical</option>
-            <option value="Fundamental">Fundamental</option>
-            <option value="Risk">Risk</option>
-            <option value="Psychology">Psychology</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Lessons grid -->
-    <div class="row g-3 mb-3" id="lessonGrid">
-      <!-- demo cards (replace with Django loop later) -->
-      <div class="col-md-6 col-xl-4" data-title="Stock Market Basics" data-level="Beginner" data-topic="Basics">
-        <div class="lesson-card">
-          <div class="d-flex gap-3">
-            <div class="lesson-icon"><i class="fas fa-seedling"></i></div>
-            <div>
-              <p class="lesson-title mb-1">Stock Market Basics</p>
-              <div class="muted">What is NEPSE, shares, IPO, secondary market, and trading hours.</div>
-              <div class="meta">
-                <span class="tag beginner">Beginner</span>
-                <span class="tag">Basics</span>
-                <span class="tag"><i class="fas fa-clock me-1"></i>8 min</span>
-              </div>
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-success btn-sm"><i class="fas fa-play me-1"></i>Start</button>
-                <button class="btn btn-outline-success btn-sm"><i class="fas fa-bookmark me-1"></i>Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-xl-4" data-title="Candlestick Patterns" data-level="Beginner" data-topic="Technical">
-        <div class="lesson-card">
-          <div class="d-flex gap-3">
-            <div class="lesson-icon" style="background:rgba(59,130,246,.12);color:var(--info);">
-              <i class="fas fa-chart-bar"></i>
-            </div>
-            <div>
-              <p class="lesson-title mb-1">Candlestick Patterns</p>
-              <div class="muted">Doji, hammer, engulfing — how to read price action quickly.</div>
-              <div class="meta">
-                <span class="tag beginner">Beginner</span>
-                <span class="tag">Technical</span>
-                <span class="tag"><i class="fas fa-clock me-1"></i>12 min</span>
-              </div>
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-success btn-sm"><i class="fas fa-play me-1"></i>Start</button>
-                <button class="btn btn-outline-success btn-sm"><i class="fas fa-bookmark me-1"></i>Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-xl-4" data-title="RSI & MACD Indicators" data-level="Intermediate" data-topic="Technical">
-        <div class="lesson-card">
-          <div class="d-flex gap-3">
-            <div class="lesson-icon" style="background:rgba(245,158,11,.12);color:var(--warning);">
-              <i class="fas fa-wave-square"></i>
-            </div>
-            <div>
-              <p class="lesson-title mb-1">RSI & MACD Indicators</p>
-              <div class="muted">Momentum, divergence, and confirmations for entry/exit signals.</div>
-              <div class="meta">
-                <span class="tag intermediate">Intermediate</span>
-                <span class="tag">Technical</span>
-                <span class="tag"><i class="fas fa-clock me-1"></i>15 min</span>
-              </div>
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-success btn-sm"><i class="fas fa-play me-1"></i>Start</button>
-                <button class="btn btn-outline-success btn-sm"><i class="fas fa-bookmark me-1"></i>Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-xl-4" data-title="Fundamental Analysis" data-level="Intermediate" data-topic="Fundamental">
-        <div class="lesson-card">
-          <div class="d-flex gap-3">
-            <div class="lesson-icon" style="background:rgba(16,185,129,.12);color:var(--primary);">
-              <i class="fas fa-file-invoice-dollar"></i>
-            </div>
-            <div>
-              <p class="lesson-title mb-1">Fundamental Analysis</p>
-              <div class="muted">EPS, P/E, book value, growth, and how to judge company health.</div>
-              <div class="meta">
-                <span class="tag intermediate">Intermediate</span>
-                <span class="tag">Fundamental</span>
-                <span class="tag"><i class="fas fa-clock me-1"></i>18 min</span>
-              </div>
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-success btn-sm"><i class="fas fa-play me-1"></i>Start</button>
-                <button class="btn btn-outline-success btn-sm"><i class="fas fa-bookmark me-1"></i>Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-xl-4" data-title="Risk Management" data-level="Beginner" data-topic="Risk">
-        <div class="lesson-card">
-          <div class="d-flex gap-3">
-            <div class="lesson-icon" style="background:rgba(239,68,68,.10);color:var(--danger);">
-              <i class="fas fa-shield-alt"></i>
-            </div>
-            <div>
-              <p class="lesson-title mb-1">Risk Management</p>
-              <div class="muted">Stop-loss, risk/reward, position sizing — protect your capital.</div>
-              <div class="meta">
-                <span class="tag beginner">Beginner</span>
-                <span class="tag">Risk</span>
-                <span class="tag"><i class="fas fa-clock me-1"></i>10 min</span>
-              </div>
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-success btn-sm"><i class="fas fa-play me-1"></i>Start</button>
-                <button class="btn btn-outline-success btn-sm"><i class="fas fa-bookmark me-1"></i>Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-xl-4" data-title="Trading Psychology" data-level="Advanced" data-topic="Psychology">
-        <div class="lesson-card">
-          <div class="d-flex gap-3">
-            <div class="lesson-icon" style="background:rgba(17,24,39,.08);color:#111827;">
-              <i class="fas fa-brain"></i>
-            </div>
-            <div>
-              <p class="lesson-title mb-1">Trading Psychology</p>
-              <div class="muted">FOMO, discipline, journaling, and building a consistent routine.</div>
-              <div class="meta">
-                <span class="tag advanced">Advanced</span>
-                <span class="tag">Psychology</span>
-                <span class="tag"><i class="fas fa-clock me-1"></i>14 min</span>
-              </div>
-              <div class="mt-3 d-flex gap-2">
-                <button class="btn btn-success btn-sm"><i class="fas fa-play me-1"></i>Start</button>
-                <button class="btn btn-outline-success btn-sm"><i class="fas fa-bookmark me-1"></i>Save</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Quick Quiz -->
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0"><i class="fas fa-question-circle text-info me-2"></i>Quick Quiz</h5>
-        <span class="pill"><i class="fas fa-bolt text-warning"></i> 1 minute</span>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-lg-6">
-            <div class="qa-item">
-              <div class="qa-q">1) What does a stop-loss do?</div>
-              <div class="muted">Choose the best answer.</div>
-              <div class="mt-2 d-grid gap-2">
-                <button class="btn btn-outline-success btn-sm quiz-opt">A) Locks profit automatically</button>
-                <button class="btn btn-outline-success btn-sm quiz-opt" data-correct="1">B) Limits loss by exiting at a set price</button>
-                <button class="btn btn-outline-success btn-sm quiz-opt">C) Increases margin</button>
-              </div>
-              <div class="mt-2 muted" id="quizMsg"></div>
-            </div>
-          </div>
-          <div class="col-lg-6">
-            <div class="qa-item">
-              <div class="qa-q">2) RSI above 70 usually means?</div>
-              <div class="muted">Common interpretation in technical analysis.</div>
-              <div class="mt-2 d-grid gap-2">
-                <button class="btn btn-outline-success btn-sm quiz-opt2" data-correct="1">A) Overbought</button>
-                <button class="btn btn-outline-success btn-sm quiz-opt2">B) Oversold</button>
-                <button class="btn btn-outline-success btn-sm quiz-opt2">C) No volume</button>
-              </div>
-              <div class="mt-2 muted" id="quizMsg2"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="text-muted mt-3" style="font-weight:600;">
-          Later: save quiz results to DB and show “Your Score” on dashboard.
-        </div>
-      </div>
-    </div>
-
   </div>
 
-  <!-- JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Course 2 -->
+  <div class="col-md-6 col-lg-4 mb-4">
+    <div class="lesson-card">
+      <div class="lesson-img" style="background:#fef3c7;color:#d97706;">
+        <i class="fas fa-coins"></i>
+      </div>
+      <div class="lesson-body">
+        <div class="lesson-title">Technical Analysis</div>
+        <div class="lesson-desc">Understand candlesticks, support/resistance, and indicators like RSI & MACD.</div>
+        <div class="progress-wrap">
+          <div class="d-flex justify-content-between small fw-bold mb-1">
+            <span>Progress</span>
+            <span class="text-muted">0%</span>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" style="width: 0%"></div>
+          </div>
+          <button class="btn btn-outline-primary w-100 btn-sm mt-3 fw-bold rounded-3">Start Course</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    // Sidebar toggle
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebarToggle');
-    if (toggleBtn && sidebar) toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
+  <!-- Course 3 -->
+  <div class="col-md-6 col-lg-4 mb-4">
+    <div class="lesson-card">
+      <div class="lesson-img" style="background:#fce7f3;color:#db2777;">
+        <i class="fas fa-shield-alt"></i>
+      </div>
+      <div class="lesson-body">
+        <div class="lesson-title">Risk Management</div>
+        <div class="lesson-desc">Protect your capital. Learn about stop-loss, position sizing, and diversification.
+        </div>
+        <div class="progress-wrap">
+          <div class="d-flex justify-content-between small fw-bold mb-1">
+            <span>Progress</span>
+            <span class="text-muted">0%</span>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" style="width: 0%"></div>
+          </div>
+          <button class="btn btn-outline-primary w-100 btn-sm mt-3 fw-bold rounded-3">Start Course</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    // Lesson filtering (UI only)
-    function applyLessonFilters() {
-      const q = (document.getElementById('lessonSearch')?.value || '').trim().toLowerCase();
-      const level = (document.getElementById('levelFilter')?.value || '').trim();
-      const topic = (document.getElementById('topicFilter')?.value || '').trim();
+<div class="row">
+  <div class="col-lg-8">
+    <h5 class="fw-bold mb-3">Today's Quiz 🧠</h5>
+    <div class="card p-4 border-0 shadow-sm" style="border-radius:16px;">
+      <h6 class="fw-bold mb-3">Which indicator is best for identifying overbought conditions?</h6>
+      <div class="d-flex flex-column gap-2">
+        <button class="btn btn-outline-secondary text-start fw-bold p-3 rounded-3">A. Moving Average</button>
+        <button class="btn btn-outline-secondary text-start fw-bold p-3 rounded-3">B. RSI (Relative Strength
+          Index)</button>
+        <button class="btn btn-outline-secondary text-start fw-bold p-3 rounded-3">C. Volume</button>
+      </div>
+    </div>
+  </div>
 
-      const cards = Array.from(document.querySelectorAll('#lessonGrid > div'));
-      cards.forEach(c => {
-        const title = (c.dataset.title || '').toLowerCase();
-        const okQ = !q || title.includes(q);
-        const okL = !level || c.dataset.level === level;
-        const okT = !topic || c.dataset.topic === topic;
-        c.style.display = (okQ && okL && okT) ? '' : 'none';
-      });
-    }
-
-    ['lessonSearch', 'levelFilter', 'topicFilter'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('input', applyLessonFilters);
-        el.addEventListener('change', applyLessonFilters);
-      }
-    });
-
-    // Quick Quiz (UI only)
-    function wireQuiz(btnSelector, msgId) {
-      const buttons = Array.from(document.querySelectorAll(btnSelector));
-      const msg = document.getElementById(msgId);
-      buttons.forEach(b => {
-        b.addEventListener('click', () => {
-          const correct = b.dataset.correct === "1";
-          if (!msg) return;
-          msg.textContent = correct ? "✅ Correct!" : "❌ Try again.";
-          msg.style.color = correct ? "#059669" : "#ef4444";
-        });
-      });
-    }
-    wireQuiz('.quiz-opt', 'quizMsg');
-    wireQuiz('.quiz-opt2', 'quizMsg2');
-
-    // OPTIONAL: same search dropdown behavior (needs /api/search/)
-    const sIn = document.getElementById('stockSearch');
-    const rBox = document.getElementById('searchResults');
-    let sT;
-
-    function fmtNumber(n, digits = 2) {
-      if (n === null || n === undefined || isNaN(n)) return '—';
-      return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    }
-
-    if (sIn) {
-      sIn.addEventListener('input', () => {
-        clearTimeout(sT);
-        const q = sIn.value.trim();
-        if (q.length < 2) { if (rBox) rBox.style.display = 'none'; return; }
-
-        sT = setTimeout(async () => {
-          try {
-            const res = await fetch(`/api/search/?q=${encodeURIComponent(q)}`);
-            const d = await res.json();
-            const list = Array.isArray(d.data) ? d.data : [];
-
-            if (rBox && list.length > 0) {
-              rBox.innerHTML = list.map(s => `
-                <div class="search-result-item" onclick="window.location.href='/trade/?symbol=${s.symbol}'">
-                  <strong>${s.symbol}</strong>
-                  <span>
-                    Rs ${fmtNumber(s.ltp, 2)}
-                    <small class="${Number(s.change_pct) >= 0 ? 'text-success' : 'text-danger'}">
-                      (${Number(s.change_pct) >= 0 ? '+' : ''}${fmtNumber(s.change_pct, 2)}%)
-                    </small>
-                  </span>
-                </div>
-              `).join('');
-              rBox.style.display = 'block';
-            } else if (rBox) {
-              rBox.style.display = 'none';
-            }
-          } catch {
-            if (rBox) rBox.style.display = 'none';
-          }
-        }, 250);
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!rBox) return;
-        if (!sIn.contains(e.target) && !rBox.contains(e.target)) rBox.style.display = 'none';
-      });
-    }
-
-    // OPTIONAL: Navbar bar indices (copy your dashboard updater if you want live)
-    // In your dashboard you call /api/nepse-index/, /api/sector-indices/, /api/market-summary/
-    // If you want the same live values here, paste the same updateNavbarBar() function and call it.
-  </script>
-</body>
-
-</html>
+  <div class="col-lg-4 mt-4 mt-lg-0">
+    <h5 class="fw-bold mb-3">Quick Tips 💡</h5>
+    <div class="qa-item">
+      <div class="qa-question">What is a Bull Market?</div>
+      <div class="qa-answer">A market condition where prices are rising or are expected to rise.</div>
+    </div>
+    <div class="qa-item">
+      <div class="qa-question">What is Dividend?</div>
+      <div class="qa-answer">A distribution of profits by a corporation to its shareholders.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

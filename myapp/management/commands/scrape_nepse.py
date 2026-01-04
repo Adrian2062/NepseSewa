@@ -699,9 +699,32 @@ class Command(BaseCommand):
                     open_price = self.parse_float(row_data.get('open'))
                     high = self.parse_float(row_data.get('high'))
                     low = self.parse_float(row_data.get('low'))
+                    # Extract price data
+                    ltp = self.parse_float(row_data.get('ltp') or row_data.get('close') or row_data.get('last'))
+                    open_price = self.parse_float(row_data.get('open'))
+                    high = self.parse_float(row_data.get('high'))
+                    low = self.parse_float(row_data.get('low'))
                     close = ltp or self.parse_float(row_data.get('close'))
-                    volume = self.parse_float(row_data.get('volume') or row_data.get('qty') or row_data.get('quantity'))
-                    turnover = self.parse_float(row_data.get('turnover') or row_data.get('value'))
+                    
+                    # Robust Volume Extraction
+                    # Check all possible keys for volume
+                    vol_keys = ['volume', 'qty', 'quantity', 'traded shares', 'shares traded', 'share traded', 'scrip volume']
+                    volume = None
+                    for key in vol_keys:
+                        # try exact match first
+                        if key in row_data:
+                            volume = self.parse_float(row_data[key])
+                            if volume is not None: break
+                        
+                        # try partial match in keys if exact fail
+                        if volume is None:
+                             for h_key in row_data.keys():
+                                 if key in h_key: 
+                                     volume = self.parse_float(row_data[h_key])
+                                     if volume is not None: break
+                        if volume is not None: break
+
+                    turnover = self.parse_float(row_data.get('turnover') or row_data.get('value') or row_data.get('amount'))
                     
                     # Extract change percentage
                     change_pct = 0

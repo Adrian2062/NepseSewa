@@ -30,6 +30,7 @@ urlpatterns = [
     
     # NEW: Date-filtered API Endpoints
     path('api/market-data/', views.api_market_data_by_date, name='api_market_data_by_date'),
+    path('api/sectors/', views.api_sectors, name='api_sectors'),
     path('api/available-dates/', views.api_available_dates, name='api_available_dates'),
     path('api/stock-history/<str:symbol>/', views.api_stock_history_range, name='api_stock_history_range'),
     path('api/date-range-summary/', views.api_date_range_summary, name='api_date_range_summary'),

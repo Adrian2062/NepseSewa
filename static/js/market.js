@@ -1,94 +1,153 @@
-// Market Page Logic
+// Market Page Logic with Server-Side Filtering
 
-let allData = [];
-let filteredData = [];
-
-// Pagination
 let currentPage = 1;
 const PAGE_SIZE = 50;
+
+// State to hold current data for client-side pagination if needed, 
+// though we might want server-side pagination later. 
+// For now, API returns all rows for a date, so we paginate client-side.
+let currentData = [];
 
 async function initMarketPage() {
     const tbody = document.getElementById('marketBody');
     if (!tbody) return;
 
-    // await updateNavbarBar(); // Handled by global script
+    // 1. Initialize Date Picker
+    await initDatePicker();
+
+    // 2. Populate Sectors Dropdown
+    await populateSectors();
+
+    // 3. Initial Fetch
     await fetchMarketData();
 
-    // Event listeners for filters
-    document.getElementById('marketSearch')?.addEventListener('input', applyFilters);
-    document.getElementById('sectorSelect')?.addEventListener('change', applyFilters);
+    // 4. Event Listeners with Debounce for Search
+    document.getElementById('marketSearch')?.addEventListener('input', debounce(fetchMarketData, 500));
+    document.getElementById('sectorSelect')?.addEventListener('change', () => {
+        currentPage = 1; // Reset to page 1 on filter change
+        fetchMarketData();
+    });
+    document.getElementById('marketDate')?.addEventListener('change', () => {
+        currentPage = 1;
+        fetchMarketData();
+    });
 
     setupPagination();
 }
 
-async function fetchMarketData() {
-    const tbody = document.getElementById('marketBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">Loading market data...</td></tr>';
-
+async function populateSectors() {
     try {
-        const res = await fetch('/api/latest/');
+        const res = await fetch('/api/sectors/');
         const json = await res.json();
 
-        if (json.data && Array.isArray(json.data)) {
-            allData = json.data;
-            // Add dummy sector for filtering if not in API (API usually returns sector, if not we skip)
-            // For demo, we might mock sector or use what's available. 
-            // The table expects: Symbol, LTP, Change, Open, High, Low, Vol
-            applyFilters();
-        } else {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">Failed to load data.</td></tr>';
+        if (json.success && json.sectors) {
+            const select = document.getElementById('sectorSelect');
+            if (select) {
+                // Clear existing options except "All Sectors"
+                select.innerHTML = '<option value="">All Sectors</option>';
+
+                // Add sectors
+                json.sectors.forEach(sector => {
+                    const option = document.createElement('option');
+                    option.value = sector;
+                    option.textContent = sector;
+                    select.appendChild(option);
+                });
+            }
         }
-    } catch (e) {
-        console.error(e);
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">Error loading data.</td></tr>';
+    } catch (err) {
+        console.error('Failed to load sectors:', err);
     }
 }
 
-function applyFilters() {
-    const q = (document.getElementById('marketSearch')?.value || '').trim().toUpperCase();
-    const sec = (document.getElementById('sectorSelect')?.value || '').trim();
+async function initDatePicker() {
+    try {
+        const res = await fetch('/api/available-dates/');
+        const json = await res.json();
 
-    filteredData = allData.filter(item => {
-        const sym = (item.symbol || '').toUpperCase();
-        // If API doesn't have sector, we ignore sector filter or match by symbol/name
-        // Assuming item has 'sector' field?
-        // If not, we just filter by search.
-        const matchSearch = !q || sym.includes(q);
-        // const matchSector = !sec || item.sector === sec; 
-        return matchSearch; // && matchSector
-    });
+        if (json.success && json.dates.length > 0) {
+            const dateInput = document.getElementById('marketDate');
+            if (dateInput) {
+                // Set max to latest available date (usually today/yesterday)
+                dateInput.max = json.latest_date;
+                dateInput.min = json.oldest_date;
+                // Default to latest date if not set
+                if (!dateInput.value) {
+                    dateInput.value = json.latest_date;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to init dates", e);
+    }
+}
 
-    currentPage = 1;
-    renderTable();
-    updatePaginationUI();
+async function fetchMarketData() {
+    const tbody = document.getElementById('marketBody');
+    const countEl = document.getElementById('marketCount');
+    const dateVal = document.getElementById('marketDate')?.value || '';
+    const sectorVal = document.getElementById('sectorSelect')?.value || '';
+    const searchVal = document.getElementById('marketSearch')?.value || '';
+
+    // Show loading state
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading market data...</td></tr>';
+    if (countEl) countEl.textContent = 'Loading...';
+
+    try {
+        // Construct query params
+        const params = new URLSearchParams();
+        if (dateVal) params.append('date', dateVal);
+        if (sectorVal) params.append('sector', sectorVal);
+        if (searchVal) params.append('search', searchVal);
+
+        const res = await fetch(`/api/market-data/?${params.toString()}`);
+        const json = await res.json();
+
+        if (json.success) {
+            currentData = json.stocks || [];
+
+            // Update UI with metadata
+            if (countEl) countEl.textContent = `${json.total_stocks} Stocks`;
+
+            // Check if we have data
+            if (currentData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">No data found for selected filters.</td></tr>';
+            } else {
+                renderTable();
+            }
+
+            updatePaginationUI();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger p-4">Error: ${json.error || 'Unknown error'}</td></tr>`;
+        }
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">Failed to fetch data.</td></tr>';
+    }
 }
 
 function renderTable() {
     const tbody = document.getElementById('marketBody');
-    const countEl = document.getElementById('marketCount');
-    if (!tbody) return;
+    if (!tbody || !currentData.length) return;
 
-    if (countEl) countEl.textContent = `${filteredData.length} Stocks`;
-
-    if (!filteredData.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">No matching stocks found.</td></tr>';
-        return;
-    }
-
-    // Slice for pagination
+    // Client-side pagination logic
     const start = (currentPage - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    const pageItems = filteredData.slice(start, end);
+    const pageItems = currentData.slice(start, end);
 
     tbody.innerHTML = pageItems.map(item => {
         const ltp = Number(item.ltp);
         const chg = Number(item.change_pct);
         const cls = chg >= 0 ? 'text-success' : 'text-danger';
+        const sectorName = item.sector ? `<br><small class="text-muted" style="font-size:0.7em">${item.sector}</small>` : '';
 
         return `
         <tr>
           <td style="font-weight:800;">
-            <a href="/trade/?symbol=${item.symbol}" class="text-decoration-none text-dark hover-primary">${item.symbol}</a>
+            <a href="/trade/?symbol=${item.symbol}" class="text-decoration-none text-dark hover-primary">
+                ${item.symbol}
+            </a>
+            ${sectorName}
           </td>
           <td style="font-weight:700;">Rs ${fmtNumber(ltp, 2)}</td>
           <td class="${cls}" style="font-weight:900;">${chg >= 0 ? '+' : ''}${fmtNumber(chg, 2)}%</td>
@@ -106,13 +165,13 @@ function setupPagination() {
         if (currentPage > 1) { currentPage--; renderTable(); updatePaginationUI(); }
     });
     document.getElementById('btnNext')?.addEventListener('click', () => {
-        const max = Math.ceil(filteredData.length / PAGE_SIZE);
+        const max = Math.ceil(currentData.length / PAGE_SIZE);
         if (currentPage < max) { currentPage++; renderTable(); updatePaginationUI(); }
     });
 }
 
 function updatePaginationUI() {
-    const max = Math.ceil(filteredData.length / PAGE_SIZE) || 1;
+    const max = Math.ceil(currentData.length / PAGE_SIZE) || 1;
     const info = document.getElementById('pageInfo');
     if (info) info.textContent = `Page ${currentPage} of ${max}`;
 
@@ -123,12 +182,18 @@ function updatePaginationUI() {
     if (btnNext) btnNext.disabled = currentPage === max;
 }
 
+// Utility debounce
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Init
 initMarketPage();
-setInterval(async () => {
-    // await updateNavbarBar(); // Global handles this
-    // We can auto-refresh market data if desired, but filters might reset?
-    // Let's just refresh data and re-apply filters (keeping page?)
-    // proper implementation would be complex. For now, simple refresh:
-    // await fetchMarketData(); 
-}, 30000);

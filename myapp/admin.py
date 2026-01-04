@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (
     CustomUser, NEPSEPrice, NEPSEIndex, MarketIndex, 
-    MarketSummary, Trade, Order, Portfolio, TradeExecution, MarketSession
+    MarketSummary, Trade, Order, Portfolio, TradeExecution, MarketSession,
+    Stock
 )
 
 # Register models
@@ -22,6 +23,11 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ['symbol', 'user__email']
     ordering = ['-created_at']
 
+@admin.register(Stock)
+class StockAdmin(admin.ModelAdmin):
+    list_display = ('symbol', 'name', 'sector', 'is_active', 'updated_at')
+    search_fields = ('symbol', 'name', 'sector')
+    list_filter = ('sector', 'is_active')
 
 @admin.register(Portfolio)
 class PortfolioAdmin(admin.ModelAdmin):

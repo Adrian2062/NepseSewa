@@ -19,8 +19,30 @@ class CustomUser(AbstractUser):
     class Meta:
         db_table = 'users'
     
+
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+
+# ============= STOCK METADATA (NEW) =============
+class Stock(models.Model):
+    """Store static stock details (Symbol, Name, Sector)"""
+    symbol = models.CharField(max_length=50, unique=True, db_index=True)
+    name = models.CharField(max_length=200)
+    sector = models.CharField(max_length=100, db_index=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'stocks'
+        ordering = ['symbol']
+        indexes = [
+            models.Index(fields=['sector', 'symbol']),
+        ]
+
+    def __str__(self):
+        return f"{self.symbol} ({self.sector})"
 
 
 # ============= NEPSE STOCK PRICES =============

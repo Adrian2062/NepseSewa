@@ -24,6 +24,10 @@ body {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg);
     color: var(--dark);
+    /* App Shell Logic */
+    height: 100vh;
+    overflow: hidden;
+    /* Lock window scroll */
 }
 
 /* chart area */
@@ -59,8 +63,12 @@ body {
     background: #fff;
     border-bottom: 1px solid var(--border);
     padding: 0.65rem 1rem;
-    position: sticky;
+    position: fixed;
+    /* Fixed top */
     top: 0;
+    left: 0;
+    right: 0;
+    /* Full width */
     z-index: 1040;
     min-height: 70px;
 }
@@ -240,15 +248,35 @@ body {
 /* LAYOUT: Sidebar */
 .sidebar {
     position: fixed;
-    top: 0;
+    top: 70px;
+    /* Below navbar */
     left: 0;
-    height: 100vh;
+    height: calc(100vh - 70px);
+    /* Full remaining height */
     width: 220px;
     background: #fff;
     border-right: 1px solid var(--border);
-    padding-top: 70px;
+    padding-top: 1rem;
+    /* Reduced padding since it's below navbar now */
     /* space for navbar */
     z-index: 1030;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(16, 185, 129, 0.2) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(16, 185, 129, 0.2);
+    border-radius: 20px;
 }
 
 .sidebar .nav-pills {
@@ -342,6 +370,12 @@ body {
 
 .main-content {
     margin-left: 220px;
+    margin-top: 70px;
+    /* Push down by navbar height */
+    height: calc(100vh - 70px);
+    /* Visible height */
+    overflow-y: auto;
+    /* Internal scrolling */
     padding: 1.5rem 1.5rem 2rem;
 }
 

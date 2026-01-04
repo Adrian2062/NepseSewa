@@ -593,7 +593,7 @@ from django.db.models import Max
 from datetime import datetime, timedelta
 from django.utils import timezone
 from .forms import RegistrationForm
-from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Trade
+from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Trade, Stock
 
 User = get_user_model()
 
@@ -607,90 +607,98 @@ User = get_user_model()
 # ========== NEW DATE-FILTERED API ENDPOINTS ==========
 
 @require_http_methods(["GET"])
+@login_required
+def api_sectors(request):
+    """Return list of distinct sectors for dropdown"""
+    sectors = Stock.objects.values_list('sector', flat=True).distinct().order_by('sector')
+    # Filter out empty or None
+    clean_sectors = [s for s in sectors if s and s != 'Others'] + ['Others']
+    # Unique/Sort
+    final_sectors = sorted(list(set(clean_sectors)))
+    if 'Others' in final_sectors:
+        final_sectors.remove('Others')
+        final_sectors.append('Others') # Put Others at end
+        
+    return JsonResponse({'success': True, 'sectors': final_sectors})
+
+@require_http_methods(["GET"])
+@login_required
 def api_market_data_by_date(request):
     """
-    Get market data filtered by date
-    GET /api/market-data/?date=2025-01-04
+    API to get market data for a specific date, with optional sector/search filtering.
     """
-    date_str = request.GET.get('date', None)
-    
+    date_str = request.GET.get('date')
+    sector_filter = request.GET.get('sector')
+    search_query = request.GET.get('search', '').strip().upper()
+
+    # 1. Determine Date
     if date_str:
         try:
-            filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            filter_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
-            return JsonResponse({
-                'error': 'Invalid date format. Use YYYY-MM-DD'
-            }, status=400)
+            return JsonResponse({'success': False, 'error': 'Invalid date format'}, status=400)
     else:
-        filter_date = timezone.now().date()
+        # Default to latest available date
+        latest_entry = NEPSEPrice.objects.order_by('-timestamp').first()
+        if not latest_entry:
+             return JsonResponse({'success': True, 'stocks': [], 'date': str(timezone.now().date())})
+        filter_date = latest_entry.timestamp.date()
+
+    # 2. Optimization: Filter by Sector at DB level if possible
+    relevant_symbols = None
+    if sector_filter and sector_filter != 'All Sectors':
+        relevant_symbols = list(Stock.objects.filter(sector__iexact=sector_filter).values_list('symbol', flat=True))
     
-    try:
-        # Get NEPSE Index for that date
-        nepse_index = NEPSEIndex.objects.filter(
-            timestamp__date=filter_date
-        ).order_by('-timestamp').first()
+    # 3. Fetch Prices
+    qs = NEPSEPrice.objects.filter(timestamp__date=filter_date)
+    
+    if relevant_symbols is not None:
+        qs = qs.filter(symbol__in=relevant_symbols)
         
-        # Get sector indices for that date
-        sector_indices = MarketIndex.objects.filter(
-            timestamp__date=filter_date
-        ).exclude(index_name='NEPSE Index').order_by('index_name')
+    if search_query:
+        qs = qs.filter(symbol__icontains=search_query)
+
+    all_prices_that_day = qs.values(
+        'symbol', 'open', 'high', 'low', 'close', 'ltp',
+        'change_pct', 'volume', 'turnover', 'timestamp'
+    ).order_by('symbol', '-timestamp')
+
+    # Deduplicate: Keep only latest timestamp for each symbol
+    unique_prices = {}
+    for p in all_prices_that_day:
+        sym = p['symbol'].strip().upper()
+        if sym not in unique_prices:
+            unique_prices[sym] = p
+
+    # Batch fetch sectors for the found symbols
+    found_symbols = list(unique_prices.keys())
+    stock_map = {s.symbol: s.sector for s in Stock.objects.filter(symbol__in=found_symbols)}
+
+    stocks_data = []
+    for sym, item in unique_prices.items():
+        # Final Search Filter
+        if search_query and search_query not in sym:
+            continue
+            
+        # Get sector
+        item_sector = stock_map.get(sym, 'Others')
         
-        # Get market summary for that date
-        market_summary = MarketSummary.objects.filter(
-            timestamp__date=filter_date
-        ).order_by('-timestamp').first()
-        
-        # Get all stock prices for that date (get the latest timestamp for that day)
-        latest_time_for_date = NEPSEPrice.objects.filter(
-            timestamp__date=filter_date
-        ).aggregate(Max('timestamp'))['timestamp__max']
-        
-        stocks = []
-        if latest_time_for_date:
-            stocks = list(NEPSEPrice.objects.filter(
-                timestamp=latest_time_for_date
-            ).values(
-                'symbol', 'open', 'high', 'low', 'close', 'ltp',
-                'change_pct', 'volume', 'turnover', 'timestamp'
-            ).order_by('symbol'))
-        
-        response_data = {
-            'success': True,
-            'date': str(filter_date),
-            'has_data': bool(stocks or nepse_index or sector_indices.exists() or market_summary),
-            'nepse_index': {
-                'value': float(nepse_index.index_value),
-                'change_pct': float(nepse_index.percentage_change),
-                'timestamp': nepse_index.timestamp.isoformat()
-            } if nepse_index else None,
-            'market_summary': {
-                'total_turnover': float(market_summary.total_turnover or 0),
-                'total_traded_shares': float(market_summary.total_traded_shares or 0),
-                'total_transactions': int(market_summary.total_transactions or 0),
-                'total_scrips': int(market_summary.total_scrips or 0),
-                'timestamp': market_summary.timestamp.isoformat()
-            } if market_summary else None,
-            'sector_indices': [
-                {
-                    'name': idx.index_name,
-                    'value': float(idx.value),
-                    'change_pct': float(idx.change_pct),
-                    'timestamp': idx.timestamp.isoformat()
-                }
-                for idx in sector_indices
-            ],
-            'stocks': stocks,
-            'total_stocks': len(stocks),
-            'timestamp': latest_time_for_date.isoformat() if latest_time_for_date else None
-        }
-        
-        return JsonResponse(response_data)
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        # Final Sector Filter
+        if sector_filter and sector_filter != 'All Sectors' and sector_filter.lower() != item_sector.lower():
+            continue
+            
+        item['sector'] = item_sector
+        item['symbol'] = sym
+        stocks_data.append(item)
+
+    stocks_data.sort(key=lambda x: x['symbol'])
+
+    return JsonResponse({
+        'success': True, 
+        'stocks': stocks_data,
+        'date': str(filter_date),
+        'count': len(stocks_data)
+    })
 
 
 @require_http_methods(["GET"])

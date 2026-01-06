@@ -329,5 +329,49 @@ class Trade(models.Model):
             models.Index(fields=['symbol', '-created_at']),
         ]
 
+
     def __str__(self):
         return f"{self.user_id} {self.side} {self.symbol} x{self.qty} @ {self.price}"
+
+
+# ============= WATCHLIST MODEL =============
+class Watchlist(models.Model):
+    """User's watchlist for stocks they want to track and get recommendations for"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='watchlist'
+    )
+    symbol = models.CharField(max_length=50, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'watchlist'
+        unique_together = [['user', 'symbol']]
+        indexes = [
+            models.Index(fields=['user', 'symbol']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} watching {self.symbol}"
+
+
+# ============= STOCK RECOMMENDATION MODEL =============
+class StockRecommendation(models.Model):
+    """Store LSTM-based recommendations for stocks"""
+    symbol = models.CharField(max_length=50, db_index=True)
+    current_price = models.FloatField()
+    predicted_next_close = models.FloatField()
+    recommendation = models.IntegerField(choices=[(1, 'BUY'), (0, 'HOLD'), (-1, 'SELL')])
+    rmse = models.FloatField(null=True, blank=True)
+    mae = models.FloatField(null=True, blank=True)
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    # academic disclaimer is part of the logic/display, not the model
+    
+    class Meta:
+        db_table = 'stock_recommendations'
+        ordering = ['symbol']
+
+    def __str__(self):
+        return f"Rec for {self.symbol}: {self.get_recommendation_display()}"

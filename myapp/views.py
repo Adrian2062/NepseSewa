@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
-from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio
+from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Watchlist, StockRecommendation
 
 
 
@@ -593,7 +593,7 @@ from django.db.models import Max
 from datetime import datetime, timedelta
 from django.utils import timezone
 from .forms import RegistrationForm
-from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Trade, Stock
+from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Trade, Stock, Watchlist, StockRecommendation
 
 User = get_user_model()
 
@@ -861,3 +861,130 @@ def api_date_range_summary(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ========== WATCHLIST & RECOMMENDATION API ==========
+
+@login_required
+@require_http_methods(["GET"])
+def api_get_watchlist(request):
+    """Get the current user's watchlist symbols"""
+    watchlist = Watchlist.objects.filter(user=request.user).values_list('symbol', flat=True)
+    return JsonResponse({'success': True, 'watchlist': list(watchlist)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_toggle_watchlist(request):
+    """Add or remove a symbol from the user's watchlist"""
+    import json
+    try:
+        data = json.loads(request.body)
+        symbol = data.get('symbol', '').strip().upper()
+        if not symbol:
+            return JsonResponse({'success': False, 'message': 'Symbol is required'})
+        
+        watchlist_item = Watchlist.objects.filter(user=request.user, symbol=symbol).first()
+        if watchlist_item:
+            watchlist_item.delete()
+            action = 'removed'
+        else:
+            Watchlist.objects.create(user=request.user, symbol=symbol)
+            action = 'added'
+            
+        return JsonResponse({'success': True, 'action': action, 'symbol': symbol})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_get_recommendations(request):
+    """Fetch stored recommendations for symbols in user's watchlist"""
+    user_symbols = Watchlist.objects.filter(user=request.user).values_list('symbol', flat=True)
+    
+    # Get latest price for context
+    latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
+    
+    recs = StockRecommendation.objects.filter(symbol__in=user_symbols)
+    
+    data = []
+    for rec in recs:
+        # Get actual current price if available
+        curr = NEPSEPrice.objects.filter(symbol=rec.symbol, timestamp=latest_time).first()
+        ltp = curr.ltp if curr else rec.current_price
+        
+        data.append({
+            'symbol': rec.symbol,
+            'current_price': ltp,
+            'predicted_price': rec.predicted_next_close,
+            'recommendation': rec.recommendation,
+            'recommendation_str': rec.get_recommendation_display(),
+            'rmse': rec.rmse,
+            'mae': rec.mae,
+            'last_updated': rec.last_updated.isoformat()
+        })
+        
+    return JsonResponse({'success': True, 'data': data})
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_refresh_recommendation(request):
+    """Trigger LSTM training and prediction for a stock"""
+    import json
+    from .ml_services import MLService, get_recommendation
+    
+    try:
+        data = json.loads(request.body)
+        symbol = data.get('symbol', '').strip().upper()
+        if not symbol:
+            return JsonResponse({'success': False, 'message': 'Symbol is required'})
+            
+        # 1. Fetch historical data (at least 60 days if possible)
+        # We'll take last 100 entries to ensure we have enough for sliding window
+        history_qs = NEPSEPrice.objects.filter(symbol=symbol).order_by('-timestamp')[:100]
+        history_data = list(history_qs.values('timestamp', 'open', 'high', 'low', 'close', 'volume'))
+        
+        if len(history_data) < 40: # Minimum data check
+            return JsonResponse({
+                'success': False, 
+                'message': f'Insufficient data for {symbol}. Need at least 40 trading days (have {len(history_data)}).'
+            })
+
+        # 2. Run ML Pipeline
+        ml = MLService(history_data)
+        predicted_price, rmse, mae, last_close = ml.train_and_predict(window_size=30)
+        
+        if predicted_price is None:
+             return JsonResponse({'success': False, 'message': 'Model training failed.'})
+
+        rec_val = get_recommendation(last_close, predicted_price)
+        
+        # 3. Save/Update Recommendation
+        rec_obj, created = StockRecommendation.objects.update_or_create(
+            symbol=symbol,
+            defaults={
+                'current_price': last_close,
+                'predicted_next_close': predicted_price,
+                'recommendation': rec_val,
+                'rmse': rmse,
+                'mae': mae
+            }
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'symbol': symbol,
+                'predicted_price': predicted_price,
+                'recommendation': rec_obj.get_recommendation_display(),
+                'rmse': rmse,
+                'mae': mae
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'message': str(e)})

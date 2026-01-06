@@ -52,4 +52,10 @@ urlpatterns = [
     path('admin/trading/pause/', admin_views.pause_market_view, name='admin_pause_market'),
     path('admin/trading/resume/', admin_views.resume_market_view, name='admin_resume_market'),
     path('admin/scraper/run/', admin_views.run_scraper_view, name='admin_run_scraper'),
+
+    # Watchlist & Recommendation APIs
+    path('api/watchlist/', views.api_get_watchlist, name='api_get_watchlist'),
+    path('api/watchlist/toggle/', views.api_toggle_watchlist, name='api_toggle_watchlist'),
+    path('api/recommendations/', views.api_get_recommendations, name='api_get_recommendations'),
+    path('api/recommendations/refresh/', views.api_refresh_recommendation, name='api_refresh_recommendation'),
 ]

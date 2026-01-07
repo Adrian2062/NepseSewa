@@ -58,4 +58,5 @@ urlpatterns = [
     path('api/watchlist/toggle/', views.api_toggle_watchlist, name='api_toggle_watchlist'),
     path('api/recommendations/', views.api_get_recommendations, name='api_get_recommendations'),
     path('api/recommendations/refresh/', views.api_refresh_recommendation, name='api_refresh_recommendation'),
+    path('api/recommendations/refresh-all/', views.api_refresh_all_recommendations, name='api_refresh_all_recommendations'),
 ]

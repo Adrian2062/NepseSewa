@@ -900,32 +900,91 @@ def api_toggle_watchlist(request):
 @login_required
 @require_http_methods(["GET"])
 def api_get_recommendations(request):
-    """Fetch stored recommendations for symbols in user's watchlist"""
-    user_symbols = Watchlist.objects.filter(user=request.user).values_list('symbol', flat=True)
-    
-    # Get latest price for context
-    latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
-    
-    recs = StockRecommendation.objects.filter(symbol__in=user_symbols)
-    
-    data = []
-    for rec in recs:
-        # Get actual current price if available
-        curr = NEPSEPrice.objects.filter(symbol=rec.symbol, timestamp=latest_time).first()
-        ltp = curr.ltp if curr else rec.current_price
+    """
+    Fetch stored recommendations.
+    Params: filter='all' (returns ALL system stocks with optional recs) OR defaults to user's watchlist.
+    """
+    try:
+        filter_type = request.GET.get('filter', 'watchlist')
         
-        data.append({
-            'symbol': rec.symbol,
-            'current_price': ltp,
-            'predicted_price': rec.predicted_next_close,
-            'recommendation': rec.recommendation,
-            'recommendation_str': rec.get_recommendation_display(),
-            'rmse': rec.rmse,
-            'mae': rec.mae,
-            'last_updated': rec.last_updated.isoformat()
-        })
+        # Get latest price for context
+        latest_time_agg = NEPSEPrice.objects.aggregate(Max('timestamp'))
+        latest_time = latest_time_agg['timestamp__max']
         
-    return JsonResponse({'success': True, 'data': data})
+        if not latest_time:
+             return JsonResponse({'success': True, 'data': [], 'message': 'No market data available.'})
+
+        # Fetch Pre-computed recommendations for lookup
+        all_recs_qs = StockRecommendation.objects.all()
+        rec_map = {r.symbol: r for r in all_recs_qs}
+
+        data = []
+
+        if filter_type == 'all':
+            # Get ALL distinct symbols from Stock model (Total ~323)
+            # If Stock model is empty, fallback to NEPSEPrice distinct symbols
+            all_symbols = Stock.objects.values_list('symbol', flat=True).order_by('symbol')
+            if not all_symbols:
+                all_symbols = NEPSEPrice.objects.values_list('symbol', flat=True).distinct().order_by('symbol')
+            
+            target_symbols = all_symbols
+        else:
+            # Default: User Watchlist only
+            target_symbols = Watchlist.objects.filter(user=request.user).values_list('symbol', flat=True)
+            if not target_symbols:
+                 return JsonResponse({'success': True, 'data': []})
+
+        # Iterate through target symbols (either ALL or Watchlist)
+        for symbol in target_symbols:
+            rec = rec_map.get(symbol)
+            
+            # Get actual current price if available
+            curr = NEPSEPrice.objects.filter(symbol=symbol, timestamp=latest_time).first()
+            
+            # If we show 'All Market', we want to show stocks even if they don't have predictions yet
+            if not curr and not rec:
+                # If truly no data, we might skip or show as 'No Data'
+                # For 'All Market', better to show with empty values than hide it
+                 data.append({
+                    'symbol': symbol,
+                    'current_price': 0,
+                    'predicted_price': 0,
+                    'recommendation': 0,
+                    'recommendation_str': 'WAITING',
+                    'rmse': None,
+                    'mae': None,
+                    'last_updated': None,
+                    'status': 'No Data'
+                })
+                 continue
+            
+            ltp = curr.ltp if curr else (rec.current_price if rec else 0)
+            
+            # Determine prediction values (or defaults if missing)
+            pred_price = rec.predicted_next_close if rec else 0
+            rec_val = rec.recommendation if rec else 0
+            rec_str = rec.get_recommendation_display() if rec else 'PENDING'
+            rmse_val = rec.rmse if rec else None
+            mae_val = rec.mae if rec else None
+            last_upd = rec.last_updated.isoformat() if rec else None
+            
+            data.append({
+                'symbol': symbol,
+                'current_price': ltp,
+                'predicted_price': pred_price,
+                'recommendation': rec_val,
+                'recommendation_str': rec_str,
+                'rmse': rmse_val,
+                'mae': mae_val,
+                'last_updated': last_upd
+            })
+            
+        return JsonResponse({'success': True, 'data': data})
+    except Exception as e:
+        import traceback
+        print(f"Error in api_get_recommendations: {e}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'message': 'Internal Server Error fetching recommendations.', 'error': str(e)}, status=500)
 
 
 @login_required
@@ -933,8 +992,12 @@ def api_get_recommendations(request):
 def api_refresh_recommendation(request):
     """Trigger LSTM training and prediction for a stock"""
     import json
-    from .ml_services import MLService, get_recommendation
-    
+    # Import locally to avoid crashing if ML libs are missing at startup
+    try:
+        from .ml_services import MLService, get_recommendation
+    except ImportError as e:
+         return JsonResponse({'success': False, 'message': f'ML Service unavailable: {str(e)}'})
+
     try:
         data = json.loads(request.body)
         symbol = data.get('symbol', '').strip().upper()
@@ -943,9 +1006,19 @@ def api_refresh_recommendation(request):
             
         # 1. Fetch historical data (at least 60 days if possible)
         # We'll take last 100 entries to ensure we have enough for sliding window
-        history_qs = NEPSEPrice.objects.filter(symbol=symbol).order_by('-timestamp')[:100]
+        history_qs = NEPSEPrice.objects.filter(symbol=symbol).order_by('timestamp') # Sort Ascending for ML
+        
+        # Check if we have enough data (naive check first)
+        if not history_qs.exists():
+            return JsonResponse({'success': False, 'message': f'No data found for {symbol}.'})
+
+        # Get last 150 days to be safe
         history_data = list(history_qs.values('timestamp', 'open', 'high', 'low', 'close', 'volume'))
         
+        # If dataset is too large, take the tail. But we need sorted by date ASC
+        if len(history_data) > 200:
+             history_data = history_data[-200:]
+
         if len(history_data) < 40: # Minimum data check
             return JsonResponse({
                 'success': False, 
@@ -957,7 +1030,7 @@ def api_refresh_recommendation(request):
         predicted_price, rmse, mae, last_close = ml.train_and_predict(window_size=30)
         
         if predicted_price is None:
-             return JsonResponse({'success': False, 'message': 'Model training failed.'})
+             return JsonResponse({'success': False, 'message': 'Model training failed (insufficient data after processing?).'})
 
         rec_val = get_recommendation(last_close, predicted_price)
         
@@ -978,13 +1051,118 @@ def api_refresh_recommendation(request):
             'data': {
                 'symbol': symbol,
                 'predicted_price': predicted_price,
-                'recommendation': rec_obj.get_recommendation_display(),
+                'recommendation': rec_obj.recommendation, # Return Integer
+                'recommendation_str': rec_obj.get_recommendation_display(), # Return String Display
                 'rmse': rmse,
-                'mae': mae
+                'mae': mae,
+                'current_price': last_close,
+                'last_updated': rec_obj.last_updated.isoformat()
             }
         })
         
     except Exception as e:
         import traceback
         print(traceback.format_exc())
-        return JsonResponse({'success': False, 'message': str(e)})
+@login_required
+@require_http_methods(["POST"])
+def api_refresh_all_recommendations(request):
+    """
+    Batch trigger LSTM training and prediction for ALL stocks.
+    Supports filter='all' to process entire market, or default to user's watchlist.
+    """
+    try:
+        from .ml_services import MLService, get_recommendation
+        import json
+        
+        # Check for filter param in JSON body
+        body_data = {}
+        try:
+            body_data = json.loads(request.body)
+        except:
+            pass
+            
+        filter_type = body_data.get('filter', 'watchlist')
+        
+        if filter_type == 'all':
+             # Process ALL stocks
+             target_symbols = Stock.objects.values_list('symbol', flat=True).order_by('symbol')
+             if not target_symbols:
+                 # Fallback
+                 target_symbols = NEPSEPrice.objects.values_list('symbol', flat=True).distinct().order_by('symbol')
+        else:
+            # 1. Get User's Watchlist
+            target_symbols = Watchlist.objects.filter(user=request.user).values_list('symbol', flat=True)
+            
+            if not target_symbols:
+                return JsonResponse({'success': True, 'data': [], 'message': 'Watchlist is empty.'})
+            
+        results = []
+        errors = []
+        
+        # 2. Loop through each stock (Dynamic & Scalable)
+        for symbol in target_symbols:
+             try:
+                # Fetch Data
+                history_qs = NEPSEPrice.objects.filter(symbol=symbol).order_by('timestamp')
+                history_data = list(history_qs.values('timestamp', 'open', 'high', 'low', 'close', 'volume'))
+                
+                # Optimization: Limit data size for performance while keeping enough for LSTM
+                if len(history_data) > 200:
+                     history_data = history_data[-200:]
+
+                # Check minimum data requirement
+                if len(history_data) < 40:
+                    errors.append(f"{symbol}: Insufficient data ({len(history_data)} days)")
+                    continue
+
+                # Run ML Pipeline
+                ml = MLService(history_data)
+                predicted_price, rmse, mae, last_close = ml.train_and_predict(window_size=30)
+                
+                if predicted_price is None:
+                    errors.append(f"{symbol}: Model training failed")
+                    continue
+
+                # Generate Signal
+                rec_val = get_recommendation(last_close, predicted_price)
+                
+                # Save Result
+                rec_obj, created = StockRecommendation.objects.update_or_create(
+                    symbol=symbol,
+                    defaults={
+                        'current_price': last_close,
+                        'predicted_next_close': predicted_price,
+                        'recommendation': rec_val,
+                        'rmse': rmse,
+                        'mae': mae
+                    }
+                )
+                
+                # Append to results
+                results.append({
+                    'symbol': symbol,
+                    'current_price': last_close,
+                    'predicted_price': predicted_price,
+                    'recommendation': rec_obj.recommendation,
+                    'recommendation_str': rec_obj.get_recommendation_display(),
+                    'rmse': rmse,
+                    'mae': mae,
+                    'last_updated': rec_obj.last_updated.isoformat()
+                })
+                
+             except Exception as inner_e:
+                 errors.append(f"{symbol}: {str(inner_e)}")
+                 continue
+
+        # 3. Return Aggregated Results
+        return JsonResponse({
+            'success': True,
+            'data': results,
+            'processed_count': len(results),
+            'errors': errors
+        })
+
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

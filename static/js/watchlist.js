@@ -1,64 +1,160 @@
 // Watchlist & Recommendation Logic
 
 async function fetchWatchlist() {
+    // Determine View Mode
+    const isAll = document.getElementById('viewAll')?.checked;
+    const url = isAll ? '/api/recommendations/?filter=all' : '/api/recommendations/';
+
+    // Show loading state if switching views
+    const tbody = document.getElementById('watchlistBody');
+    if (tbody && tbody.innerHTML.trim() === '') {
+        // Only show spinner if empty (or switching)
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted fw-bold">Loading...</div></td></tr>`;
+    }
+
     try {
-        const response = await fetch('/api/recommendations/');
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            let errorMsg = `Server error: ${response.status}`;
+            try {
+                const text = await response.text();
+                // Try to parse JSON error if possible
+                const errJson = JSON.parse(text);
+                if (errJson.message) errorMsg = errJson.message;
+            } catch (e) {
+                // If not JSON, use default or substring
+            }
+            throw new Error(errorMsg);
+        }
+
         const result = await response.json();
 
         if (result.success) {
             renderWatchlist(result.data);
             updateKPIs(result.data);
         } else {
-            showError('Failed to fetch recommendations');
+            showError(result.message || 'Failed to fetch recommendations');
         }
     } catch (error) {
         console.error('Error fetching watchlist:', error);
-        showError('Network error while fetching watchlist');
+        showError(error.message || 'Network error while fetching watchlist');
     }
 }
 
+// View Toggle Listeners
+document.querySelectorAll('input[name="viewToggle"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        // Clear table and fetch
+        const tbody = document.getElementById('watchlistBody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted fw-bold">Loading...</div></td></tr>`;
+        fetchWatchlist();
+    });
+});
+
+document.addEventListener('DOMContentLoaded', fetchWatchlist);
+
 function renderWatchlist(data) {
     const tbody = document.getElementById('watchlistBody');
-    if (!data.length) {
+    if (!data || !data.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted fw-bold">Your watchlist is empty. Add some stocks to see recommendations!</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = data.map(item => `
-        <tr data-symbol="${item.symbol}" data-signal="${item.recommendation}">
-            <td class="ps-3 fw-bold underline-hover"><a href="/trade/?symbol=${item.symbol}" class="text-decoration-none text-dark">${item.symbol}</a></td>
-            <td class="fw-bold">Rs ${item.current_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-            <td class="fw-bold text-primary">Rs ${item.predicted_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-            <td class="fw-bold ${getPriceColor(item.current_price, item.predicted_price)}">
-                ${calculateChange(item.current_price, item.predicted_price)}%
-            </td>
-            <td>
-                <span class="signal-pill ${getSignalClass(item.recommendation)}">
-                    ${item.recommendation_str}
-                </span>
-            </td>
-            <td>
-                <div class="small text-muted fw-bold">RMSE: ${item.rmse ? item.rmse.toFixed(4) : 'N/A'}</div>
-                <div class="small text-muted">MAE: ${item.mae ? item.mae.toFixed(4) : 'N/A'}</div>
-            </td>
-            <td class="text-end pe-3">
-                <button class="btn btn-sm btn-light me-1 refresh-stock" title="Refresh Prediction" data-symbol="${item.symbol}">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-                <button class="btn btn-sm btn-light text-danger remove-stock" title="Remove" data-symbol="${item.symbol}">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    try {
+        tbody.innerHTML = data.map(item => {
+            // Handle Pending/Waiting States
+            // Check for explicit 'PENDING' string OR if predicted_price is missing/zero while not waiting
+            if (item.recommendation_str === 'PENDING' || item.recommendation_str === 'WAITING' || !item.predicted_price) {
+                return `
+                <tr data-symbol="${item.symbol}">
+                    <td class="ps-3 fw-bold underline-hover"><a href="/trade/?symbol=${item.symbol}" class="text-decoration-none text-dark">${item.symbol}</a></td>
+                    <td class="fw-bold">Rs ${formatPrice(item.current_price)}</td>
+                    <td colspan="3" class="text-center text-muted fst-italic">
+                        <small>${item.status || 'Recalculation needed'}</small>
+                    </td>
+                    <td>
+                       <span class="badge bg-secondary">PENDING</span>
+                    </td>
+                    <td class="text-end pe-3">
+                        <button class="btn btn-sm btn-primary refresh-stock" title="Generate Prediction" data-symbol="${item.symbol}">
+                            <i class="fas fa-magic me-1"></i> Predict
+                        </button>
+                        <button class="btn btn-sm btn-light text-danger remove-stock" title="Remove" data-symbol="${item.symbol}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            }
 
-    attachEventListeners();
+            // Safe formatting for metrics
+            const rmseVal = (item.rmse !== null && item.rmse !== undefined) ? Number(item.rmse).toFixed(4) : 'N/A';
+            const maeVal = (item.mae !== null && item.mae !== undefined) ? Number(item.mae).toFixed(4) : 'N/A';
+
+            return `
+            <tr data-symbol="${item.symbol}" data-signal="${item.recommendation}">
+                <td class="ps-3 fw-bold underline-hover"><a href="/trade/?symbol=${item.symbol}" class="text-decoration-none text-dark">${item.symbol}</a></td>
+                <td class="fw-bold">Rs ${formatPrice(item.current_price)}</td>
+                <td class="fw-bold text-primary">Rs ${formatPrice(item.predicted_price)}</td>
+                <td class="fw-bold ${getPriceColor(item.current_price, item.predicted_price)}">
+                    ${calculateChange(item.current_price, item.predicted_price)}%
+                </td>
+                <td>
+                    <span class="signal-pill ${getSignalClass(item.recommendation, item.recommendation_str)}">
+                        ${item.recommendation_str || getSignalText(item.recommendation)}
+                    </span>
+                </td>
+                <td>
+                    <div class="small text-muted fw-bold">RMSE: ${rmseVal}</div>
+                    <div class="small text-muted">MAE: ${maeVal}</div>
+                </td>
+                <td class="text-end pe-3">
+                    <button class="btn btn-sm btn-light me-1 refresh-stock" title="Refresh Prediction" data-symbol="${item.symbol}">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light text-danger remove-stock" title="Remove" data-symbol="${item.symbol}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `}).join('');
+
+        attachEventListeners();
+    } catch (renderErr) {
+        console.error("Render error:", renderErr);
+        showError("Error rendering watchlist data.");
+    }
 }
 
-function getSignalClass(rec) {
+function formatPrice(p) {
+    if (p === undefined || p === null) return '0.00';
+    return Number(p).toLocaleString(undefined, { minimumFractionDigits: 2 });
+}
+
+function getSignalClass(rec, recStr) {
+    // Handle String inputs (Robustness)
+    if (typeof rec === 'string') {
+        rec = rec.trim().toUpperCase();
+        if (rec === 'BUY') return 'sig-buy';
+        if (rec === 'SELL') return 'sig-sell';
+    }
+    // Handle String via recStr
+    if (recStr) {
+        const s = recStr.trim().toUpperCase();
+        if (s === 'BUY') return 'sig-buy';
+        if (s === 'SELL') return 'sig-sell';
+    }
+
+    // Handle Integers
     if (rec === 1) return 'sig-buy';
     if (rec === -1) return 'sig-sell';
     return 'sig-hold';
+}
+
+function getSignalText(rec) {
+    if (rec === 1) return 'BUY';
+    if (rec === -1) return 'SELL';
+    return 'HOLD';
 }
 
 function getPriceColor(curr, pred) {
@@ -73,9 +169,13 @@ function calculateChange(curr, pred) {
 }
 
 function updateKPIs(data) {
-    document.getElementById('kpiWatchCount').textContent = data.length;
-    document.getElementById('kpiBuyCount').textContent = data.filter(i => i.recommendation === 1).length;
-    document.getElementById('kpiSellCount').textContent = data.filter(i => i.recommendation === -1).length;
+    const kpiWatch = document.getElementById('kpiWatchCount');
+    const kpiBuy = document.getElementById('kpiBuyCount');
+    const kpiSell = document.getElementById('kpiSellCount');
+
+    if (kpiWatch) kpiWatch.textContent = data.length;
+    if (kpiBuy) kpiBuy.textContent = data.filter(i => i.recommendation === 1 || i.recommendation_str === 'BUY').length;
+    if (kpiSell) kpiSell.textContent = data.filter(i => i.recommendation === -1 || i.recommendation_str === 'SELL').length;
 }
 
 function attachEventListeners() {
@@ -174,35 +274,69 @@ document.getElementById('addStockForm')?.addEventListener('submit', async (e) =>
         }
 
         // Cleanup
-        bootstrap.Modal.getInstance(document.getElementById('addStockModal')).hide();
+        const modalEl = document.getElementById('addStockModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
         document.getElementById('addStockForm').reset();
         fetchWatchlist();
     } catch (err) {
         console.error(err);
     } finally {
-        btn.disabled = false;
-        btn.querySelector('.spinner-border').classList.add('d-none');
+        if (btn) {
+            btn.disabled = false;
+            btn.querySelector('.spinner-border').classList.add('d-none');
+        }
     }
 });
 
 // Refresh All
 document.getElementById('refreshAllBtn')?.addEventListener('click', async () => {
-    const symbols = Array.from(document.querySelectorAll('#watchlistBody tr[data-symbol]'))
-        .map(tr => tr.dataset.symbol);
+    // Refresh All Button Logic
+    const refreshAllBtn = document.getElementById('refreshAllBtn');
+    if (!refreshAllBtn) return;
 
-    if (!symbols.length) return;
+    // Determine scope
+    const isAll = document.getElementById('viewAll')?.checked;
 
-    const btn = document.getElementById('refreshAllBtn');
-    const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Refreshing...';
-    btn.disabled = true;
-
-    for (const sym of symbols) {
-        await refreshRecommendation(sym);
+    if (isAll) {
+        if (!confirm("Warning: Refreshing ALL market stocks (~323 items) may take 10-20 minutes. The browser may timeout, but the server will continue processing. Do you want to proceed?")) {
+            return;
+        }
     }
 
-    btn.innerHTML = originalHtml;
-    btn.disabled = false;
+    const originalText = refreshAllBtn.innerHTML;
+    refreshAllBtn.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Processing...';
+    refreshAllBtn.disabled = true;
+
+    try {
+        const response = await fetch('/api/recommendations/refresh-all/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ filter: isAll ? 'all' : 'watchlist' })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Refresh the table to show new data
+            fetchWatchlist();
+        } else {
+            showError(result.message || 'Failed to refresh recommendations');
+        }
+    } catch (error) {
+        console.error('Error refreshing all:', error);
+        // Even if it times out, we refresh the list as some might have finished
+        setTimeout(fetchWatchlist, 2000);
+        showError('Request timed out or failed. Check back in a few minutes as processing may continue in background.');
+    } finally {
+        refreshAllBtn.innerHTML = originalText;
+        refreshAllBtn.disabled = false;
+    }
 });
 
 // Filtering
@@ -216,7 +350,7 @@ function applyFilters() {
     const rows = document.querySelectorAll('#watchlistBody tr[data-symbol]');
     rows.forEach(r => {
         const okQ = !q || r.dataset.symbol.includes(q);
-        const okSig = !sig || r.dataset.signal === sig;
+        const okSig = !sig || r.dataset.signal == sig; // loose equality for string vs number
         r.style.display = (okQ && okSig) ? '' : 'none';
     });
 }
@@ -238,7 +372,9 @@ function getCookie(name) {
 
 function showError(msg) {
     const tbody = document.getElementById('watchlistBody');
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger fw-bold">${msg}</td></tr>`;
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger fw-bold">${msg}</td></tr>`;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', fetchWatchlist);

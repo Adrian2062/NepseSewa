@@ -154,6 +154,15 @@
       <div class="card-header d-flex flex-wrap gap-2 align-items-center">
         <h5 class="card-title mb-0 flex-grow-1">Market Signals</h5>
 
+        <!-- View Toggle -->
+        <div class="btn-group me-3" role="group" aria-label="View Toggle">
+          <input type="radio" class="btn-check" name="viewToggle" id="viewWatchlist" autocomplete="off" checked>
+          <label class="btn btn-outline-primary btn-sm fw-bold" for="viewWatchlist">My Watchlist</label>
+
+          <input type="radio" class="btn-check" name="viewToggle" id="viewAll" autocomplete="off">
+          <label class="btn btn-outline-primary btn-sm fw-bold" for="viewAll">All Market</label>
+        </div>
+
         <!-- Filters -->
         <input id="wlSearch" class="soft-input" placeholder="Search..." style="width:140px;">
         <select id="wlSignal" class="soft-input" style="width:120px;cursor:pointer;">

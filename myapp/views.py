@@ -6,12 +6,16 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.db.models import Max
+from django.db.models import Max, Q, Avg, Count
 from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
-from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Watchlist, StockRecommendation, CandlestickLesson, UserLessonProgress
+from .models import (
+    NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, 
+    Portfolio, Watchlist, StockRecommendation, CandlestickLesson, UserLessonProgress,
+    Course, CourseCategory, UserCourseProgress
+)
 
 
 
@@ -205,48 +209,190 @@ def watchlist(request):
 
 @login_required
 def learn(request):
-    lessons = CandlestickLesson.objects.all().order_by('order')
+    """
+    Updated Learn View to display Courses instead of individual lessons.
+    Supports Search, Category Filter, and Difficulty Filter.
+    """
     
-    # Annotate lessons with progress
-    # This is a simple loop approach. For high scale, use prefetch_related or annotations.
-    lesson_data = []
-    for lesson in lessons:
-        progress_obj = UserLessonProgress.objects.filter(user=request.user, lesson=lesson).first()
-        progress_pct = progress_obj.progress if progress_obj else 0
-        lesson_data.append({
-            'lesson': lesson,
-            'progress': progress_pct,
-            'is_completed': progress_obj.is_completed if progress_obj else False
-        })
+    # --- Filter Parameters ---
+    search_query = request.GET.get('q', '')
+    category_slug = request.GET.get('category', '')
+    difficulty = request.GET.get('difficulty', '')
+
+    # --- Base Query ---
+    courses = Course.objects.all().order_by('-is_featured', '-created_at')
+
+    # --- Apply Filters ---
+    if search_query:
+        courses = courses.filter(
+            Q(title__icontains=search_query) | 
+            Q(description__icontains=search_query)
+        )
+    
+    if category_slug and category_slug != 'all':
+        courses = courses.filter(category__slug=category_slug)
+
+    if difficulty and difficulty != 'all':
+        courses = courses.filter(difficulty=difficulty)
+
+    # --- Prepare Course Data (Progress Calculation) ---
+    course_data = []
+    for course in courses:
+        # Get total lessons in course
+        total_lessons = course.lessons.count()
         
+        progress_pct = 0
+        is_completed = False
+        first_incomplete_lesson = None
+
+        if total_lessons > 0:
+            # Get user's completed lessons for this course
+            completed_lessons_count = UserLessonProgress.objects.filter(
+                user=request.user, 
+                lesson__course=course, 
+                is_completed=True
+            ).count()
+            
+            progress_pct = (completed_lessons_count / total_lessons) * 100
+            is_completed = completed_lessons_count == total_lessons
+            
+            # Find first incomplete lesson to "Start/Continue"
+            # Get IDs of completed lessons
+            completed_lesson_ids = UserLessonProgress.objects.filter(
+                user=request.user, 
+                lesson__course=course, 
+                is_completed=True
+            ).values_list('lesson_id', flat=True)
+            
+            first_incomplete_lesson = course.lessons.exclude(id__in=completed_lesson_ids).order_by('order').first()
+
+            # Update or Create UserCourseProgress record
+            UserCourseProgress.objects.update_or_create(
+                user=request.user,
+                course=course,
+                defaults={
+                    'progress_percent': progress_pct,
+                    'is_completed': is_completed
+                }
+            )
+
+        course_data.append({
+            'course': course,
+            'progress': int(progress_pct), # passed as integer for cleaner UI
+            'is_completed': is_completed,
+            'total_lessons': total_lessons,
+            'next_lesson': first_incomplete_lesson,
+            'first_lesson': course.lessons.first() if total_lessons > 0 else None
+        })
+
+    # --- Categories for Filter Dropdown ---
+    categories = CourseCategory.objects.all()
+
+    # --- Featured Courses (Top 3) ---
+    featured_courses = [c for c in course_data if c['course'].is_featured][:3]
+
     context = {
         'active_page': 'learn',
-        'lesson_data': lesson_data
+        'course_data': course_data,
+        'categories': categories,
+        'featured_courses': featured_courses,
+        'search_query': search_query,
+        'selected_category': category_slug,
+        'selected_difficulty': difficulty,
     }
     return render(request, 'learn.html', context)
+
+
+@login_required
+def course_detail(request, course_id):
+    """
+    Detailed view for a specific course, listing all lessons.
+    """
+    course = get_object_or_404(Course, id=course_id)
+    lessons = course.lessons.all().order_by('order')
+    
+    # Calculate progress
+    lesson_data = []
+    completed_count = 0
+    
+    for lesson in lessons:
+        progress_obj = UserLessonProgress.objects.filter(user=request.user, lesson=lesson).first()
+        is_completed = progress_obj.is_completed if progress_obj else False
+        if is_completed:
+            completed_count += 1
+            
+        lesson_data.append({
+            'lesson': lesson,
+            'is_completed': is_completed,
+            'is_locked': False # Can implement locking logic later (e.g. must complete prev)
+        })
+
+    total_lessons = lessons.count()
+    progress_pct = (completed_count / total_lessons * 100) if total_lessons > 0 else 0
+    
+    context = {
+        'active_page': 'learn',
+        'course': course,
+        'lesson_data': lesson_data,
+        'progress_pct': int(progress_pct),
+        'total_lessons': total_lessons,
+        'completed_count': completed_count
+    }
+    return render(request, 'learn/course_detail.html', context)
+
 
 @login_required
 def lesson_detail(request, lesson_id):
     lesson = get_object_or_404(CandlestickLesson, id=lesson_id)
     
-    # Get user progress
-    progress, created = UserLessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
+    # Mark as In Progress if accessed
+    UserLessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
     
-    # Logic for next/prev lesson
-    all_lessons = list(CandlestickLesson.objects.all().order_by('order'))
-    current_index = all_lessons.index(lesson)
-    
-    previous_lesson = all_lessons[current_index - 1] if current_index > 0 else None
-    next_lesson = all_lessons[current_index + 1] if current_index < len(all_lessons) - 1 else None
-    
+    # Logic for next/prev lesson WITHIN THE COURSE
+    if lesson.course:
+        all_lessons = list(lesson.course.lessons.order_by('order'))
+        try:
+            current_index = all_lessons.index(lesson)
+            previous_lesson = all_lessons[current_index - 1] if current_index > 0 else None
+            next_lesson = all_lessons[current_index + 1] if current_index < len(all_lessons) - 1 else None
+        except ValueError:
+            previous_lesson = None
+            next_lesson = None
+    else:
+        # Fallback for orphan lessons (shouldn't happen with new logic, but safety first)
+        previous_lesson = None
+        next_lesson = None
+
+    is_completed = UserLessonProgress.objects.filter(user=request.user, lesson=lesson, is_completed=True).exists()
+
+    # Handle completion (POST request)
+    if request.method == 'POST' and 'mark_complete' in request.POST:
+        UserLessonProgress.objects.update_or_create(
+            user=request.user, 
+            lesson=lesson,
+            defaults={'is_completed': True}
+        )
+        is_completed = True
+        messages.success(request, f"Lesson '{lesson.title}' completed! 🎉")
+        
+        # Determine redirect
+        if next_lesson:
+            return redirect('lesson_detail', lesson_id=next_lesson.id)
+        else:
+            # Finished course
+            messages.success(request, f"Congratulations! You've finished the course '{lesson.course.title}'! 🎓")
+            return redirect('course_detail', course_id=lesson.course.id)
+
     context = {
         'lesson': lesson,
-        'progress': progress,
+        'is_completed': is_completed,
         'previous_lesson': previous_lesson,
         'next_lesson': next_lesson,
         'active_page': 'learn',
+        'course': lesson.course 
     }
     return render(request, 'learn/lesson_detail.html', context)
+
 
 
 @login_required

@@ -377,9 +377,47 @@ class StockRecommendation(models.Model):
         return f"Rec for {self.symbol}: {self.get_recommendation_display()}"
 
 
-# ============= LEARNING MODULE (CANDLESTICK LESSONS) =============
+
+# ============= LEARNING MODULE =============
+
+class CourseCategory(models.Model):
+    """Category for courses (e.g., Trading Basics, Technical Analysis)"""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Course Categories"
+
+    def __str__(self):
+        return self.name
+
+
+class Course(models.Model):
+    """Structured Course containing multiple lessons"""
+    DIFFICULTY_CHOICES = [
+        ('Beginner', 'Beginner'),
+        ('Intermediate', 'Intermediate'),
+        ('Advanced', 'Advanced'),
+    ]
+
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True)
+    description = models.TextField()
+    category = models.ForeignKey(CourseCategory, on_delete=models.SET_NULL, null=True, related_name='courses')
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY_CHOICES, default='Beginner')
+    image = models.ImageField(upload_to='courses/', null=True, blank=True)
+    is_featured = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+
 class CandlestickLesson(models.Model):
     """Stores individual lessons about candlestick patterns"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='lessons', null=True, blank=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
     image = models.ImageField(upload_to='lessons/', null=True, blank=True)
@@ -387,12 +425,12 @@ class CandlestickLesson(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['order']
-        verbose_name = "Candlestick Lesson"
-        verbose_name_plural = "Candlestick Lessons"
+        ordering = ['course', 'order']
+        verbose_name = "Lesson"
+        verbose_name_plural = "Lessons"
 
     def __str__(self):
-        return self.title
+        return f"{self.course.title} - {self.title}" if self.course else self.title
 
 
 class LessonQuiz(models.Model):
@@ -417,12 +455,27 @@ class UserLessonProgress(models.Model):
     """Tracks user progress for each lesson"""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='lesson_progress')
     lesson = models.ForeignKey(CandlestickLesson, on_delete=models.CASCADE)
-    progress = models.IntegerField(default=0, help_text="Progress in % (0-100)")
     is_completed = models.BooleanField(default=False)
-    last_updated = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ['user', 'lesson']
     
     def __str__(self):
-        return f"{self.user.email} - {self.lesson.title}: {self.progress}%"
+        return f"{self.user.email} - {self.lesson.title}: {'Completed' if self.is_completed else 'In Progress'}"
+
+
+class UserCourseProgress(models.Model):
+    """Tracks overall progress for a course"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='course_progress')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    progress_percent = models.FloatField(default=0.0)
+    is_completed = models.BooleanField(default=False)
+    last_accessed = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'course']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.course.title}: {self.progress_percent}%"
+

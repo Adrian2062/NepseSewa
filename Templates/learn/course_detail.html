@@ -1,0 +1,212 @@
+{% extends "layouts/app_base.html" %}
+{% load static %}
+
+{% block title %}{{ course.title }} - NepseSewa Academy{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .course-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(4px);
+        padding: 6px 16px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-block;
+        margin-bottom: 1rem;
+    }
+
+    .lesson-list-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .lesson-item {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+        transition: all 0.2s;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .lesson-item:last-child {
+        border-bottom: none;
+    }
+
+    .lesson-item:hover {
+        background-color: var(--light);
+    }
+
+    .lesson-item.active {
+        background-color: #f0fdf4;
+        /* Light green */
+    }
+
+    .lesson-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: var(--light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1.5rem;
+        font-size: 1.2rem;
+        color: var(--muted);
+        flex-shrink: 0;
+    }
+
+    .lesson-item.completed .lesson-icon {
+        background: #dcfce7;
+        color: #10b981;
+    }
+
+    .lesson-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 0.2rem;
+        color: #1f2937;
+    }
+
+    .status-icon {
+        margin-left: auto;
+        color: var(--muted);
+    }
+
+    .lesson-item.completed .status-icon {
+        color: #10b981;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="mb-3">
+        <a href="{% url 'learn' %}" class="text-decoration-none text-muted fw-bold">
+            <i class="fas fa-arrow-left me-1"></i> Back to Courses
+        </a>
+    </div>
+
+    <!-- Course Header -->
+    <div class="course-header">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <span class="course-badge">{{ course.difficulty }}</span>
+                {% if course.category %}
+                <span class="course-badge ms-2"><i class="fas fa-tag me-1"></i> {{ course.category.name }}</span>
+                {% endif %}
+
+                <h1 class="fw-bold display-5 mb-3 mt-1">{{ course.title }}</h1>
+                <p class="h5 mb-4" style="opacity: 0.9; line-height: 1.6;">{{ course.description }}</p>
+
+                <div class="d-flex align-items-center gap-4">
+                    <div style="min-width: 200px;">
+                        <div class="d-flex justify-content-between text-white mb-1 small fw-bold">
+                            <span>Your Progress</span>
+                            <span>{{ progress_pct }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar bg-white" role="progressbar" style="width: {{ progress_pct }}%">
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if progress_pct == 100 %}
+                    <span class="badge bg-white text-success p-2 px-3 rounded-pill fw-bold">
+                        <i class="fas fa-check-circle me-1"></i> Completed
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-4 text-center d-none d-lg-block">
+                <!-- Illustration or Graphic place holder -->
+                <i class="fas fa-graduation-cap" style="font-size: 8rem; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <h4 class="fw-bold mb-3">Course Content</h4>
+            <div class="lesson-list-card shadow-sm">
+                {% for item in lesson_data %}
+                <a href="{% url 'lesson_detail' item.lesson.id %}"
+                    class="lesson-item {% if item.is_completed %}completed{% endif %}">
+                    <div class="lesson-icon">
+                        {% if item.is_completed %}
+                        <i class="fas fa-check"></i>
+                        {% else %}
+                        <i class="fas fa-play" style="font-size: 0.9rem;"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="lesson-title">{{ item.lesson.title }}</div>
+                        <div class="text-muted small">
+                            <i class="far fa-clock me-1"></i> 5 min read
+                        </div>
+                    </div>
+                    <div class="status-icon">
+                        {% if item.is_completed %}
+                        <span class="fw-bold text-success small">Completed</span>
+                        {% else %}
+                        <i class="fas fa-chevron-right"></i>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+
+                {% if not lesson_data %}
+                <div class="p-5 text-center text-muted">
+                    <i class="fas fa-book-open fa-3x mb-3"></i>
+                    <p>No lessons added yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 sticky-top" style="top: 20px;">
+                <h5 class="fw-bold mb-3">Course Info</h5>
+                <ul class="list-unstyled mb-0">
+                    <li class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Lessons</span>
+                        <span class="fw-bold">{{ total_lessons }}</span>
+                    </li>
+                    <li class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Completed</span>
+                        <span class="fw-bold text-success">{{ completed_count }}</span>
+                    </li>
+                    <li class="d-flex justify-content-between py-2">
+                        <span class="text-muted">Difficulty</span>
+                        <span class="fw-bold">{{ course.difficulty }}</span>
+                    </li>
+                </ul>
+
+                {% if completed_count > 0 and completed_count < total_lessons %} <div class="mt-4">
+                    <button class="btn btn-primary w-100 fw-bold rounded-3 py-2">
+                        Continue Learning
+                    </button>
+                    <!-- Logic to find next lesson URL would be good here, but list is clickable -->
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}

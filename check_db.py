@@ -1,21 +1,20 @@
+
 import os
 import django
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'NepseSewa.settings')
-django.setup()
-
-from myapp.models import Course
 from django.db import connection
 
-def check():
-    tables = connection.introspection.table_names()
-    print(f"Tables found: {len(tables)}")
-    if 'myapp_course' in tables:
-        print("Table 'myapp_course' EXISTS.")
-        count = Course.objects.count()
-        print(f"Course count: {count}")
-    else:
-        print("Table 'myapp_course' DOES NOT EXIST.")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "NepseSewa.settings")
+django.setup()
 
-if __name__ == '__main__':
-    check()
+print("Checking database schema...")
+with connection.cursor() as cursor:
+    try:
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'myapp_course';")
+        columns = [row[0] for row in cursor.fetchall()]
+        print(f"Columns in myapp_course: {columns}")
+        if 'slug' in columns:
+            print("SUCCESS: Slug column found.")
+        else:
+            print("FAILURE: Slug column missing.")
+    except Exception as e:
+        print(f"Error: {e}")

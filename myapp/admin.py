@@ -3,7 +3,8 @@ from django.contrib.auth.admin import UserAdmin
 from .models import (
     CustomUser, NEPSEPrice, NEPSEIndex, MarketIndex, 
     MarketSummary, Trade, Order, Portfolio, TradeExecution, MarketSession,
-    Stock, CandlestickLesson, LessonQuiz, UserLessonProgress
+    Stock, CandlestickLesson, LessonQuiz, UserLessonProgress,
+    Course, CourseCategory, UserCourseProgress
 )
 
 # Register models
@@ -13,6 +14,7 @@ admin.site.register(NEPSEIndex)
 admin.site.register(MarketIndex)
 admin.site.register(MarketSummary)
 admin.site.register(Trade)
+admin.site.register(CourseCategory)
 
 
 # Trading Engine Models
@@ -52,19 +54,39 @@ class MarketSessionAdmin(admin.ModelAdmin):
 
 
 # ============= CUSTOM ADMIN REORDERING =============
+
+class LessonInline(admin.StackedInline):
+    model = CandlestickLesson
+    extra = 1
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ('title', 'category', 'difficulty', 'is_featured', 'created_at')
+    list_filter = ('category', 'difficulty', 'is_featured')
+    search_fields = ('title', 'description')
+    prepopulated_fields = {'slug': ('title',)}
+    inlines = [LessonInline]
+
 class QuizInline(admin.StackedInline):
     model = LessonQuiz
     extra = 1
 
 @admin.register(CandlestickLesson)
 class CandlestickLessonAdmin(admin.ModelAdmin):
-    list_display = ('title', 'order', 'created_at')
-    search_fields = ('title', 'description')
+    list_display = ('title', 'course', 'order', 'created_at')
+    list_filter = ('course',)
+    search_fields = ('title', 'description', 'course__title')
     inlines = [QuizInline]
-    ordering = ('order',)
+    ordering = ('course', 'order',)
 
 @admin.register(UserLessonProgress)
 class UserLessonProgressAdmin(admin.ModelAdmin):
-    list_display = ('user', 'lesson', 'progress', 'is_completed', 'last_updated')
-    list_filter = ('is_completed', 'progress')
+    list_display = ('user', 'lesson', 'is_completed', 'completed_at')
+    list_filter = ('is_completed',)
     search_fields = ('user__email', 'lesson__title')
+
+@admin.register(UserCourseProgress)
+class UserCourseProgressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'course', 'progress_percent', 'is_completed', 'last_accessed')
+    list_filter = ('is_completed', 'course')
+    search_fields = ('user__email', 'course__title')

@@ -1,0 +1,149 @@
+{% extends "layouts/app_base.html" %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - NepseSewa Academy{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lesson-content {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .lesson-hero {
+        height: 300px;
+        background: var(--light);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .lesson-hero img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .lesson-body {
+        padding: 2.5rem;
+    }
+
+    .lesson-title {
+        font-weight: 800;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        color: #1f2937;
+    }
+
+    .lesson-text {
+        color: #4b5563;
+        font-size: 1.1rem;
+        line-height: 1.8;
+    }
+
+    .quiz-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .nav-btn {
+        min-width: 140px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Navigation Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <a href="{% url 'learn' %}" class="btn btn-light fw-bold">
+                <i class="fas fa-arrow-left me-2"></i>Back to Courses
+            </a>
+            <div class="badge bg-primary fs-6 px-3 py-2 rounded-pill">
+                Progress: {{ progress.progress }}%
+            </div>
+        </div>
+
+        <div class="lesson-content mb-5">
+            {% if lesson.image %}
+            <div class="lesson-hero d-flex align-items-center justify-content-center bg-dark">
+                <img src="{{ lesson.image.url }}" alt="{{ lesson.title }}">
+            </div>
+            {% endif %}
+
+            <div class="lesson-body">
+                <h1 class="lesson-title">{{ lesson.title }}</h1>
+
+                <div class="lesson-text mb-5">
+                    {{ lesson.description|linebreaks }}
+                </div>
+
+                <!-- Navigation Footer -->
+                <div class="d-flex justify-content-between align-items-center pt-4 border-top">
+                    <div>
+                        {% if previous_lesson %}
+                        <a href="{% url 'lesson_detail' previous_lesson.id %}"
+                            class="btn btn-outline-secondary nav-btn fw-bold">
+                            <i class="fas fa-chevron-left me-2"></i>Previous
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary nav-btn fw-bold" disabled>
+                            <i class="fas fa-chevron-left me-2"></i>Previous
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <!-- Mark Complete (Functionality can be added later) -->
+                        <button class="btn btn-success fw-bold px-4">
+                            <i class="fas fa-check-circle me-2"></i>Mark Complete
+                        </button>
+
+                        {% if next_lesson %}
+                        <a href="{% url 'lesson_detail' next_lesson.id %}" class="btn btn-primary nav-btn fw-bold">
+                            Next<i class="fas fa-chevron-right ms-2"></i>
+                        </a>
+                        {% else %}
+                        <a href="{% url 'learn' %}" class="btn btn-primary nav-btn fw-bold">
+                            Finish<i class="fas fa-flag ms-2"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quizzes Section -->
+        {% if lesson.quizzes.all %}
+        <div class="mb-5">
+            <h4 class="fw-bold mb-3">Knowledge Check 🧠</h4>
+            {% for quiz in lesson.quizzes.all %}
+            <div class="quiz-card mb-3">
+                <h5 class="fw-bold mb-3">{{ forloop.counter }}. {{ quiz.question }}</h5>
+                <div class="d-grid gap-2">
+                    {% if quiz.option1 %}
+                    <button class="btn btn-outline-dark text-start">{{ quiz.option1 }}</button>
+                    {% endif %}
+                    {% if quiz.option2 %}
+                    <button class="btn btn-outline-dark text-start">{{ quiz.option2 }}</button>
+                    {% endif %}
+                    {% if quiz.option3 %}
+                    <button class="btn btn-outline-dark text-start">{{ quiz.option3 }}</button>
+                    {% endif %}
+                    {% if quiz.option4 %}
+                    <button class="btn btn-outline-dark text-start">{{ quiz.option4 }}</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

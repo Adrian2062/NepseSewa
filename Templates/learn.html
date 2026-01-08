@@ -165,9 +165,10 @@
             <div class="progress-bar {% if item.progress == 100 %}bg-success{% endif %}"
               style="width: {{ item.progress }}%"></div>
           </div>
-          <button class="btn btn-outline-primary w-100 btn-sm mt-3 fw-bold rounded-3">
+          <a href="{% url 'lesson_detail' item.lesson.id %}"
+            class="btn btn-outline-primary w-100 btn-sm mt-3 fw-bold rounded-3">
             {% if item.progress == 100 %}Review Lesson{% else %}Start Lesson{% endif %}
-          </button>
+          </a>
 
           {% if item.lesson.quizzes.exists %}
           <div class="mt-2 text-center">

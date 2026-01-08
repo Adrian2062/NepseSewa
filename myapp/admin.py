@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import (
     CustomUser, NEPSEPrice, NEPSEIndex, MarketIndex, 
     MarketSummary, Trade, Order, Portfolio, TradeExecution, MarketSession,
-    Stock
+    Stock, CandlestickLesson, LessonQuiz, UserLessonProgress
 )
 
 # Register models
@@ -49,3 +49,22 @@ class MarketSessionAdmin(admin.ModelAdmin):
     list_display = ['session_date', 'status', 'is_active', 'opened_at', 'closed_at']
     list_filter = ['status', 'is_active', 'session_date']
     ordering = ['-session_date']
+
+
+# ============= CUSTOM ADMIN REORDERING =============
+class QuizInline(admin.StackedInline):
+    model = LessonQuiz
+    extra = 1
+
+@admin.register(CandlestickLesson)
+class CandlestickLessonAdmin(admin.ModelAdmin):
+    list_display = ('title', 'order', 'created_at')
+    search_fields = ('title', 'description')
+    inlines = [QuizInline]
+    ordering = ('order',)
+
+@admin.register(UserLessonProgress)
+class UserLessonProgressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'lesson', 'progress', 'is_completed', 'last_updated')
+    list_filter = ('is_completed', 'progress')
+    search_fields = ('user__email', 'lesson__title')

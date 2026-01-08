@@ -53,6 +53,14 @@
     justify-content: center;
     color: var(--muted);
     font-size: 3rem;
+    overflow: hidden;
+  }
+
+  .lesson-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
   .lesson-body {
@@ -133,75 +141,52 @@
     <h5 class="fw-bold"><i class="fas fa-book-open me-2 text-primary"></i>Latest Courses</h5>
   </div>
 
-  <!-- Course 1 -->
+  {% if lesson_data %}
+  {% for item in lesson_data %}
   <div class="col-md-6 col-lg-4 mb-4">
     <div class="lesson-card">
-      <div class="lesson-img" style="background:#e0f2fe;color:#0ea5e9;">
-        <i class="fas fa-chart-line"></i>
+      <div class="lesson-img" style="background:#f0f9ff;">
+        {% if item.lesson.image %}
+        <img src="{{ item.lesson.image.url }}" alt="{{ item.lesson.title }}">
+        {% else %}
+        <i class="fas fa-chart-bar text-primary" style="font-size:3rem;"></i>
+        {% endif %}
       </div>
       <div class="lesson-body">
-        <div class="lesson-title">Stock Market Basics</div>
-        <div class="lesson-desc">Learn how the NEPSE works, what are shares, and how to start investing safely.</div>
+        <div class="lesson-title">{{ item.lesson.title }}</div>
+        <div class="lesson-desc">{{ item.lesson.description|truncatewords:20 }}</div>
         <div class="progress-wrap">
           <div class="d-flex justify-content-between small fw-bold mb-1">
             <span>Progress</span>
-            <span class="text-primary">40%</span>
+            <span class="{% if item.progress == 100 %}text-success{% else %}text-primary{% endif %}">{{ item.progress
+              }}%</span>
           </div>
           <div class="progress">
-            <div class="progress-bar" style="width: 40%"></div>
+            <div class="progress-bar {% if item.progress == 100 %}bg-success{% endif %}"
+              style="width: {{ item.progress }}%"></div>
           </div>
-          <button class="btn btn-primary w-100 btn-sm mt-3 fw-bold rounded-3">Continue Learning</button>
-        </div>
-      </div>
-    </div>
-  </div>
+          <button class="btn btn-outline-primary w-100 btn-sm mt-3 fw-bold rounded-3">
+            {% if item.progress == 100 %}Review Lesson{% else %}Start Lesson{% endif %}
+          </button>
 
-  <!-- Course 2 -->
-  <div class="col-md-6 col-lg-4 mb-4">
-    <div class="lesson-card">
-      <div class="lesson-img" style="background:#fef3c7;color:#d97706;">
-        <i class="fas fa-coins"></i>
-      </div>
-      <div class="lesson-body">
-        <div class="lesson-title">Technical Analysis</div>
-        <div class="lesson-desc">Understand candlesticks, support/resistance, and indicators like RSI & MACD.</div>
-        <div class="progress-wrap">
-          <div class="d-flex justify-content-between small fw-bold mb-1">
-            <span>Progress</span>
-            <span class="text-muted">0%</span>
+          {% if item.lesson.quizzes.exists %}
+          <div class="mt-2 text-center">
+            <small class="text-muted" style="font-size:0.8rem;"><i class="fas fa-question-circle"></i> {{
+              item.lesson.quizzes.count }} Quiz(zes) available</small>
           </div>
-          <div class="progress">
-            <div class="progress-bar" style="width: 0%"></div>
-          </div>
-          <button class="btn btn-outline-primary w-100 btn-sm mt-3 fw-bold rounded-3">Start Course</button>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
-
-  <!-- Course 3 -->
-  <div class="col-md-6 col-lg-4 mb-4">
-    <div class="lesson-card">
-      <div class="lesson-img" style="background:#fce7f3;color:#db2777;">
-        <i class="fas fa-shield-alt"></i>
-      </div>
-      <div class="lesson-body">
-        <div class="lesson-title">Risk Management</div>
-        <div class="lesson-desc">Protect your capital. Learn about stop-loss, position sizing, and diversification.
-        </div>
-        <div class="progress-wrap">
-          <div class="d-flex justify-content-between small fw-bold mb-1">
-            <span>Progress</span>
-            <span class="text-muted">0%</span>
-          </div>
-          <div class="progress">
-            <div class="progress-bar" style="width: 0%"></div>
-          </div>
-          <button class="btn btn-outline-primary w-100 btn-sm mt-3 fw-bold rounded-3">Start Course</button>
-        </div>
-      </div>
-    </div>
+  {% endfor %}
+  {% else %}
+  <div class="col-12 text-center py-5">
+    <div class="text-muted mb-3"><i class="fas fa-book-open fa-3x"></i></div>
+    <h5>No lessons available yet.</h5>
+    <p class="text-muted">Check back later for new candlestick patterns!</p>
   </div>
+  {% endif %}
 </div>
 
 <div class="row">

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
-from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Watchlist, StockRecommendation
+from .models import NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, Portfolio, Watchlist, StockRecommendation, CandlestickLesson, UserLessonProgress
 
 
 
@@ -205,7 +205,48 @@ def watchlist(request):
 
 @login_required
 def learn(request):
-    return render(request, 'learn.html', {'active_page': 'learn'})
+    lessons = CandlestickLesson.objects.all().order_by('order')
+    
+    # Annotate lessons with progress
+    # This is a simple loop approach. For high scale, use prefetch_related or annotations.
+    lesson_data = []
+    for lesson in lessons:
+        progress_obj = UserLessonProgress.objects.filter(user=request.user, lesson=lesson).first()
+        progress_pct = progress_obj.progress if progress_obj else 0
+        lesson_data.append({
+            'lesson': lesson,
+            'progress': progress_pct,
+            'is_completed': progress_obj.is_completed if progress_obj else False
+        })
+        
+    context = {
+        'active_page': 'learn',
+        'lesson_data': lesson_data
+    }
+    return render(request, 'learn.html', context)
+
+@login_required
+def lesson_detail(request, lesson_id):
+    lesson = get_object_or_404(CandlestickLesson, id=lesson_id)
+    
+    # Get user progress
+    progress, created = UserLessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
+    
+    # Logic for next/prev lesson
+    all_lessons = list(CandlestickLesson.objects.all().order_by('order'))
+    current_index = all_lessons.index(lesson)
+    
+    previous_lesson = all_lessons[current_index - 1] if current_index > 0 else None
+    next_lesson = all_lessons[current_index + 1] if current_index < len(all_lessons) - 1 else None
+    
+    context = {
+        'lesson': lesson,
+        'progress': progress,
+        'previous_lesson': previous_lesson,
+        'next_lesson': next_lesson,
+        'active_page': 'learn',
+    }
+    return render(request, 'learn/lesson_detail.html', context)
 
 
 @login_required

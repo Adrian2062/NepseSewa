@@ -375,3 +375,54 @@ class StockRecommendation(models.Model):
 
     def __str__(self):
         return f"Rec for {self.symbol}: {self.get_recommendation_display()}"
+
+
+# ============= LEARNING MODULE (CANDLESTICK LESSONS) =============
+class CandlestickLesson(models.Model):
+    """Stores individual lessons about candlestick patterns"""
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    image = models.ImageField(upload_to='lessons/', null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = "Candlestick Lesson"
+        verbose_name_plural = "Candlestick Lessons"
+
+    def __str__(self):
+        return self.title
+
+
+class LessonQuiz(models.Model):
+    """Stores quiz questions for a specific lesson"""
+    lesson = models.ForeignKey(CandlestickLesson, on_delete=models.CASCADE, related_name='quizzes')
+    question = models.CharField(max_length=300)
+    option1 = models.CharField(max_length=200)
+    option2 = models.CharField(max_length=200)
+    option3 = models.CharField(max_length=200)
+    option4 = models.CharField(max_length=200)
+    correct_answer = models.CharField(max_length=200, help_text="Exact text of the correct option")
+    
+    class Meta:
+        verbose_name = "Lesson Quiz"
+        verbose_name_plural = "Lesson Quizzes"
+
+    def __str__(self):
+        return f"Quiz for {self.lesson.title}"
+
+
+class UserLessonProgress(models.Model):
+    """Tracks user progress for each lesson"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='lesson_progress')
+    lesson = models.ForeignKey(CandlestickLesson, on_delete=models.CASCADE)
+    progress = models.IntegerField(default=0, help_text="Progress in % (0-100)")
+    is_completed = models.BooleanField(default=False)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'lesson']
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.lesson.title}: {self.progress}%"

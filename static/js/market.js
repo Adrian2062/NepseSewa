@@ -1,62 +1,117 @@
-// Market Page Logic with Server-Side Filtering
+// Market Page Logic with Strict Client-Side Sector Mapping
 
+// User-provided Sector Data
+const SECTOR_DATA = {
+    "Commercial Banks": ["ADBL", "GBIME", "CZBIL", "NIMBPO", "SBL", "SANIMA", "NMB", "NICA", "MBL", "NBL", "EBL", "PCBL", "SCB", "LSL", "SBI", "KBL", "PRVU"],
+    "Development Banks": ["MLBL", "KSBBL", "MDB", "MNBBL", "SINDU", "GRDBL", "JBBL", "EDBL", "GBBL", "NABBC", "SADBL", "CORBL", "SHINE", "LBBL", "SAPDBL"],
+    "Microfinance": ["LLBS", "SMFBS", "MERO", "SKBBL", "CYCL", "FOWAD", "NUBL", "SWBBL", "DDBL", "GLBSL", "GMFBS", "MSLB", "FMDBL", "JBLB", "ULBSL", "DLBS", "NMFBS", "NMLBBL", "MLBSL", "ALBSL"],
+    "Finance": ["PROFL", "MPFL", "CFCL", "MFIL", "JFL", "SFCL", "GFCL", "PFL", "NFS", "SIFC", "RLFL", "ICFC", "BFC"],
+    "Investment": ["NRN", "HATHY", "NIFRA", "CIT", "HIDCL", "CHDC"],
+    "Hotels & Tourism": ["BANDIPUR", "KDL", "TRH", "SHL", "OHL", "CITY", "CGH"],
+    "Manufacturing & Processing": ["GCIL", "SHIVM", "OMPL", "SONA", "SYPNL", "SAIL", "BNT", "SAGAR", "SARBTM", "UNL", "HDL", "BNL"],
+    "Others": ["NTC", "NRM", "NWCL", "MKCL", "TTL", "JHAPA", "HRL", "NRIC", "PURE"],
+    "Hydropower": ["SANVI", "KKHC", "BHCL", "AKJCL", "TPC", "DHEL", "SSHL", "HDHPC", "NHPC", "SPL", "SMHL", "IHL", "NHDL", "AHL", "BUNGAL", "TSHL", "RFPL", "MHCL", "GVL", "BNHC", "LEC", "UMRH", "SHEL", "SHPC", "RIDI", "NGPL", "MBJC", "DORDI", "SGHC", "MHL", "USHEC", "BHPL", "SMH", "MKHC", "MAKAR", "MKHL", "DOLTI", "MCHL", "MEL", "RAWA", "KBSH", "MEHL", "ULHC", "MANDU", "BGWT", "TVCL", "VLUCL", "CKHL", "BEDC", "UPPER", "GHL", "UPCL", "MHNL", "PPCL", "SJCL", "MEN", "GLH", "RURU", "SAHAS", "SPC", "NYADI", "BHDC", "HHL", "UHEWA", "PPL", "SPHL", "SIKLES", "EHPL", "SMJC", "MMKJL", "PHCL"],
+    "Life Insurance": ["HLI", "CLI", "ILI", "PMLI", "RNLI", "SNLI", "SRLI", "CREST", "GMLI", "ALICL", "NLICL", "LICN", "NLIC"],
+    "Non-Life Insurance": ["SGIC", "NMIC", "SICL", "IGI", "RBCL", "HEI", "NIL", "PRIN", "NICL", "SPIL", "UAIL", "NLG"],
+    "Mutual Fund": ["NMBHF2", "GBIMESY2", "SIGS2", "SFEF", "NICBF", "NSIF2", "LVF2", "C30MF", "GIBF1", "NIBLSTF", "CMF2", "SIGS3", "NICGF2", "HLICF", "NICFC", "NBF2", "H8020", "MMF1", "SEF", "KDBY"],
+    "Corporate Debentures": ["NBBD2085", "SBLD2091", "PBD85", "ADBLD83", "SBID83", "ICFCD88", "EBLD91", "NABILD2089", "EBLEB89", "MBLD2085", "SRBLD83", "SBID89", "PBD88", "GBBD85", "CIZBD86", "NICAD2091", "CIZBD90", "SAND2085", "RBBD2088"],
+    "Trading": ["BBC", "STC"]
+};
+
+// Global state
+let allMarketData = []; // Stores the full fetched list
+let filteredData = [];  // Stores the list currently shown (after search/filter)
 let currentPage = 1;
 const PAGE_SIZE = 50;
-
-// State to hold current data for client-side pagination if needed, 
-// though we might want server-side pagination later. 
-// For now, API returns all rows for a date, so we paginate client-side.
-let currentData = [];
 
 async function initMarketPage() {
     const tbody = document.getElementById('marketBody');
     if (!tbody) return;
 
-    // 1. Initialize Date Picker
-    await initDatePicker();
+    // 1. Populate Sectors Dropdown (Instant)
+    populateSectorsDropdown();
 
-    // 2. Populate Sectors Dropdown
-    await populateSectors();
+    // 2. Initialize Date Picker (Non-blocking)
+    // We do NOT await this. If it takes time, let it happen in background.
+    initDatePicker();
 
-    // 3. Initial Fetch
-    await fetchMarketData();
+    // 3. Keep existing listeners or setup new ones? 
+    // We need to setup listeners after or before fetch? Listeners can be set up immediately.
 
-    // 4. Event Listeners with Debounce for Search
-    document.getElementById('marketSearch')?.addEventListener('input', debounce(fetchMarketData, 500));
+    document.getElementById('marketSearch')?.addEventListener('input', debounce(applyFilters, 300));
+
     document.getElementById('sectorSelect')?.addEventListener('change', () => {
-        currentPage = 1; // Reset to page 1 on filter change
-        fetchMarketData();
+        applyFilters();
     });
+
     document.getElementById('marketDate')?.addEventListener('change', () => {
-        currentPage = 1;
         fetchMarketData();
     });
 
     setupPagination();
+
+    // 4. Initial Fetch of ALL data (This is the main priority)
+    await fetchMarketData();
 }
 
-async function populateSectors() {
+/**
+ * Function 1: Populates the dropdown menu with all sectors as options.
+ */
+function populateSectorsDropdown() {
+    const select = document.getElementById('sectorSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">All Sectors</option>';
+
+    // Sort sectors alphabetically if desired, or keep order
+    Object.keys(SECTOR_DATA).forEach(sector => {
+        const option = document.createElement('option');
+        option.value = sector;
+        option.textContent = sector;
+        select.appendChild(option);
+    });
+}
+
+/**
+ * Core Fetch: Gets data from server. 
+ * NOTE: We do NOT pass 'sector' to the server anymore. 
+ * We fetch everything and filter locally to ensure strict user mapping.
+ */
+async function fetchMarketData() {
+    const tbody = document.getElementById('marketBody');
+    const countEl = document.getElementById('marketCount');
+    const dateVal = document.getElementById('marketDate')?.value || '';
+
+    // Show loading state
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading live market data...</td></tr>';
+    if (countEl) countEl.textContent = 'Loading...';
+
     try {
-        const res = await fetch('/api/sectors/');
+        const params = new URLSearchParams();
+        if (dateVal) params.append('date', dateVal);
+        // We do NOT append 'sector' here. We want all stocks.
+
+        const res = await fetch(`/api/market-data/?${params.toString()}`);
         const json = await res.json();
 
-        if (json.success && json.sectors) {
-            const select = document.getElementById('sectorSelect');
-            if (select) {
-                // Clear existing options except "All Sectors"
-                select.innerHTML = '<option value="">All Sectors</option>';
+        if (json.success) {
+            allMarketData = json.stocks || [];
+            applyFilters(); // Filter and render
 
-                // Add sectors
-                json.sectors.forEach(sector => {
-                    const option = document.createElement('option');
-                    option.value = sector;
-                    option.textContent = sector;
-                    select.appendChild(option);
-                });
+            // If we have date in response, update datepicker if not set
+            // (But only if user didn't set it)
+            if (json.date && !dateVal) {
+                const dateInput = document.getElementById('marketDate');
+                if (dateInput && !dateInput.value) {
+                    dateInput.value = json.date;
+                }
             }
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger p-4">Error: ${json.error || 'Unknown error'}</td></tr>`;
         }
-    } catch (err) {
-        console.error('Failed to load sectors:', err);
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">Failed to fetch data.</td></tr>';
     }
 }
 
@@ -68,10 +123,10 @@ async function initDatePicker() {
         if (json.success && json.dates.length > 0) {
             const dateInput = document.getElementById('marketDate');
             if (dateInput) {
-                // Set max to latest available date (usually today/yesterday)
+                // Set max to latest available date
                 dateInput.max = json.latest_date;
                 dateInput.min = json.oldest_date;
-                // Default to latest date if not set
+                // Default to latest date if not set (and if fetchMarketData hasn't set it yet)
                 if (!dateInput.value) {
                     dateInput.value = json.latest_date;
                 }
@@ -82,64 +137,79 @@ async function initDatePicker() {
     }
 }
 
-async function fetchMarketData() {
-    const tbody = document.getElementById('marketBody');
+/**
+ * Function 2: Displays all the stocks of the selected sector (by filtering the main list).
+ */
+function applyFilters() {
+    const sectorSelect = document.getElementById('sectorSelect');
+    const searchInput = document.getElementById('marketSearch');
     const countEl = document.getElementById('marketCount');
-    const dateVal = document.getElementById('marketDate')?.value || '';
-    const sectorVal = document.getElementById('sectorSelect')?.value || '';
-    const searchVal = document.getElementById('marketSearch')?.value || '';
 
-    // Show loading state
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading market data...</td></tr>';
-    if (countEl) countEl.textContent = 'Loading...';
+    const selectedSector = sectorSelect ? sectorSelect.value : '';
+    const searchQuery = searchInput ? searchInput.value.trim().toUpperCase() : '';
 
-    try {
-        // Construct query params
-        const params = new URLSearchParams();
-        if (dateVal) params.append('date', dateVal);
-        if (sectorVal) params.append('sector', sectorVal);
-        if (searchVal) params.append('search', searchVal);
+    // Start with all data
+    let result = allMarketData;
 
-        const res = await fetch(`/api/market-data/?${params.toString()}`);
-        const json = await res.json();
-
-        if (json.success) {
-            currentData = json.stocks || [];
-
-            // Update UI with metadata
-            if (countEl) countEl.textContent = `${json.total_stocks} Stocks`;
-
-            // Check if we have data
-            if (currentData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">No data found for selected filters.</td></tr>';
-            } else {
-                renderTable();
-            }
-
-            updatePaginationUI();
-        } else {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger p-4">Error: ${json.error || 'Unknown error'}</td></tr>`;
-        }
-    } catch (e) {
-        console.error(e);
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">Failed to fetch data.</td></tr>';
+    // 1. Filter by Sector (using SECTOR_DATA JSON)
+    if (selectedSector && SECTOR_DATA[selectedSector]) {
+        const allowedSymbols = SECTOR_DATA[selectedSector].map(s => s.toUpperCase()); // Ensure upper case
+        result = result.filter(item => allowedSymbols.includes(item.symbol.toUpperCase()));
     }
+
+    // 2. Filter by Search
+    if (searchQuery) {
+        result = result.filter(item => item.symbol.toUpperCase().includes(searchQuery));
+    }
+
+    filteredData = result;
+    currentPage = 1; // Reset to page 1
+
+    // Update Count
+    if (countEl) countEl.textContent = `${filteredData.length} Stocks`;
+
+    renderTable();
+    updatePaginationUI();
 }
 
 function renderTable() {
     const tbody = document.getElementById('marketBody');
-    if (!tbody || !currentData.length) return;
+    if (!tbody) return;
 
-    // Client-side pagination logic
+    if (filteredData.length === 0) {
+        // Only show "No data found" if we actually have data loaded but filtered out
+        // If allMarketData is empty, it might be a date issue
+        if (allMarketData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">Prices haven\'t been updated for this date yet. Try a different date.</td></tr>';
+        } else {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">No data found for selected filters.</td></tr>';
+        }
+        return;
+    }
+
+    // Pagination
     const start = (currentPage - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    const pageItems = currentData.slice(start, end);
+    const pageItems = filteredData.slice(start, end);
 
     tbody.innerHTML = pageItems.map(item => {
         const ltp = Number(item.ltp);
         const chg = Number(item.change_pct);
         const cls = chg >= 0 ? 'text-success' : 'text-danger';
-        const sectorName = item.sector ? `<br><small class="text-muted" style="font-size:0.7em">${item.sector}</small>` : '';
+
+        // Try to find sector from our JSON first, fallback to item.sector
+        let displaySector = item.sector || '';
+        if (!displaySector || displaySector === 'Others') {
+            // Find which sector this symbol belongs to in our map
+            for (const [sec, syms] of Object.entries(SECTOR_DATA)) {
+                if (syms.includes(item.symbol.toUpperCase())) { // Case insensitive check
+                    displaySector = sec;
+                    break;
+                }
+            }
+        }
+
+        const sectorHtml = displaySector ? `<br><small class="text-muted" style="font-size:0.75em">${displaySector}</small>` : '';
 
         return `
         <tr>
@@ -147,7 +217,7 @@ function renderTable() {
             <a href="/trade/?symbol=${item.symbol}" class="text-decoration-none text-dark hover-primary">
                 ${item.symbol}
             </a>
-            ${sectorName}
+            ${sectorHtml}
           </td>
           <td style="font-weight:700;">Rs ${fmtNumber(ltp, 2)}</td>
           <td class="${cls}" style="font-weight:900;">${chg >= 0 ? '+' : ''}${fmtNumber(chg, 2)}%</td>
@@ -165,13 +235,13 @@ function setupPagination() {
         if (currentPage > 1) { currentPage--; renderTable(); updatePaginationUI(); }
     });
     document.getElementById('btnNext')?.addEventListener('click', () => {
-        const max = Math.ceil(currentData.length / PAGE_SIZE);
+        const max = Math.ceil(filteredData.length / PAGE_SIZE);
         if (currentPage < max) { currentPage++; renderTable(); updatePaginationUI(); }
     });
 }
 
 function updatePaginationUI() {
-    const max = Math.ceil(currentData.length / PAGE_SIZE) || 1;
+    const max = Math.ceil(filteredData.length / PAGE_SIZE) || 1;
     const info = document.getElementById('pageInfo');
     if (info) info.textContent = `Page ${currentPage} of ${max}`;
 
@@ -182,18 +252,21 @@ function updatePaginationUI() {
     if (btnNext) btnNext.disabled = currentPage === max;
 }
 
-// Utility debounce
 function debounce(func, wait) {
     let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
+    return function (...args) {
         clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
 
+// Helpers
+function fmtNumber(n, d = 2) {
+    return (n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function fmtInt(n) {
+    return (n || 0).toLocaleString('en-US');
+}
+
 // Init
-initMarketPage();
+document.addEventListener('DOMContentLoaded', initMarketPage);

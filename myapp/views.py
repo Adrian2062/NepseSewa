@@ -793,6 +793,13 @@ User = get_user_model()
 
 # ========== NEW DATE-FILTERED API ENDPOINTS ==========
 
+# Helper to sanitize NaN/Inf for JSON
+def sanitize_float(val):
+    import math
+    if val is None or (isinstance(val, float) and (math.isnan(val) or math.isinf(val))):
+        return None
+    return float(val)
+
 @require_http_methods(["GET"])
 @login_required
 def api_sectors(request):
@@ -1157,12 +1164,12 @@ def api_get_recommendations(request):
             
             data.append({
                 'symbol': symbol,
-                'current_price': ltp,
-                'predicted_price': pred_price,
+                'current_price': sanitize_float(ltp),
+                'predicted_price': sanitize_float(pred_price),
                 'recommendation': rec_val,
                 'recommendation_str': rec_str,
-                'rmse': rmse_val,
-                'mae': mae_val,
+                'rmse': sanitize_float(rmse_val),
+                'mae': sanitize_float(mae_val),
                 'last_updated': last_upd
             })
             
@@ -1237,12 +1244,12 @@ def api_refresh_recommendation(request):
             'success': True,
             'data': {
                 'symbol': symbol,
-                'predicted_price': predicted_price,
+                'predicted_price': sanitize_float(predicted_price),
                 'recommendation': rec_obj.recommendation, # Return Integer
                 'recommendation_str': rec_obj.get_recommendation_display(), # Return String Display
-                'rmse': rmse,
-                'mae': mae,
-                'current_price': last_close,
+                'rmse': sanitize_float(rmse),
+                'mae': sanitize_float(mae),
+                'current_price': sanitize_float(last_close),
                 'last_updated': rec_obj.last_updated.isoformat()
             }
         })
@@ -1328,12 +1335,12 @@ def api_refresh_all_recommendations(request):
                 # Append to results
                 results.append({
                     'symbol': symbol,
-                    'current_price': last_close,
-                    'predicted_price': predicted_price,
+                    'current_price': sanitize_float(last_close),
+                    'predicted_price': sanitize_float(predicted_price),
                     'recommendation': rec_obj.recommendation,
                     'recommendation_str': rec_obj.get_recommendation_display(),
-                    'rmse': rmse,
-                    'mae': mae,
+                    'rmse': sanitize_float(rmse),
+                    'mae': sanitize_float(mae),
                     'last_updated': rec_obj.last_updated.isoformat()
                 })
                 

@@ -1,6 +1,8 @@
 // Watchlist & Recommendation Logic
+let isAutoPredicting = false; // Flag to prevent infinite loops
 
 async function fetchWatchlist() {
+    console.log(`Watchlist JS: fetchWatchlist() called at ${new Date().toLocaleTimeString()}`);
     // Determine View Mode
     const isAll = document.getElementById('viewAll')?.checked;
     const url = isAll ? '/api/recommendations/?filter=all' : '/api/recommendations/';
@@ -31,6 +33,8 @@ async function fetchWatchlist() {
         const result = await response.json();
 
         if (result.success) {
+            // Store data globally or as a property to reuse in rendering/filtering
+            window.lastWatchlistData = result.data;
             renderWatchlist(result.data);
             updateKPIs(result.data);
         } else {
@@ -45,6 +49,7 @@ async function fetchWatchlist() {
 // View Toggle Listeners
 document.querySelectorAll('input[name="viewToggle"]').forEach(radio => {
     radio.addEventListener('change', () => {
+        console.log(`Watchlist JS: View toggled to ${radio.id}`);
         // Clear table and fetch
         const tbody = document.getElementById('watchlistBody');
         if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><div class="mt-2 text-muted fw-bold">Loading...</div></td></tr>`;
@@ -52,26 +57,66 @@ document.querySelectorAll('input[name="viewToggle"]').forEach(radio => {
     });
 });
 
-document.addEventListener('DOMContentLoaded', fetchWatchlist);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Watchlist JS: DOMContentLoaded - Initializing...");
+    fetchWatchlist();
+});
 
 function renderWatchlist(data) {
+    console.log(`Watchlist JS: renderWatchlist() with ${data ? data.length : 0} items`);
     const tbody = document.getElementById('watchlistBody');
+    const summaryLabel = document.getElementById('tableSummaryLabel');
+    const isAll = document.getElementById('viewAll')?.checked;
+    const activeSig = document.getElementById('wlSignal')?.value;
+
     if (!data || !data.length) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted fw-bold">Your watchlist is empty. Add some stocks to see recommendations!</td></tr>`;
+        if (summaryLabel) summaryLabel.classList.add('d-none');
         return;
     }
 
     try {
-        tbody.innerHTML = data.map(item => {
+        let displayData = [...data];
+        let isSummarizedView = false;
+
+        // Optimized "All Market" Logic:
+        // If viewing All Market AND no specific signal filter is selected (from dropdown or KPI)
+        if (isAll && !activeSig) {
+            const buys = data.filter(i => i.recommendation === 1 || i.recommendation_str === 'BUY').slice(0, 5);
+            const sells = data.filter(i => i.recommendation === -1 || i.recommendation_str === 'SELL').slice(0, 5);
+            const holds = data.filter(i => i.recommendation === 0 || i.recommendation_str === 'HOLD').slice(0, 5);
+
+            displayData = [...buys, ...sells, ...holds];
+            isSummarizedView = true;
+        } else if (activeSig) {
+            // If a specific signal is active, filter ALL data by that signal
+            displayData = data.filter(i => i.recommendation == activeSig || i.recommendation_str === (activeSig == '1' ? 'BUY' : (activeSig == '-1' ? 'SELL' : 'HOLD')));
+        }
+
+        // Update Summary Label
+        if (summaryLabel) {
+            if (isSummarizedView) {
+                summaryLabel.innerHTML = `<i class="fas fa-list-ul me-2"></i>Showing <strong>Summary View</strong> (Top 5 per category). Click <strong>BUY/SELL/HOLD</strong> targets above to see all.`;
+                summaryLabel.classList.remove('d-none');
+            } else if (activeSig) {
+                const sigText = activeSig == '1' ? 'BUY' : (activeSig == '-1' ? 'SELL' : 'HOLD');
+                summaryLabel.innerHTML = `<i class="fas fa-filter me-2"></i>Showing all <strong>${sigText}</strong> signals. Click <strong>Watchlist Count</strong> to reset.`;
+                summaryLabel.classList.remove('d-none');
+            } else {
+                summaryLabel.classList.add('d-none');
+            }
+        }
+
+        tbody.innerHTML = displayData.map(item => {
             // Handle Pending/Waiting States
             // Check for explicit 'PENDING' string OR if predicted_price is missing/zero while not waiting
             if (item.recommendation_str === 'PENDING' || item.recommendation_str === 'WAITING' || !item.predicted_price) {
                 return `
-                <tr data-symbol="${item.symbol}">
+                <tr data-symbol="${item.symbol}" data-pending="true">
                     <td class="ps-3 fw-bold underline-hover"><a href="/trade/?symbol=${item.symbol}" class="text-decoration-none text-dark">${item.symbol}</a></td>
                     <td class="fw-bold">Rs ${formatPrice(item.current_price)}</td>
                     <td colspan="3" class="text-center text-muted fst-italic">
-                        <small>${item.status || 'Recalculation needed'}</small>
+                        <small class="prediction-status">${item.status || 'Calculating prediction...'}</small>
                     </td>
                     <td>
                        <span class="badge bg-secondary">PENDING</span>
@@ -120,10 +165,61 @@ function renderWatchlist(data) {
         `}).join('');
 
         attachEventListeners();
+
+        // Auto-predict stocks with pending predictions
+        if (!isAutoPredicting) {
+            autoPredictPendingStocks(data);
+        }
     } catch (renderErr) {
         console.error("Render error:", renderErr);
         showError("Error rendering watchlist data.");
     }
+}
+
+// Auto-predict function to handle pending stocks
+async function autoPredictPendingStocks(data) {
+    // Find all stocks that need predictions
+    const pendingStocks = data.filter(item =>
+        item.recommendation_str === 'PENDING' ||
+        item.recommendation_str === 'WAITING' ||
+        !item.predicted_price
+    );
+
+    if (pendingStocks.length === 0) {
+        console.log("Watchlist JS: No pending predictions found.");
+        return;
+    }
+
+    console.log(`Watchlist JS: Auto-predicting ${pendingStocks.length} stocks...`);
+    isAutoPredicting = true; // Block further auto-prediction triggers
+
+    // Process stocks sequentially to avoid overwhelming the server
+    for (const stock of pendingStocks) {
+        try {
+            // Update status message in UI
+            const row = document.querySelector(`tr[data-symbol="${stock.symbol}"]`);
+            if (row) {
+                const statusEl = row.querySelector('.prediction-status');
+                if (statusEl) {
+                    statusEl.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>Predicting...`;
+                }
+            }
+
+            console.log(`Watchlist JS: Triggering prediction for ${stock.symbol}`);
+            // Trigger prediction
+            await refreshRecommendation(stock.symbol, true);
+
+            // Small delay between predictions to prevent server overload
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+            console.error(`Watchlist JS: Error auto-predicting ${stock.symbol}:`, error);
+        }
+    }
+
+    console.log('Watchlist JS: Auto-prediction complete. Final refresh.');
+    // One final fetch to update the whole table with new signals/RMSE etc
+    await fetchWatchlist();
+    isAutoPredicting = false; // Release lock
 }
 
 function formatPrice(p) {
@@ -172,10 +268,52 @@ function updateKPIs(data) {
     const kpiWatch = document.getElementById('kpiWatchCount');
     const kpiBuy = document.getElementById('kpiBuyCount');
     const kpiSell = document.getElementById('kpiSellCount');
+    const kpiHold = document.getElementById('kpiHoldCount');
+
+    const buys = data.filter(i => i.recommendation === 1 || i.recommendation_str === 'BUY').length;
+    const sells = data.filter(i => i.recommendation === -1 || i.recommendation_str === 'SELL').length;
+    const holds = data.filter(i => i.recommendation === 0 || i.recommendation_str === 'HOLD').length;
 
     if (kpiWatch) kpiWatch.textContent = data.length;
-    if (kpiBuy) kpiBuy.textContent = data.filter(i => i.recommendation === 1 || i.recommendation_str === 'BUY').length;
-    if (kpiSell) kpiSell.textContent = data.filter(i => i.recommendation === -1 || i.recommendation_str === 'SELL').length;
+    if (kpiBuy) kpiBuy.textContent = buys;
+    if (kpiSell) kpiSell.textContent = sells;
+    if (kpiHold) kpiHold.textContent = holds;
+
+    // Attach click listeners for KPI-based filtering
+    setupKPIFiltering(data);
+}
+
+function setupKPIFiltering(data) {
+    const sets = [
+        { id: 'btnFilterAll', val: '' },
+        { id: 'btnFilterBuy', val: '1' },
+        { id: 'btnFilterSell', val: '-1' },
+        { id: 'btnFilterHold', val: '0' }
+    ];
+
+    const sigSelect = document.getElementById('wlSignal');
+
+    sets.forEach(s => {
+        const el = document.getElementById(s.id);
+        if (!el) return;
+
+        // Highlight active one
+        if (sigSelect && sigSelect.value === s.val) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+
+        el.onclick = () => {
+            if (sigSelect) {
+                sigSelect.value = s.val;
+                // Re-render instead of just hiding rows (to handle the Top 5 logic)
+                renderWatchlist(data);
+                // Re-update active states
+                setupKPIFiltering(data);
+            }
+        };
+    });
 }
 
 function attachEventListeners() {
@@ -209,7 +347,7 @@ async function toggleWatchlist(symbol) {
     }
 }
 
-async function refreshRecommendation(symbol) {
+async function refreshRecommendation(symbol, silent = false) {
     const btn = document.querySelector(`.refresh-stock[data-symbol="${symbol}"]`);
     if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
 
@@ -224,14 +362,20 @@ async function refreshRecommendation(symbol) {
         });
         const result = await response.json();
         if (result.success) {
-            fetchWatchlist();
+            if (!silent) {
+                fetchWatchlist();
+            }
         } else {
-            alert(result.message);
-            fetchWatchlist(); // Reset button
+            if (!silent) {
+                alert(result.message);
+                fetchWatchlist(); // Reset button
+            }
         }
     } catch (e) {
         console.error(e);
-        fetchWatchlist();
+        if (!silent) {
+            fetchWatchlist();
+        }
     }
 }
 
@@ -341,7 +485,13 @@ document.getElementById('refreshAllBtn')?.addEventListener('click', async () => 
 
 // Filtering
 document.getElementById('wlSearch')?.addEventListener('input', applyFilters);
-document.getElementById('wlSignal')?.addEventListener('change', applyFilters);
+document.getElementById('wlSignal')?.addEventListener('change', () => {
+    if (window.lastWatchlistData) {
+        renderWatchlist(window.lastWatchlistData);
+        // Sync KPI highlights
+        setupKPIFiltering(window.lastWatchlistData);
+    }
+});
 
 function applyFilters() {
     const q = (document.getElementById('wlSearch')?.value || '').trim().toUpperCase();
@@ -351,6 +501,9 @@ function applyFilters() {
     rows.forEach(r => {
         const okQ = !q || r.dataset.symbol.includes(q);
         const okSig = !sig || r.dataset.signal == sig; // loose equality for string vs number
+
+        // Note: In summary mode, filtering by search might lead to confusing results 
+        // if the stock isn't in the Top 5. Better to just hide/show what's currently rendered.
         r.style.display = (okQ && okSig) ? '' : 'none';
     });
 }

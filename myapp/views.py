@@ -397,7 +397,98 @@ def lesson_detail(request, lesson_id):
 
 @login_required
 def settings_view(request):
-    return render(request, 'settings.html', {'active_page': 'settings'})
+    """
+    Settings page with full backend functionality.
+    Handles: profile update, email change, password change, account reset, account delete, notifications
+    """
+    user = request.user
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        # ---------------- SAVE SETTINGS (Consolidated) ----------------
+        if action == "save_settings":
+            try:
+                # 1. Update Profile Fields
+                user.first_name = request.POST.get("first_name", user.first_name)
+                user.last_name = request.POST.get("last_name", user.last_name)
+                user.phone = request.POST.get("phone", user.phone)
+                
+                # 2. Update Preferences
+                user.buy_sell_notifications = "buy_sell_notifications" in request.POST
+                
+                # 3. Update Email (with validation)
+                new_email = request.POST.get("email", user.email).strip().lower()
+                if new_email and new_email != user.email:
+                    if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+                        messages.error(request, f"Error: The email {new_email} is already in use by another account.")
+                    else:
+                        user.email = new_email
+                        user.username = new_email  # Sync username if email is the identifier
+                        messages.success(request, "✅ Email address updated.")
+                
+                user.save()
+                messages.success(request, "✅ Settings updated successfully.")
+            except Exception as e:
+                messages.error(request, f"Error updating settings: {str(e)}")
+
+        # ---------------- PASSWORD ----------------
+        elif action == "change_password":
+            current = request.POST.get("current_password")
+            new = request.POST.get("new_password")
+            confirm = request.POST.get("confirm_password")
+
+            if not user.check_password(current):
+                messages.error(request, "Current password is incorrect.")
+            elif new != confirm:
+                messages.error(request, "Passwords do not match.")
+            else:
+                user.set_password(new)
+                user.save()
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, user)
+                messages.success(request, "✅ Password changed successfully.")
+
+        # ---------------- RESET ACCOUNT ----------------
+        elif action == "reset_account":
+            try:
+                # Reset currency-related fields
+                user.virtual_balance = 100000.00
+                user.portfolio_value = 100000.00
+                user.save()
+                
+                # Use bulk delete for efficiency
+                Portfolio.objects.filter(user=user).delete()
+                Order.objects.filter(user=user).delete()
+                Trade.objects.filter(user=user).delete()
+                
+                # Delete executions (handle both sides)
+                from .models import TradeExecution
+                TradeExecution.objects.filter(buy_order__user=user).delete()
+                TradeExecution.objects.filter(sell_order__user=user).delete()
+                
+                messages.success(request, "✅ Account reset! Your virtual balance is now Rs 100,000 and portfolio is empty.")
+                return redirect('settings')
+            except Exception as e:
+                messages.error(request, f"Error resetting account: {str(e)}")
+
+        # ---------------- DELETE ACCOUNT ----------------
+        elif action == "delete_account":
+            try:
+                target_email = user.email
+                user.delete()
+                logout(request)
+                messages.success(request, f"The account associated with {target_email} has been permanently deleted.")
+                return redirect("login")
+            except Exception as e:
+                messages.error(request, f"Error deleting account: {str(e)}")
+
+        return redirect("settings")
+
+    context = {
+        'active_page': 'settings',
+    }
+    return render(request, "settings.html", context)
 
 
 def logout_view(request):
@@ -1360,3 +1451,373 @@ def api_refresh_all_recommendations(request):
         import traceback
         print(traceback.format_exc())
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ========== PORTFOLIO ANALYTICS API ==========
+
+@login_required
+@require_http_methods(["GET"])
+def api_portfolio_analytics(request):
+    """
+    Get portfolio analytics summary for the logged-in user.
+    Returns: total value, holdings count, today's P/L, overall P/L
+    """
+    try:
+        from decimal import Decimal
+        user = request.user
+        
+        # Get user's portfolio holdings
+        holdings = Portfolio.objects.filter(user=user, quantity__gt=0)
+        
+        if not holdings.exists():
+            return JsonResponse({
+                'success': True,
+                'data': {
+                    'total_value': 0,
+                    'holdings_count': 0,
+                    'today_pl': 0,
+                    'today_pl_pct': 0,
+                    'overall_pl': 0,
+                    'overall_pl_pct': 0,
+                    'cost_basis': 0,
+                    'timestamp': timezone.now().isoformat()
+                }
+            })
+        
+        # Get latest price timestamp
+        latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
+        if not latest_time:
+            return JsonResponse({
+                'success': False,
+                'error': 'No market data available'
+            }, status=404)
+        
+        # Get previous day's timestamp for today's P/L calculation
+        previous_day = latest_time.date() - timedelta(days=1)
+        
+        total_value = Decimal('0')
+        total_cost_basis = Decimal('0')
+        total_prev_value = Decimal('0')
+        holdings_count = 0
+        
+        for holding in holdings:
+            symbol = holding.symbol
+            qty = Decimal(str(holding.quantity))
+            avg_price = holding.avg_price
+            
+            # Get current LTP
+            current_price_obj = NEPSEPrice.objects.filter(
+                symbol=symbol,
+                timestamp=latest_time
+            ).first()
+            
+            if current_price_obj and current_price_obj.ltp:
+                current_ltp = Decimal(str(current_price_obj.ltp))
+                
+                # Calculate current value
+                current_value = qty * current_ltp
+                total_value += current_value
+                
+                # Calculate cost basis
+                cost_basis = qty * avg_price
+                total_cost_basis += cost_basis
+                
+                # Get previous day's close for today's P/L
+                prev_price_obj = NEPSEPrice.objects.filter(
+                    symbol=symbol,
+                    timestamp__date=previous_day
+                ).order_by('-timestamp').first()
+                
+                if prev_price_obj and prev_price_obj.close:
+                    prev_close = Decimal(str(prev_price_obj.close))
+                    prev_value = qty * prev_close
+                    total_prev_value += prev_value
+                else:
+                    # If no previous data, use current value
+                    total_prev_value += current_value
+                
+                holdings_count += 1
+        
+        # Calculate P/L metrics
+        overall_pl = total_value - total_cost_basis
+        overall_pl_pct = (overall_pl / total_cost_basis * 100) if total_cost_basis > 0 else 0
+        
+        today_pl = total_value - total_prev_value
+        today_pl_pct = (today_pl / total_prev_value * 100) if total_prev_value > 0 else 0
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'total_value': float(total_value),
+                'holdings_count': holdings_count,
+                'today_pl': float(today_pl),
+                'today_pl_pct': float(today_pl_pct),
+                'overall_pl': float(overall_pl),
+                'overall_pl_pct': float(overall_pl_pct),
+                'cost_basis': float(total_cost_basis),
+                'timestamp': latest_time.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in api_portfolio_analytics: {e}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_portfolio_holdings(request):
+    """
+    Get detailed holdings for the logged-in user with current market prices.
+    Returns: symbol, qty, avg_price, current_ltp, market_value, pl, pl_pct
+    """
+    try:
+        from decimal import Decimal
+        user = request.user
+        
+        # Get user's portfolio holdings
+        holdings = Portfolio.objects.filter(user=user, quantity__gt=0)
+        
+        if not holdings.exists():
+            return JsonResponse({
+                'success': True,
+                'data': []
+            })
+        
+        # Get latest price timestamp
+        latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
+        if not latest_time:
+            return JsonResponse({
+                'success': False,
+                'error': 'No market data available'
+            }, status=404)
+        
+        holdings_data = []
+        
+        for holding in holdings:
+            symbol = holding.symbol
+            qty = holding.quantity
+            avg_price = float(holding.avg_price)
+            
+            # Get current LTP
+            current_price_obj = NEPSEPrice.objects.filter(
+                symbol=symbol,
+                timestamp=latest_time
+            ).first()
+            
+            if current_price_obj and current_price_obj.ltp:
+                current_ltp = float(current_price_obj.ltp)
+                market_value = qty * current_ltp
+                cost_basis = qty * avg_price
+                
+                pl = market_value - cost_basis
+                pl_pct = (pl / cost_basis * 100) if cost_basis > 0 else 0
+                
+                holdings_data.append({
+                    'symbol': symbol,
+                    'quantity': qty,
+                    'avg_price': avg_price,
+                    'current_ltp': current_ltp,
+                    'market_value': market_value,
+                    'pl': pl,
+                    'pl_pct': pl_pct,
+                    'change_pct': float(current_price_obj.change_pct or 0)
+                })
+        
+        # Sort by market value (largest first)
+        holdings_data.sort(key=lambda x: x['market_value'], reverse=True)
+        
+        return JsonResponse({
+            'success': True,
+            'data': holdings_data,
+            'timestamp': latest_time.isoformat()
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in api_portfolio_holdings: {e}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_portfolio_performance(request):
+    """
+    Get portfolio performance history over time.
+    Params: range=1D|1W|1M (default: 1D)
+    Returns: time-series data for portfolio value chart
+    """
+    try:
+        from decimal import Decimal
+        user = request.user
+        range_param = request.GET.get('range', '1D').upper()
+        
+        # Determine time range
+        now = timezone.now()
+        if range_param == '1D':
+            start_time = now - timedelta(days=1)
+        elif range_param == '1W':
+            start_time = now - timedelta(weeks=1)
+        elif range_param == '1M':
+            start_time = now - timedelta(days=30)
+        else:
+            start_time = now - timedelta(days=1)
+        
+        # Get user's current holdings
+        holdings = Portfolio.objects.filter(user=user, quantity__gt=0)
+        
+        if not holdings.exists():
+            return JsonResponse({
+                'success': True,
+                'data': {
+                    'labels': [],
+                    'values': [],
+                    'performance': {
+                        '1d': 0,
+                        '1w': 0,
+                        '1m': 0
+                    }
+                }
+            })
+        
+        # Get distinct timestamps in the range
+        timestamps = NEPSEPrice.objects.filter(
+            timestamp__gte=start_time
+        ).values_list('timestamp', flat=True).distinct().order_by('timestamp')
+        
+        # Limit to reasonable number of data points
+        timestamps = list(timestamps)
+        if len(timestamps) > 50:
+            # Sample every nth timestamp
+            step = len(timestamps) // 50
+            timestamps = timestamps[::step]
+        
+        labels = []
+        values = []
+        
+        for ts in timestamps:
+            portfolio_value = Decimal('0')
+            
+            for holding in holdings:
+                symbol = holding.symbol
+                qty = Decimal(str(holding.quantity))
+                
+                # Get price at this timestamp
+                price_obj = NEPSEPrice.objects.filter(
+                    symbol=symbol,
+                    timestamp=ts
+                ).first()
+                
+                if price_obj and price_obj.ltp:
+                    ltp = Decimal(str(price_obj.ltp))
+                    portfolio_value += qty * ltp
+            
+            labels.append(ts.strftime('%Y-%m-%d %H:%M'))
+            values.append(float(portfolio_value))
+        
+        # Calculate performance metrics
+        performance = {'1d': 0, '1w': 0, '1m': 0}
+        
+        if len(values) >= 2:
+            current_value = values[-1]
+            
+            # 1 day performance
+            day_ago_idx = max(0, len(values) - 2)
+            if values[day_ago_idx] > 0:
+                performance['1d'] = ((current_value - values[day_ago_idx]) / values[day_ago_idx]) * 100
+            
+            # 1 week performance
+            week_ago_idx = max(0, len(values) - 7)
+            if values[week_ago_idx] > 0:
+                performance['1w'] = ((current_value - values[week_ago_idx]) / values[week_ago_idx]) * 100
+            
+            # 1 month performance
+            if values[0] > 0:
+                performance['1m'] = ((current_value - values[0]) / values[0]) * 100
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values,
+                'performance': performance,
+                'range': range_param
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in api_portfolio_performance: {e}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_portfolio_activity(request):
+    """
+    Get recent trading activity for the logged-in user.
+    Returns: last 10 trade executions
+    """
+    try:
+        user = request.user
+        
+        # Get recent trade executions where user was either buyer or seller
+        buy_executions = TradeExecution.objects.filter(
+            buy_order__user=user
+        ).select_related('buy_order', 'sell_order')
+        
+        sell_executions = TradeExecution.objects.filter(
+            sell_order__user=user
+        ).select_related('buy_order', 'sell_order')
+        
+        # Combine and sort by executed_at
+        all_executions = list(buy_executions) + list(sell_executions)
+        all_executions.sort(key=lambda x: x.executed_at, reverse=True)
+        
+        # Take last 10
+        recent_executions = all_executions[:10]
+        
+        activity_data = []
+        for execution in recent_executions:
+            # Determine if user was buyer or seller
+            if execution.buy_order.user == user:
+                side = 'BUY'
+            else:
+                side = 'SELL'
+            
+            # Calculate time ago
+            time_diff = timezone.now() - execution.executed_at
+            if time_diff.days > 0:
+                time_ago = f"{time_diff.days} day{'s' if time_diff.days > 1 else ''} ago"
+            elif time_diff.seconds >= 3600:
+                hours = time_diff.seconds // 3600
+                time_ago = f"{hours} hour{'s' if hours > 1 else ''} ago"
+            elif time_diff.seconds >= 60:
+                minutes = time_diff.seconds // 60
+                time_ago = f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+            else:
+                time_ago = "Just now"
+            
+            activity_data.append({
+                'symbol': execution.symbol,
+                'side': side,
+                'quantity': execution.executed_qty,
+                'price': float(execution.executed_price),
+                'executed_at': execution.executed_at.isoformat(),
+                'time_ago': time_ago
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': activity_data
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in api_portfolio_activity: {e}")
+        print(traceback.format_exc())
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

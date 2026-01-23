@@ -61,4 +61,10 @@ urlpatterns = [
     path('api/recommendations/', views.api_get_recommendations, name='api_get_recommendations'),
     path('api/recommendations/refresh/', views.api_refresh_recommendation, name='api_refresh_recommendation'),
     path('api/recommendations/refresh-all/', views.api_refresh_all_recommendations, name='api_refresh_all_recommendations'),
+    
+    # Portfolio Analytics APIs
+    path('api/portfolio/analytics/', views.api_portfolio_analytics, name='api_portfolio_analytics'),
+    path('api/portfolio/holdings/', views.api_portfolio_holdings, name='api_portfolio_holdings'),
+    path('api/portfolio/performance/', views.api_portfolio_performance, name='api_portfolio_performance'),
+    path('api/portfolio/activity/', views.api_portfolio_activity, name='api_portfolio_activity'),
 ]

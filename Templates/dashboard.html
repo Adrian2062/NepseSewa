@@ -17,13 +17,13 @@
 <div class="welcome-banner">
     <div class="row align-items-center">
         <div class="col-md-8">
-            <h4 class="mb-2" style="font-weight:800;">Welcome back, {{ user.first_name }}! 👋</h4>
+            <h4 class="mb-2" style="font-weight:800;">Welcome back, {{ request.user.first_name }}! 👋</h4>
             <p class="mb-0" style="opacity:.92;">Monitor your portfolio and explore the market.</p>
         </div>
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
             <div class="virtual-balance">
                 <div style="font-size:.75rem;font-weight:800;opacity:.9;letter-spacing:.8px;">VIRTUAL BALANCE</div>
-                <div style="font-size:1.4rem;font-weight:900;">Rs {{ user.virtual_balance|floatformat:2 }}</div>
+                <div style="font-size:1.4rem;font-weight:900;">Rs {{ request.user.virtual_balance|floatformat:2 }}</div>
                 <small class="text-white-50" id="vbHint">Live market updates</small>
             </div>
         </div>
@@ -39,7 +39,7 @@
             </div>
             <div>
                 <div class="stat-label">Total Portfolio</div>
-                <div class="stat-value">Rs {{ user.portfolio_value|floatformat:0 }}</div>
+                <div class="stat-value">Rs {{ request.user.portfolio_value|floatformat:0 }}</div>
                 <div class="fw-bold" style="font-size:.85rem;color: var(--muted);">user value</div>
             </div>
         </div>

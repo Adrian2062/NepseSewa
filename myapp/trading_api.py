@@ -227,6 +227,11 @@ def api_place_order_new(request):
         # Refresh order status
         order.refresh_from_db()
         
+        # Add success message if notifications are enabled
+        if request.user.buy_sell_notifications:
+            from django.contrib import messages
+            messages.success(request, f"✅ {side} order placed successfully for {symbol}")
+        
         return JsonResponse({
             'success': True,
             'message': message,

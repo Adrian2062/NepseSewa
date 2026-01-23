@@ -13,6 +13,10 @@ class CustomUser(AbstractUser):
     portfolio_value = models.DecimalField(max_digits=12, decimal_places=2, default=100000.00)
     date_joined = models.DateTimeField(auto_now_add=True)
     
+    # Settings fields
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    buy_sell_notifications = models.BooleanField(default=True)
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     

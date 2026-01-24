@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card shadow-lg border-0 p-5 rounded-4">
+                <div class="mb-4">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <h2 class="fw-bold">Processing Your Payment</h2>
+                    <p class="text-muted">Plan: <strong>{{ transaction.plan.name }}</strong></p>
+                    <p class="text-muted">Amount: <strong>Rs {{ transaction.amount }}</strong></p>
+                </div>
+
+                <div class="alert alert-info border-0 bg-light p-4 rounded-3 text-start mb-4">
+                    <h6><i class="fas fa-info-circle me-2"></i> Payment Gateway Simulation</h6>
+                    <p class="small mb-0">In a production environment, you would be redirected to Khalti or eSewa here.
+                        Click the button below to simulate a successful payment callback.</p>
+                </div>
+
+                <div class="d-grid gap-3">
+                    <a href="{% url 'verify_payment' transaction.transaction_id %}"
+                        class="btn btn-success py-3 fw-bold rounded-pill shadow-sm">
+                        <i class="fas fa-check-circle me-2"></i> Confirm Success (Simulate Callback)
+                    </a>
+                    <a href="{% url 'pricing' %}" class="btn btn-link text-decoration-none text-muted">
+                        Cancel Payment
+                    </a>
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <p class="text-muted x-small">Transaction ID: {{ transaction.transaction_id }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+
+    .x-small {
+        font-size: 0.75rem;
+    }
+
+    .rounded-4 {
+        border-radius: 1.5rem !important;
+    }
+</style>
+{% endblock %}

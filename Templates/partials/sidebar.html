@@ -43,6 +43,13 @@
         </li>
 
         <li class="nav-item">
+            <a href="{% url 'pricing' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'pricing' %}active{% endif %}">
+                <i class="fas fa-gem"></i><span>Pricing</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a href="{% url 'settings' %}"
                 class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
                 <i class="fas fa-cog"></i><span>Settings</span>

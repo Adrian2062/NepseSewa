@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold">Upgrade Your Experience</h1>
+        <p class="lead text-muted">Choose the plan that's right for your trading journey.</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 justify-content-center">
+        {% for plan in plans %}
+        <div class="col">
+            <div
+                class="card h-100 shadow-sm border-0 {% if user.subscription.plan == plan %}border border-2 border-success{% elif plan.price > 0 %}border-top border-5 border-primary{% endif %}">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold">{{ plan.name }}</h3>
+                        <div class="plan-price my-3">
+                            <span class="h2 fw-bold">Rs {{ plan.price }}</span>
+                            <span class="text-muted">/ {{ plan.duration_days }} Days</span>
+                        </div>
+                    </div>
+
+                    <div class="plan-features mb-4 flex-grow-1">
+                        <div class="text-muted small">
+                            {{ plan.description|linebreaksbr }}
+                        </div>
+                    </div>
+
+                    <div class="mt-auto">
+                        {% if user.is_authenticated %}
+                        {% if user.subscription.plan == plan and not user.subscription.is_expired %}
+                        <div class="text-center p-2 bg-success bg-opacity-10 rounded text-success fw-bold mb-2">
+                            <i class="fas fa-check-circle me-1"></i> Active Plan
+                        </div>
+                        <button class="btn btn-outline-success w-100 disabled border-2">Subscribed</button>
+                        {% else %}
+                        <a href="{% url 'subscribe' plan.id %}" class="btn btn-primary w-100 py-2 shadow-sm">
+                            {% if user.subscription %}Switch to Plan{% else %}Get Started{% endif %}
+                        </a>
+                        {% endif %}
+                        {% else %}
+                        <a href="{% url 'login' %}?next={% url 'pricing' %}" class="btn btn-primary w-100 py-2">Login to
+                            Subscribe</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center">
+            <div class="alert alert-info">
+                No subscription plans are available at the moment. Please check back later.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-5 text-center">
+        <p class="text-muted small">
+            <i class="fas fa-shield-alt me-1"></i> Secure Payment Simulation<br>
+            By subscribing, you agree to our Terms of Service and Privacy Policy.
+        </p>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        border-radius: 1.25rem;
+        overflow: hidden;
+    }
+
+    .card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .plan-price {
+        color: #1a1a1a;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+        border: none;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0b5ed7 0%, #0bacbe 100%);
+        transform: scale(1.02);
+    }
+
+    .plan-features p {
+        margin-bottom: 0.5rem;
+    }
+
+    .border-top.border-5 {
+        border-top-width: 6px !important;
+    }
+</style>
+{% endblock %}

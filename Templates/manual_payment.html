@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                <div class="bg-success text-white p-4 text-center">
+                    <h3 class="fw-bold mb-0">Manual eSewa Payment</h3>
+                    <p class="mb-0 opacity-75">Scan, Pay, and Upload Receipt</p>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <div class="payment-details mb-4">
+                            <span class="text-muted d-block">You are subscribing to</span>
+                            <h4 class="fw-bold text-primary">{{ plan.name }}</h4>
+                            <div class="display-6 fw-bold">Rs {{ plan.price }}</div>
+                        </div>
+
+                        <!-- QR Code Section -->
+                        <div class="qr-container bg-light p-3 rounded-4 mb-4 d-inline-block border">
+                            <img src="{% static 'img/payment.png' %}" alt="eSewa QR Code" class="img-fluid rounded-3"
+                                style="max-height: 300px;">
+                            <div class="mt-2 small text-muted">Scan to pay with eSewa</div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Instruction Section -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>Instructions</h5>
+                        <ol class="small text-muted ps-3">
+                            <li class="mb-2">Open your eSewa app and scan the QR code above.</li>
+                            <li class="mb-2">Enter the exact amount: <strong>Rs {{ plan.price }}</strong>.</li>
+                            <li class="mb-2">After successful payment, take a <strong>screenshot</strong> of the
+                                receipt.</li>
+                            <li>Upload the screenshot and enter the <strong>Transaction ID</strong> below.</li>
+                        </ol>
+                    </div>
+
+                    <!-- Submission Form -->
+                    <div id="payment-form-container">
+                        <form action="{% url 'manual_payment_submit' %}" method="POST" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+
+                            <div class="mb-3">
+                                <label for="transaction_id" class="form-label fw-bold">eSewa Transaction ID</label>
+                                <input type="text" name="transaction_id" id="transaction_id"
+                                    class="form-control form-control-lg rounded-3 shadow-sm"
+                                    placeholder="e.g. 15X8P9..." required>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="receipt" class="form-label fw-bold">Upload Payment Receipt
+                                    (Screenshot)</label>
+                                <input type="file" name="receipt" id="receipt" class="form-control rounded-3 shadow-sm"
+                                    accept="image/*" required>
+                                <div class="form-text">Max size 5MB. PNG, JPG formats allowed.</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold rounded-pill shadow">
+                                Submit for Verification <i class="fas fa-paper-plane ms-2"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <hr class="my-4 d-none" id="polling-divider">
+
+                    <!-- Polling Status (Hidden by default) -->
+                    <div id="polling-container" class="text-center d-none border-top pt-4">
+                        <div class="spinner-grow text-success mb-3" role="status"
+                            style="width: 1.5rem; height: 1.5rem;"></div>
+                        <h5 class="fw-bold text-success">Verification in Progress...</h5>
+                        <p class="text-muted small">We are checking your payment. This page will automatically update
+                            once confirmed.</p>
+                        <div class="badge bg-warning text-dark p-2 rounded-3">Status: Awaiting Admin Approval</div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light border-0 p-4 text-center">
+                    <p class="text-muted small mb-0">
+                        <i class="fas fa-user-shield me-1"></i> Our admin will verify your payment within 1-2 hours
+                        after submission.
+                    </p>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="{% url 'pricing' %}" class="text-muted text-decoration-none">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Plans
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function checkStatus() {
+        fetch("{% url 'api_payment_status' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'COMPLETED') {
+                    window.location.href = "{% url 'dashboard' %}?verified=true";
+                } else if (data.status === 'PENDING') {
+                    // Show polling UI BUT don't hide the form
+                    document.getElementById('polling-container').classList.remove('d-none');
+                    if (document.getElementById('polling-divider')) {
+                        document.getElementById('polling-divider').classList.remove('d-none');
+                    }
+
+                    // Pre-fill form if we have data
+                    if (data.transaction_id) {
+                        document.getElementById('transaction_id').value = data.transaction_id;
+                    }
+                } else {
+                    document.getElementById('polling-container').classList.add('d-none');
+                    if (document.getElementById('polling-divider')) {
+                        document.getElementById('polling-divider').classList.add('d-none');
+                    }
+                }
+            })
+            .catch(error => console.error('Error checking status:', error));
+    }
+
+    // Check status every 10 seconds
+    setInterval(checkStatus, 10000);
+
+    // Initial check on load
+    window.onload = checkStatus;
+</script>
+<style>
+    body {
+        background-color: #f0f2f5;
+    }
+
+    .rounded-4 {
+        border-radius: 1.5rem !important;
+    }
+
+    .qr-container {
+        transition: transform 0.3s ease;
+    }
+
+    .qr-container:hover {
+        transform: scale(1.02);
+    }
+
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        border: none;
+    }
+</style>
+{% endblock %}

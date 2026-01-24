@@ -46,6 +46,12 @@
                 <div id="searchResults" class="search-results-dropdown"></div>
             </div>
 
+            {% if not user.subscription or user.subscription.is_expired %}
+            <a href="{% url 'pricing' %}" class="btn btn-sm btn-warning d-none d-lg-block fw-bold px-3">
+                <i class="fas fa-crown me-1"></i> Go Premium
+            </a>
+            {% endif %}
+
             <div class="dropdown">
                 <a href="#" class="d-flex align-items-center text-decoration-none" data-bs-toggle="dropdown">
                     <div class="user-avatar me-2">
@@ -58,6 +64,9 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
                     <li><a class="dropdown-item" href="{% url 'settings' %}"><i class="fas fa-cog me-2"></i>Settings</a>
+                    </li>
+                    <li><a class="dropdown-item" href="{% url 'pricing' %}"><i class="fas fa-gem me-2"></i>Pricing /
+                            Plans</a>
                     </li>
                     <li>
                         <hr class="dropdown-divider">

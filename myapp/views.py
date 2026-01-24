@@ -11,11 +11,14 @@ from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
+import uuid
 from .models import (
     NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, 
     Portfolio, Watchlist, StockRecommendation, CandlestickLesson, UserLessonProgress,
-    Course, CourseCategory, UserCourseProgress
+    Course, CourseCategory, UserCourseProgress, SubscriptionPlan, UserSubscription,
+    PaymentTransaction
 )
+from .decorators import subscription_required, premium_required, gold_required
 
 
 
@@ -489,6 +492,94 @@ def settings_view(request):
         'active_page': 'settings',
     }
     return render(request, "settings.html", context)
+
+def pricing(request):
+    """View to display subscription plans"""
+    plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+    context = get_nepse_context()
+    context.update({
+        'active_page': 'pricing',
+        'plans': plans,
+    })
+    return render(request, 'pricing.html', context)
+
+@login_required
+def join_plan(request, plan_id):
+    """Initiates manual QR payment or joins free plan"""
+    plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+    
+    # If plan is free, activate immediately
+    if plan.price == 0:
+        UserSubscription.objects.update_or_create(
+            user=request.user,
+            defaults={
+                'plan': plan,
+                'start_date': timezone.now(),
+                'end_date': timezone.now() + timezone.timedelta(days=plan.duration_days),
+                'is_active': True
+            }
+        )
+        messages.success(request, f"Successfully joined the {plan.name} plan!")
+        return redirect('dashboard')
+    
+    # If plan is paid, redirect to manual payment page (QR Code)
+    context = get_nepse_context()
+    context.update({
+        'plan': plan,
+        'active_page': 'pricing'
+    })
+    return render(request, 'manual_payment.html', context)
+
+@login_required
+def manual_payment_submit(request):
+    """Handle receipt upload for manual payment"""
+    if request.method == "POST":
+        plan_id = request.POST.get('plan_id')
+        transaction_id = request.POST.get('transaction_id', '').strip()
+        receipt = request.FILES.get('receipt')
+        
+        # 1. Basic validation
+        if not transaction_id:
+            messages.error(request, "Transaction ID is required.")
+            return redirect(request.META.get('HTTP_REFERER', 'pricing'))
+            
+        plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+
+        # 2. Check for duplicate transaction IDs from OTHER users to prevent collisions
+        # If the SAME user is re-submitting, we'll allow updating their own pending one
+        existing_other = PaymentTransaction.objects.filter(transaction_id=transaction_id).exclude(user=request.user).exists()
+        if existing_other:
+            messages.error(request, f"Error: Transaction ID '{transaction_id}' has already been submitted by another user.")
+            return redirect(request.META.get('HTTP_REFERER', 'pricing'))
+            
+        # 3. Create or Update a pending payment transaction
+        try:
+            # Check if user already has a pending transaction for this plan
+            # If so, we update it instead of creating a new one to avoid clutter
+            transaction, created = PaymentTransaction.objects.update_or_create(
+                user=request.user,
+                status='PENDING',
+                defaults={
+                    'plan': plan,
+                    'amount': plan.price,
+                    'transaction_id': transaction_id,
+                    'verification_image': receipt if receipt else None,
+                    'gateway': 'esewa_manual'
+                }
+            )
+            
+            if not created and receipt:
+                # Force update image if specifically provided during update
+                transaction.verification_image = receipt
+                transaction.save()
+
+            messages.success(request, "✅ Your payment proof has been submitted! An admin will verify it and activate your plan shortly.")
+        except Exception as e:
+            messages.error(request, f"Error submitting payment: {str(e)}")
+            
+        return redirect('subscribe', plan_id=plan_id)
+    
+    return redirect('pricing')
 
 
 def logout_view(request):
@@ -1182,7 +1273,7 @@ def api_toggle_watchlist(request):
         return JsonResponse({'success': False, 'message': str(e)})
 
 
-@login_required
+@premium_required
 @require_http_methods(["GET"])
 def api_get_recommendations(request):
     """
@@ -1272,7 +1363,7 @@ def api_get_recommendations(request):
         return JsonResponse({'success': False, 'message': 'Internal Server Error fetching recommendations.', 'error': str(e)}, status=500)
 
 
-@login_required
+@premium_required
 @require_http_methods(["POST"])
 def api_refresh_recommendation(request):
     """Trigger LSTM training and prediction for a stock"""
@@ -1348,7 +1439,7 @@ def api_refresh_recommendation(request):
     except Exception as e:
         import traceback
         print(traceback.format_exc())
-@login_required
+@premium_required
 @require_http_methods(["POST"])
 def api_refresh_all_recommendations(request):
     """
@@ -1455,7 +1546,7 @@ def api_refresh_all_recommendations(request):
 
 # ========== PORTFOLIO ANALYTICS API ==========
 
-@login_required
+@premium_required
 @require_http_methods(["GET"])
 def api_portfolio_analytics(request):
     """
@@ -1566,7 +1657,7 @@ def api_portfolio_analytics(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@premium_required
 @require_http_methods(["GET"])
 def api_portfolio_holdings(request):
     """
@@ -1642,7 +1733,7 @@ def api_portfolio_holdings(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@premium_required
 @require_http_methods(["GET"])
 def api_portfolio_performance(request):
     """
@@ -1755,7 +1846,7 @@ def api_portfolio_performance(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@login_required
+@premium_required
 @require_http_methods(["GET"])
 def api_portfolio_activity(request):
     """
@@ -1821,3 +1912,29 @@ def api_portfolio_activity(request):
         print(f"Error in api_portfolio_activity: {e}")
         print(traceback.format_exc())
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+@login_required
+def api_check_payment_status(request):
+    """API endpoint to check if the user's latest payment has been verified"""
+    latest_payment = PaymentTransaction.objects.filter(
+        user=request.user, 
+        status='PENDING'
+    ).order_by('-created_at').first()
+    
+    # If no pending, check if a COMPLETED one was created recently
+    if not latest_payment:
+        success_payment = PaymentTransaction.objects.filter(
+            user=request.user, 
+            status='COMPLETED'
+        ).order_by('-updated_at').first()
+        
+        # If updated in last 5 minutes, assume it was just verified
+        if success_payment:
+             return JsonResponse({'status': 'COMPLETED', 'plan': success_payment.plan.name})
+             
+        return JsonResponse({'status': 'none'})
+    
+    return JsonResponse({
+        'status': latest_payment.status,
+        'plan': latest_payment.plan.name if latest_payment.plan else None,
+        'transaction_id': latest_payment.transaction_id
+    })

@@ -484,3 +484,96 @@ class UserCourseProgress(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.course.title}: {self.progress_percent}%"
 
+
+# ============= SUBSCRIPTION MODELS =============
+
+class SubscriptionPlan(models.Model):
+    """Store available subscription plans and pricing"""
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    tier = models.IntegerField(default=1, help_text="1=Basic, 2=Premium, 3=Gold")
+    duration_days = models.PositiveIntegerField(help_text="Duration of the plan in days")
+    description = models.TextField(help_text="Description of features included")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} - Rs {self.price} [Tier {self.tier}]"
+
+
+class UserSubscription(models.Model):
+    """Link users to their subscription plans"""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, related_name='subscribers')
+    start_date = models.DateTimeField(default=timezone.now)
+    end_date = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.plan.name if self.plan else 'No Plan'}"
+
+    @property
+    def is_expired(self):
+        """Check if subscription has expired"""
+        return timezone.now() > self.end_date
+
+    def has_access(self, required_tier):
+        """Check if user has at least the required tier level"""
+        if not self.is_active or self.is_expired:
+            return False
+        return self.plan.tier >= required_tier
+
+    def save(self, *args, **kwargs):
+        """Auto-calculate end_date if not set"""
+        if not self.end_date and self.plan:
+            self.end_date = self.start_date + timezone.timedelta(days=self.plan.duration_days)
+        super().save(*args, **kwargs)
+
+
+class PaymentTransaction(models.Model):
+    """Track payment attempts and their status"""
+    STATUS_CHOICES = [
+        ('PENDING', 'PENDING'),
+        ('COMPLETED', 'COMPLETED'),
+        ('FAILED', 'FAILED'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payments')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.CASCADE)
+    transaction_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    gateway = models.CharField(max_length=50, default='esewa')
+    verification_image = models.ImageField(upload_to='payment_proofs/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Payment {self.id} - {self.user.email} - {self.status}"
+
+
+# --- SIGNALS ---
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=PaymentTransaction)
+def activate_subscription_on_payment(sender, instance, created, **kwargs):
+    """Automatically activate subscription when PaymentTransaction is marked COMPLETED by admin"""
+    if instance.status == 'COMPLETED':
+        from django.utils import timezone
+        
+        UserSubscription.objects.update_or_create(
+            user=instance.user,
+            defaults={
+                'plan': instance.plan,
+                'start_date': timezone.now(),
+                # end_date calculation is handled by UserSubscription.save() logic if not set,
+                # but we'll set it here explicitly for clarity
+                'end_date': timezone.now() + timezone.timedelta(days=instance.plan.duration_days),
+                'is_active': True
+            }
+        )
+

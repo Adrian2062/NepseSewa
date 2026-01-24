@@ -62,6 +62,12 @@ urlpatterns = [
     path('api/recommendations/refresh/', views.api_refresh_recommendation, name='api_refresh_recommendation'),
     path('api/recommendations/refresh-all/', views.api_refresh_all_recommendations, name='api_refresh_all_recommendations'),
     
+    # Manual Payment
+    path('pricing/', views.pricing, name='pricing'),
+    path('subscribe/<int:plan_id>/', views.join_plan, name='subscribe'),
+    path('payment/manual-submit/', views.manual_payment_submit, name='manual_payment_submit'),
+    path('api/payment-status/', views.api_check_payment_status, name='api_payment_status'),
+
     # Portfolio Analytics APIs
     path('api/portfolio/analytics/', views.api_portfolio_analytics, name='api_portfolio_analytics'),
     path('api/portfolio/holdings/', views.api_portfolio_holdings, name='api_portfolio_holdings'),

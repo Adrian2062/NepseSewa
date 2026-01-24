@@ -4,7 +4,8 @@ from .models import (
     CustomUser, NEPSEPrice, NEPSEIndex, MarketIndex, 
     MarketSummary, Trade, Order, Portfolio, TradeExecution, MarketSession,
     Stock, CandlestickLesson, LessonQuiz, UserLessonProgress,
-    Course, CourseCategory, UserCourseProgress
+    Course, CourseCategory, UserCourseProgress,
+    SubscriptionPlan, UserSubscription, PaymentTransaction
 )
 
 # Register models
@@ -90,3 +91,53 @@ class UserCourseProgressAdmin(admin.ModelAdmin):
     list_display = ('user', 'course', 'progress_percent', 'is_completed', 'last_accessed')
     list_filter = ('is_completed', 'course')
     search_fields = ('user__email', 'course__title')
+
+
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'price', 'tier', 'duration_days', 'is_active', 'created_at')
+    list_editable = ('price', 'tier', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'description')
+
+
+@admin.register(UserSubscription)
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'plan', 'start_date', 'end_date', 'is_active')
+    list_filter = ('is_active', 'plan', 'start_date', 'end_date')
+    search_fields = ('user__email', 'plan__name')
+
+
+@admin.register(PaymentTransaction)
+class PaymentTransactionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'plan', 'transaction_id', 'amount', 'status', 'view_receipt', 'created_at')
+    list_filter = ('status', 'gateway', 'created_at')
+    search_fields = ('user__email', 'transaction_id')
+    readonly_fields = ('created_at', 'updated_at', 'thumbnail')
+    
+    fieldsets = (
+        ('Transaction Info', {
+            'fields': ('user', 'plan', 'transaction_id', 'amount', 'status', 'gateway')
+        }),
+        ('Verification Proof', {
+            'fields': ('verification_image', 'thumbnail')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def view_receipt(self, obj):
+        if obj.verification_image:
+            from django.utils.html import format_html
+            return format_html('<a href="{}" target="_blank">View Receipt</a>', obj.verification_image.url)
+        return "No Receipt"
+    
+    def thumbnail(self, obj):
+        if obj.verification_image:
+            from django.utils.html import format_html
+            return format_html('<img src="{}" style="max-height: 200px;"/>', obj.verification_image.url)
+        return "No Proof Uploaded"
+    
+    view_receipt.short_description = 'Proof Link'
+    thumbnail.short_description = 'Receipt Preview'

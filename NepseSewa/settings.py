@@ -207,7 +207,7 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'
 SOCIALACCOUNT_ADAPTER = 'allauth.socialaccount.adapter.DefaultSocialAccountAdapter'
 
 # Prevent showing allauth's default signup page
-ACCOUNT_SIGNUP_FIELDS = ['email']
+ACCOUNT_SIGNUP_FIELDS = []
 
 # ========== OPTIONAL: Google OAuth Credentials ==========
 # Store these securely in environment variables in production
@@ -252,3 +252,15 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 
+# ========== ESEWA INTEGRATION SETTINGS ==========
+# For production, change to: https://epay.esewa.com.np
+ESEWA_EPAY_URL = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
+# Sandbox credentials:
+ESEWA_MERCHANT_CODE = "EPAYTEST"
+ESEWA_SECRET_KEY = "8g8M898P8Go7iwK6H169w9S8alot76bG"
+
+# Redirect URLs (Must be accessible from web for verification or redirect back)
+# In production, use your actual domain
+BASE_URL = "http://127.0.0.1:8000"
+ESEWA_SUCCESS_URL = f"{BASE_URL}/payment/esewa/success/"
+ESEWA_FAILURE_URL = f"{BASE_URL}/payment/esewa/failure/"

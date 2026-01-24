@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="spinner-border text-primary mb-4" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <h2 class="fw-bold">Redirecting to eSewa...</h2>
+    <p class="text-muted">Please do not refresh the page or click back.</p>
+
+    <!-- Hidden form that auto-submits to eSewa -->
+    <form action="{{ esewa_url }}" method="POST" id="esewa-form">
+        <input type="hidden" id="amount" name="amount" value="{{ amount }}" required>
+        <input type="hidden" id="tax_amount" name="tax_amount" value="{{ tax_amount }}" required>
+        <input type="hidden" id="total_amount" name="total_amount" value="{{ total_amount }}" required>
+        <input type="hidden" id="transaction_uuid" name="transaction_uuid" value="{{ transaction_uuid }}" required>
+        <input type="hidden" id="product_code" name="product_code" value="{{ product_code }}" required>
+        <input type="hidden" id="product_service_charge" name="product_service_charge" value="{{ service_charge }}"
+            required>
+        <input type="hidden" id="product_delivery_charge" name="product_delivery_charge" value="{{ delivery_charge }}"
+            required>
+        <input type="hidden" id="success_url" name="success_url" value="{{ success_url }}" required>
+        <input type="hidden" id="failure_url" name="failure_url" value="{{ failure_url }}" required>
+        <input type="hidden" id="signed_field_names" name="signed_field_names" value="{{ signed_field_names }}"
+            required>
+        <input type="hidden" id="signature" name="signature" value="{{ signature }}" required>
+
+        <noscript>
+            <div class="mt-4">
+                <p>Javascript is disabled. Please click the button below to proceed.</p>
+                <button type="submit" class="btn btn-success btn-lg px-5">Pay with eSewa Now</button>
+            </div>
+        </noscript>
+    </form>
+</div>
+
+<script>
+    // Auto-submit the form as soon as page loads
+    window.onload = function () {
+        document.getElementById('esewa-form').submit();
+    };
+</script>
+
+<style>
+    body {
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        min-height: 80vh;
+    }
+
+    .container {
+        max-width: 500px;
+    }
+</style>
+{% endblock %}

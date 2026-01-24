@@ -425,6 +425,7 @@ class CandlestickLesson(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     image = models.ImageField(upload_to='lessons/', null=True, blank=True)
+    video_url = models.URLField(max_length=500, null=True, blank=True, help_text="YouTube video URL (e.g., https://www.youtube.com/watch?v=...)")
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

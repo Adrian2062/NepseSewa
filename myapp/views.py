@@ -496,31 +496,42 @@ def settings_view(request):
 def pricing(request):
     """View to display subscription plans"""
     plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+    
+    pending_transaction = None
+    if request.user.is_authenticated:
+        pending_transaction = PaymentTransaction.objects.filter(
+            user=request.user, 
+            status='PENDING'
+        ).first()
+
     context = get_nepse_context()
     context.update({
         'active_page': 'pricing',
         'plans': plans,
+        'pending_transaction': pending_transaction,
     })
     return render(request, 'pricing.html', context)
 
 @login_required
 def join_plan(request, plan_id):
-    """Initiates manual QR payment or joins free plan"""
+    """Initiates manual QR payment or requests a plan change (requires admin approval)"""
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
     
-    # If plan is free, activate immediately
+    # If plan is free, create a pending request instead of immediate activation
     if plan.price == 0:
-        UserSubscription.objects.update_or_create(
+        transaction_id = f"FREE-{uuid.uuid4().hex[:8].upper()}"
+        PaymentTransaction.objects.update_or_create(
             user=request.user,
+            status='PENDING',
             defaults={
                 'plan': plan,
-                'start_date': timezone.now(),
-                'end_date': timezone.now() + timezone.timedelta(days=plan.duration_days),
-                'is_active': True
+                'amount': 0,
+                'transaction_id': transaction_id,
+                'gateway': 'system_free'
             }
         )
-        messages.success(request, f"Successfully joined the {plan.name} plan!")
-        return redirect('dashboard')
+        messages.success(request, f"Your request for the {plan.name} plan has been submitted for admin approval!")
+        return redirect('pricing')
     
     # If plan is paid, redirect to manual payment page (QR Code)
     context = get_nepse_context()
@@ -1348,8 +1359,19 @@ def api_get_recommendations(request):
                 'symbol': symbol,
                 'current_price': sanitize_float(ltp),
                 'predicted_price': sanitize_float(pred_price),
+                'predicted_return': sanitize_float(rec.predicted_return) if rec else 0,
+                'trend': rec.trend if rec else 'Neutral',
                 'recommendation': rec_val,
                 'recommendation_str': rec_str,
+                'entry_price': sanitize_float(rec.entry_price) if rec else None,
+                'target_price': sanitize_float(rec.target_price) if rec else None,
+                'stop_loss': sanitize_float(rec.stop_loss) if rec else None,
+                'exit_price': sanitize_float(rec.exit_price) if rec else None,
+                'rsi': sanitize_float(rec.rsi) if rec else None,
+                'expected_move': sanitize_float(rec.expected_move) if rec else 0,
+                'confidence_score': sanitize_float(rec.confidence) if rec else None,
+                'market_condition': rec.market_state if rec else 'N/A',
+                'reason': rec.reason if rec else '',
                 'rmse': sanitize_float(rmse_val),
                 'mae': sanitize_float(mae_val),
                 'last_updated': last_upd
@@ -1402,13 +1424,14 @@ def api_refresh_recommendation(request):
             })
 
         # 2. Run ML Pipeline
+        from .ml_services import get_recommendation_data
         ml = MLService(history_data)
-        predicted_price, rmse, mae, last_close = ml.train_and_predict(window_size=30)
+        predicted_price, rmse, mae, last_close, ma30, rsi = ml.train_and_predict(window_size=30)
         
         if predicted_price is None:
              return JsonResponse({'success': False, 'message': 'Model training failed (insufficient data after processing?).'})
 
-        rec_val = get_recommendation(last_close, predicted_price)
+        rec_data = get_recommendation_data(last_close, predicted_price, ma30, rsi)
         
         # 3. Save/Update Recommendation
         rec_obj, created = StockRecommendation.objects.update_or_create(
@@ -1416,7 +1439,13 @@ def api_refresh_recommendation(request):
             defaults={
                 'current_price': last_close,
                 'predicted_next_close': predicted_price,
-                'recommendation': rec_val,
+                'predicted_return': rec_data['predicted_return'],
+                'trend': rec_data['trend'],
+                'recommendation': rec_data['recommendation'],
+                'entry_price': rec_data['levels']['entry'],
+                'target_price': rec_data['levels']['target'],
+                'stop_loss': rec_data['levels']['stop_loss'],
+                'exit_price': rec_data['levels']['exit'],
                 'rmse': rmse,
                 'mae': mae
             }
@@ -1427,8 +1456,14 @@ def api_refresh_recommendation(request):
             'data': {
                 'symbol': symbol,
                 'predicted_price': sanitize_float(predicted_price),
-                'recommendation': rec_obj.recommendation, # Return Integer
-                'recommendation_str': rec_obj.get_recommendation_display(), # Return String Display
+                'predicted_return': sanitize_float(rec_obj.predicted_return),
+                'trend': rec_obj.trend,
+                'recommendation': rec_obj.recommendation,
+                'recommendation_str': rec_obj.get_recommendation_display(),
+                'entry_price': sanitize_float(rec_obj.entry_price),
+                'target_price': sanitize_float(rec_obj.target_price),
+                'stop_loss': sanitize_float(rec_obj.stop_loss),
+                'exit_price': sanitize_float(rec_obj.exit_price),
                 'rmse': sanitize_float(rmse),
                 'mae': sanitize_float(mae),
                 'current_price': sanitize_float(last_close),
@@ -1492,15 +1527,16 @@ def api_refresh_all_recommendations(request):
                     continue
 
                 # Run ML Pipeline
+                from .ml_services import get_recommendation_data
                 ml = MLService(history_data)
-                predicted_price, rmse, mae, last_close = ml.train_and_predict(window_size=30)
+                predicted_price, rmse, mae, last_close, ma30, rsi = ml.train_and_predict(window_size=30)
                 
                 if predicted_price is None:
                     errors.append(f"{symbol}: Model training failed")
                     continue
 
                 # Generate Signal
-                rec_val = get_recommendation(last_close, predicted_price)
+                rec_data = get_recommendation_data(last_close, predicted_price, ma30, rsi)
                 
                 # Save Result
                 rec_obj, created = StockRecommendation.objects.update_or_create(
@@ -1508,7 +1544,13 @@ def api_refresh_all_recommendations(request):
                     defaults={
                         'current_price': last_close,
                         'predicted_next_close': predicted_price,
-                        'recommendation': rec_val,
+                        'predicted_return': rec_data['predicted_return'],
+                        'trend': rec_data['trend'],
+                        'recommendation': rec_data['recommendation'],
+                        'entry_price': rec_data['levels']['entry'],
+                        'target_price': rec_data['levels']['target'],
+                        'stop_loss': rec_data['levels']['stop_loss'],
+                        'exit_price': rec_data['levels']['exit'],
                         'rmse': rmse,
                         'mae': mae
                     }
@@ -1519,8 +1561,14 @@ def api_refresh_all_recommendations(request):
                     'symbol': symbol,
                     'current_price': sanitize_float(last_close),
                     'predicted_price': sanitize_float(predicted_price),
+                    'predicted_return': sanitize_float(rec_obj.predicted_return),
+                    'trend': rec_obj.trend,
                     'recommendation': rec_obj.recommendation,
                     'recommendation_str': rec_obj.get_recommendation_display(),
+                    'entry_price': sanitize_float(rec_obj.entry_price),
+                    'target_price': sanitize_float(rec_obj.target_price),
+                    'stop_loss': sanitize_float(rec_obj.stop_loss),
+                    'exit_price': sanitize_float(rec_obj.exit_price),
                     'rmse': sanitize_float(rmse),
                     'mae': sanitize_float(mae),
                     'last_updated': rec_obj.last_updated.isoformat()
@@ -1920,17 +1968,19 @@ def api_check_payment_status(request):
         status='PENDING'
     ).order_by('-created_at').first()
     
-    # If no pending, check if a COMPLETED one was created recently
+    # If no pending, check if a COMPLETED one was created/verified recently
     if not latest_payment:
         success_payment = PaymentTransaction.objects.filter(
             user=request.user, 
             status='COMPLETED'
         ).order_by('-updated_at').first()
         
-        # If updated in last 5 minutes, assume it was just verified
+        # If updated in last 2 minutes, assume it was just verified
         if success_payment:
-             return JsonResponse({'status': 'COMPLETED', 'plan': success_payment.plan.name})
-             
+            time_diff = timezone.now() - success_payment.updated_at
+            if time_diff.total_seconds() < 120: # 2 minutes
+                 return JsonResponse({'status': 'COMPLETED', 'plan': success_payment.plan.name})
+                 
         return JsonResponse({'status': 'none'})
     
     return JsonResponse({

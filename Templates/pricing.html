@@ -7,6 +7,23 @@
         <p class="lead text-muted">Choose the plan that's right for your trading journey.</p>
     </div>
 
+    {% if pending_transaction %}
+    <div class="alert alert-warning border-0 shadow-sm rounded-4 p-4 mb-5 d-flex align-items-center">
+        <div class="alert-icon me-4">
+            <i class="fas fa-clock fa-3x text-warning opacity-50"></i>
+        </div>
+        <div>
+            <h5 class="fw-bold mb-1">Request Pending Approval</h5>
+            <p class="mb-0">You have a pending request for the <strong>{{ pending_transaction.plan.name }}</strong>
+                plan. Our admin will verify it shortly.</p>
+            {% if pending_transaction.gateway == 'esewa_manual' %}
+            <a href="{% url 'subscribe' pending_transaction.plan.id %}" class="btn btn-sm btn-warning mt-2 fw-bold">View
+                Status / Update Proof</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 justify-content-center">
         {% for plan in plans %}
         <div class="col">
@@ -34,10 +51,21 @@
                             <i class="fas fa-check-circle me-1"></i> Active Plan
                         </div>
                         <button class="btn btn-outline-success w-100 disabled border-2">Subscribed</button>
+                        {% elif pending_transaction.plan == plan %}
+                        <div class="text-center p-2 bg-warning bg-opacity-10 rounded text-warning fw-bold mb-2">
+                            <i class="fas fa-hourglass-half me-1"></i> Request Pending
+                        </div>
+                        <button class="btn btn-outline-warning w-100 disabled border-2">Awaiting Approval</button>
                         {% else %}
-                        <a href="{% url 'subscribe' plan.id %}" class="btn btn-primary w-100 py-2 shadow-sm">
+                        <a href="{% url 'subscribe' plan.id %}"
+                            class="btn btn-primary w-100 py-2 shadow-sm {% if pending_transaction %}disabled{% endif %}">
                             {% if user.subscription %}Switch to Plan{% else %}Get Started{% endif %}
                         </a>
+                        {% if pending_transaction %}
+                        <div class="text-center small text-muted mt-2">
+                            Please wait for your pending request to be processed.
+                        </div>
+                        {% endif %}
                         {% endif %}
                         {% else %}
                         <a href="{% url 'login' %}?next={% url 'pricing' %}" class="btn btn-primary w-100 py-2">Login to
@@ -100,4 +128,24 @@
         border-top-width: 6px !important;
     }
 </style>
+
+<script>
+    function checkStatus() {
+        {% if pending_transaction %}
+        fetch("{% url 'api_payment_status' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'COMPLETED') {
+                    window.location.href = "{% url 'dashboard' %}?verified=true";
+                }
+            })
+            .catch(error => console.error('Error checking status:', error));
+        {% endif %}
+    }
+
+    // Check status every 10 seconds if there's a pending transaction
+    {% if pending_transaction %}
+    setInterval(checkStatus, 10000);
+    {% endif %}
+</script>
 {% endblock %}

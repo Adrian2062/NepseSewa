@@ -366,7 +366,23 @@ class StockRecommendation(models.Model):
     symbol = models.CharField(max_length=50, db_index=True)
     current_price = models.FloatField()
     predicted_next_close = models.FloatField()
+    predicted_return = models.FloatField(null=True, blank=True)
+    trend = models.CharField(max_length=20, choices=[('Bullish', 'Bullish'), ('Bearish', 'Bearish'), ('Neutral', 'Neutral')], default='Neutral')
     recommendation = models.IntegerField(choices=[(1, 'BUY'), (0, 'HOLD'), (-1, 'SELL')])
+    
+    # Trading Levels
+    entry_price = models.FloatField(null=True, blank=True)
+    target_price = models.FloatField(null=True, blank=True)
+    stop_loss = models.FloatField(null=True, blank=True)
+    exit_price = models.FloatField(null=True, blank=True)
+    
+    # Quant Metrics
+    rsi = models.FloatField(null=True, blank=True)
+    expected_move = models.FloatField(null=True, blank=True)
+    confidence = models.FloatField(null=True, blank=True)
+    market_state = models.CharField(max_length=100, null=True, blank=True)
+    reason = models.TextField(null=True, blank=True)
+    
     rmse = models.FloatField(null=True, blank=True)
     mae = models.FloatField(null=True, blank=True)
     last_updated = models.DateTimeField(auto_now=True)

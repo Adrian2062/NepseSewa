@@ -306,19 +306,3 @@ def get_recommendation_data(ml_result):
         'mae': ml_result['mae'],
         'predicted_price': float(pred_avg)
     }
-
-    # Confidence Labeling
-    conf_score = 1.0 - min(ml_result['rmse'], 1.0)
-    
-    return {
-        'symbol': '', # Filled by caller
-        'signal': recommendation,
-        'trend': trend,
-        'rsi': round(rsi, 2),
-        'expected_move': round(expected_move_pct, 2),
-        'confidence': round(conf_score * 100, 1),
-        'levels': levels,
-        'rmse': ml_result['rmse'],
-        'mae': ml_result['mae'],
-        'predicted_price': float(pred_avg)
-    }

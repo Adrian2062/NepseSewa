@@ -380,7 +380,7 @@ class StockRecommendation(models.Model):
     rsi = models.FloatField(null=True, blank=True)
     expected_move = models.FloatField(null=True, blank=True)
     confidence = models.FloatField(null=True, blank=True)
-    market_state = models.CharField(max_length=100, null=True, blank=True)
+    market_condition = models.CharField(max_length=100, null=True, blank=True)
     reason = models.TextField(null=True, blank=True)
     
     rmse = models.FloatField(null=True, blank=True)

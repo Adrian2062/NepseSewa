@@ -1330,18 +1330,26 @@ def api_get_recommendations(request):
             
             # If we show 'All Market', we want to show stocks even if they don't have predictions yet
             if not curr and not rec:
-                # If truly no data, we might skip or show as 'No Data'
-                # For 'All Market', better to show with empty values than hide it
                  data.append({
                     'symbol': symbol,
                     'current_price': 0,
                     'predicted_price': 0,
+                    'predicted_return': 0,
+                    'trend': 'Neutral',
                     'recommendation': 0,
                     'recommendation_str': 'WAITING',
+                    'entry_price': None,
+                    'target_price': None,
+                    'stop_loss': None,
+                    'exit_price': None,
+                    'rsi': None,
+                    'expected_move': 0,
+                    'confidence_score': 0,
+                    'market_condition': 'N/A',
+                    'reason': 'Insufficient historical data for analysis.',
                     'rmse': None,
                     'mae': None,
-                    'last_updated': None,
-                    'status': 'No Data'
+                    'last_updated': None
                 })
                  continue
             
@@ -1370,7 +1378,7 @@ def api_get_recommendations(request):
                 'rsi': sanitize_float(rec.rsi) if rec else None,
                 'expected_move': sanitize_float(rec.expected_move) if rec else 0,
                 'confidence_score': sanitize_float(rec.confidence) if rec else None,
-                'market_condition': rec.market_state if rec else 'N/A',
+                'market_condition': rec.market_condition if rec else 'N/A',
                 'reason': rec.reason if rec else '',
                 'rmse': sanitize_float(rmse_val),
                 'mae': sanitize_float(mae_val),

@@ -30,7 +30,7 @@ class Command(BaseCommand):
                 "rsi": "DOUBLE PRECISION",
                 "expected_move": "DOUBLE PRECISION",
                 "confidence": "DOUBLE PRECISION",
-                "market_state": "VARCHAR(100)",
+                "market_condition": "VARCHAR(100)",
                 "reason": "TEXT"
             }
             
@@ -129,7 +129,7 @@ class Command(BaseCommand):
                         'rsi': rec_data['rsi'],
                         'expected_move': rec_data['expected_move'],
                         'confidence': rec_data['confidence'],
-                        'market_state': rec_data['market_condition'],
+                        'market_condition': rec_data['market_condition'],
                         'reason': rec_data['reason'],
                         'rmse': rec_data['rmse'],
                         'mae': rec_data['mae']

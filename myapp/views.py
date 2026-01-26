@@ -7,16 +7,19 @@ from django.contrib.auth.backends import ModelBackend
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Max, Q, Avg, Count
+from django.db import transaction
+from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
 import uuid
+import json
 from .models import (
     NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, 
     Portfolio, Watchlist, StockRecommendation, CandlestickLesson, UserLessonProgress,
     Course, CourseCategory, UserCourseProgress, SubscriptionPlan, UserSubscription,
-    PaymentTransaction
+    PaymentTransaction, Trade
 )
 from .decorators import subscription_required, premium_required, gold_required
 
@@ -608,7 +611,7 @@ def api_latest_nepse(request):
         latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
         
         if not latest_time:
-            return JsonResponse({'data': [], 'message': 'No data available'})
+            return JsonResponse({'success': True, 'data': [], 'message': 'No data available'})
         
         data = list(NEPSEPrice.objects.filter(
             timestamp=latest_time
@@ -618,12 +621,13 @@ def api_latest_nepse(request):
         ).order_by('symbol'))
         
         return JsonResponse({
+            'success': True,
             'data': data,
             'count': len(data),
             'timestamp': latest_time.isoformat()
         })
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @require_http_methods(["GET"])
@@ -891,8 +895,13 @@ def api_place_order(request):
     """
     POST /api/trade/place/
     body: {symbol, side, qty, price}
+    
+    CORRECTED VERSION:
+    - Updates Portfolio table (BUY/SELL)
+    - Atomic transactions
+    - SELL validation
+    - Concurrency safety
     """
-    import json
     try:
         data = json.loads(request.body)
         symbol = (data.get('symbol') or '').strip().upper()
@@ -901,7 +910,7 @@ def api_place_order(request):
         try:
             qty = int(data.get('qty', 0))
             price = float(data.get('price', 0.0))
-        except ValueError:
+        except (ValueError, TypeError):
             return JsonResponse({'success': False, 'message': 'Invalid quantity or price.'})
 
         if not symbol:
@@ -917,47 +926,128 @@ def api_place_order(request):
             return JsonResponse({'success': False, 'message': 'Price must be positive.'})
 
         user = request.user
-        total_cost = qty * price
+        price_decimal = Decimal(str(price))
+        qty_decimal = Decimal(str(qty))
+        total_cost = qty_decimal * price_decimal
 
-        if side == 'BUY':
-            # Convert to Decimal for precise calculation
-            from decimal import Decimal
-            cost_decimal = Decimal(str(total_cost))
-            
-            if user.virtual_balance < cost_decimal:
-                 return JsonResponse({
-                    'success': False, 
-                    'message': f'Insufficient balance. Your limit is Rs {user.virtual_balance:,.2f} but order cost is Rs {total_cost:,.2f}.'
+        # Wrap in atomic transaction - all succeed or all rollback
+        try:
+            with transaction.atomic():
+                # Step 1: Lock User object first to prevent deadlocks (User then Portfolio)
+                User = get_user_model()
+                user = User.objects.select_for_update().get(pk=user.pk)
+
+                if side == 'BUY':
+                    # BUY Validation & Execution
+                    if user.virtual_balance < total_cost:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': f'Insufficient balance. Required: Rs {total_cost:,.2f}, Available: Rs {user.virtual_balance:,.2f}'
+                        })
+                    
+                    # 1. Deduct balance
+                    user.virtual_balance -= total_cost
+                    user.save(update_fields=['virtual_balance'])
+
+                    # 2. Update Portfolio (Weighted Average)
+                    portfolio, created = Portfolio.objects.select_for_update().get_or_create(
+                        user=user,
+                        symbol=symbol,
+                        defaults={
+                            'quantity': qty,
+                            'avg_price': price_decimal
+                        }
+                    )
+                    
+                    if not created:
+                        old_qty = Decimal(str(portfolio.quantity))
+                        old_avg = portfolio.avg_price
+                        total_qty = old_qty + qty_decimal
+                        # New Avg = ((Old Qty * Old Avg) + (New Qty * New Price)) / Total Qty
+                        new_avg_price = ((old_qty * old_avg) + (qty_decimal * price_decimal)) / total_qty
+                        
+                        portfolio.quantity = int(total_qty)
+                        portfolio.avg_price = new_avg_price.quantize(Decimal('0.01'))
+                        portfolio.save(update_fields=['quantity', 'avg_price', 'updated_at'])
+
+                elif side == 'SELL':
+                    # SELL Validation & Execution
+                    try:
+                        # Lock portfolio row
+                        portfolio = Portfolio.objects.select_for_update().get(
+                            user=user,
+                            symbol=symbol
+                        )
+                    except Portfolio.DoesNotExist:
+                        return JsonResponse({
+                            'success': False,
+                            'message': f'You do not own any {symbol} shares. Cannot sell.'
+                        })
+                    
+                    if portfolio.quantity < qty:
+                        return JsonResponse({
+                            'success': False,
+                            'message': f'Insufficient holdings. You have {portfolio.quantity} {symbol} shares but trying to sell {qty}.'
+                        })
+                    
+                    # 1. Update portfolio (Delete if empty)
+                    new_quantity = portfolio.quantity - qty
+                    if new_quantity <= 0:
+                        portfolio.delete()
+                    else:
+                        portfolio.quantity = new_quantity
+                        portfolio.save(update_fields=['quantity', 'updated_at'])
+                    
+                    # 2. Credit balance
+                    user.virtual_balance += total_cost
+                    user.save(update_fields=['virtual_balance'])
+
+                # Step 4: Create Trade record (Final step)
+                Trade.objects.create(
+                    user=user,
+                    symbol=symbol,
+                    side=side,
+                    qty=qty,
+                    price=price_decimal,
+                    status='COMPLETED'
+                )
+
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'✅ {side} order executed! {qty} {symbol} @ Rs {price:,.2f}'
                 })
+
+        except Portfolio.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': f'Portfolio error: You do not own {symbol}.'
+            })
+        
+        except Exception as db_error:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Trade execution error for user {user.id}: {str(db_error)}", exc_info=True)
             
-            user.virtual_balance -= cost_decimal
-            user.save()
-
-        elif side == 'SELL':
-            # For now, we don't check portfolio holdings (as per request simplicity/focus on BUY limit)
-            # But we should credit the user
-            from decimal import Decimal
-            cost_decimal = Decimal(str(total_cost))
-            user.virtual_balance += cost_decimal
-            user.save()
-
-        # Create Trade
-        Trade.objects.create(
-            user=user,
-            symbol=symbol,
-            side=side,
-            qty=qty,
-            price=price,
-            status='COMPLETED'
-        )
-
+            return JsonResponse({
+                'success': False,
+                'message': f'Order execution failed: {str(db_error)}'
+            })
+    
+    except json.JSONDecodeError:
         return JsonResponse({
-            'success': True, 
-            'message': f'Order placed successfully! {side} {qty} {symbol} @ {price}'
+            'success': False,
+            'message': 'Invalid JSON in request body.'
         })
-
+    
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected error in api_place_order: {str(e)}", exc_info=True)
+        
+        return JsonResponse({
+            'success': False,
+            'message': f'An unexpected error occurred: {str(e)}'
+        })
 
 # Add these new API endpoints to your existing views.py
 
@@ -1255,9 +1345,44 @@ def api_date_range_summary(request):
 @login_required
 @require_http_methods(["GET"])
 def api_get_watchlist(request):
-    """Get the current user's watchlist symbols"""
-    watchlist = Watchlist.objects.filter(user=request.user).values_list('symbol', flat=True)
-    return JsonResponse({'success': True, 'watchlist': list(watchlist)})
+    """Get the current user's watchlist with full stock details and latest prices"""
+    from django.db.models import Max
+    from myapp.models import Watchlist, Stock, NEPSEPrice
+    
+    # 1. Get user's watchlist symbols
+    watchlist_symbols = Watchlist.objects.filter(user=request.user).values_list('symbol', flat=True)
+    
+    if not watchlist_symbols:
+        return JsonResponse({'success': True, 'data': []})
+    
+    # 2. Get latest price timestamp
+    latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
+    
+    # 3. Fetch stock metadata (names)
+    stocks_meta = {s.symbol: s.name for s in Stock.objects.filter(symbol__in=watchlist_symbols)}
+    
+    # 4. Fetch latest prices
+    prices_map = {}
+    if latest_time:
+        prices_qs = NEPSEPrice.objects.filter(symbol__in=watchlist_symbols, timestamp=latest_time)
+        for p in prices_qs:
+            prices_map[p.symbol] = {
+                'ltp': p.ltp,
+                'change_pct': p.change_pct
+            }
+            
+    # 5. Build final data
+    data = []
+    for sym in watchlist_symbols:
+        price_info = prices_map.get(sym, {'ltp': 0, 'change_pct': 0})
+        data.append({
+            'symbol': sym,
+            'name': stocks_meta.get(sym, 'N/A'),
+            'price': float(price_info['ltp']),
+            'change': float(price_info['change_pct'])
+        })
+        
+    return JsonResponse({'success': True, 'data': data})
 
 
 @login_required
@@ -1602,7 +1727,45 @@ def api_refresh_all_recommendations(request):
 
 # ========== PORTFOLIO ANALYTICS API ==========
 
-@premium_required
+@login_required
+@require_http_methods(["GET"])
+def api_dashboard_summary(request):
+    """
+    Get high-level summary for the dashboard: Rank, Wealth, and basic stats.
+    """
+    try:
+        from django.db.models import F
+        user = request.user
+        
+        # 1. Total Wealth (Balance + Portfolio Value)
+        wealth = float(user.virtual_balance + user.portfolio_value)
+        
+        # 2. Calculate Rank
+        user_wealth = user.virtual_balance + user.portfolio_value
+        
+        # Use 'User' which is get_user_model() defined at top of file
+        rank = User.objects.annotate(
+            total_wealth=F('virtual_balance') + F('portfolio_value')
+        ).filter(total_wealth__gt=user_wealth).count() + 1
+        
+        total_users = User.objects.count()
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'rank': rank,
+                'total_users': total_users,
+                'portfolio_value': float(user.portfolio_value),
+                'virtual_balance': float(user.virtual_balance),
+                'total_wealth': wealth,
+                'username': user.first_name or user.username
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
 @require_http_methods(["GET"])
 def api_portfolio_analytics(request):
     """
@@ -1638,10 +1801,25 @@ def api_portfolio_analytics(request):
                 'success': False,
                 'error': 'No market data available'
             }, status=404)
-        
-        # Get previous day's timestamp for today's P/L calculation
+
+        # Get previous day's date for today's P/L calculation
         previous_day = latest_time.date() - timedelta(days=1)
         
+        # Get all latest prices for holdings in one batch query (Fix N+1)
+        symbols = [h.symbol for h in holdings]
+        latest_prices_qs = NEPSEPrice.objects.filter(
+            symbol__in=symbols,
+            timestamp=latest_time
+        )
+        latest_prices_map = {p.symbol: p for p in latest_prices_qs}
+
+        # Get all previous day's prices in one batch query
+        prev_prices_qs = NEPSEPrice.objects.filter(
+            symbol__in=symbols,
+            timestamp__date=previous_day
+        ).order_by('symbol', '-timestamp').distinct('symbol')
+        prev_prices_map = {p.symbol: p for p in prev_prices_qs}
+
         total_value = Decimal('0')
         total_cost_basis = Decimal('0')
         total_prev_value = Decimal('0')
@@ -1652,11 +1830,8 @@ def api_portfolio_analytics(request):
             qty = Decimal(str(holding.quantity))
             avg_price = holding.avg_price
             
-            # Get current LTP
-            current_price_obj = NEPSEPrice.objects.filter(
-                symbol=symbol,
-                timestamp=latest_time
-            ).first()
+            # Use pre-fetched price map
+            current_price_obj = latest_prices_map.get(symbol)
             
             if current_price_obj and current_price_obj.ltp:
                 current_ltp = Decimal(str(current_price_obj.ltp))
@@ -1669,11 +1844,8 @@ def api_portfolio_analytics(request):
                 cost_basis = qty * avg_price
                 total_cost_basis += cost_basis
                 
-                # Get previous day's close for today's P/L
-                prev_price_obj = NEPSEPrice.objects.filter(
-                    symbol=symbol,
-                    timestamp__date=previous_day
-                ).order_by('-timestamp').first()
+                # Use pre-fetched previous price map
+                prev_price_obj = prev_prices_map.get(symbol)
                 
                 if prev_price_obj and prev_price_obj.close:
                     prev_close = Decimal(str(prev_price_obj.close))
@@ -1713,7 +1885,7 @@ def api_portfolio_analytics(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@premium_required
+@login_required
 @require_http_methods(["GET"])
 def api_portfolio_holdings(request):
     """
@@ -1741,6 +1913,14 @@ def api_portfolio_holdings(request):
                 'error': 'No market data available'
             }, status=404)
         
+        # Batch fetch all latest prices for holdings (Fix N+1)
+        symbols = [h.symbol for h in holdings]
+        latest_prices_qs = NEPSEPrice.objects.filter(
+            symbol__in=symbols,
+            timestamp=latest_time
+        )
+        latest_prices_map = {p.symbol: p for p in latest_prices_qs}
+
         holdings_data = []
         
         for holding in holdings:
@@ -1748,11 +1928,8 @@ def api_portfolio_holdings(request):
             qty = holding.quantity
             avg_price = float(holding.avg_price)
             
-            # Get current LTP
-            current_price_obj = NEPSEPrice.objects.filter(
-                symbol=symbol,
-                timestamp=latest_time
-            ).first()
+            # Use pre-fetched price map
+            current_price_obj = latest_prices_map.get(symbol)
             
             if current_price_obj and current_price_obj.ltp:
                 current_ltp = float(current_price_obj.ltp)
@@ -1789,7 +1966,7 @@ def api_portfolio_holdings(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@premium_required
+@login_required
 @require_http_methods(["GET"])
 def api_portfolio_performance(request):
     """
@@ -1902,7 +2079,7 @@ def api_portfolio_performance(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@premium_required
+@login_required
 @require_http_methods(["GET"])
 def api_portfolio_activity(request):
     """
@@ -1912,7 +2089,7 @@ def api_portfolio_activity(request):
     try:
         user = request.user
         
-        # Get recent trade executions where user was either buyer or seller
+        # 1. Get recent trade executions (Matching Engine trades)
         buy_executions = TradeExecution.objects.filter(
             buy_order__user=user
         ).select_related('buy_order', 'sell_order')
@@ -1921,46 +2098,83 @@ def api_portfolio_activity(request):
             sell_order__user=user
         ).select_related('buy_order', 'sell_order')
         
-        # Combine and sort by executed_at
-        all_executions = list(buy_executions) + list(sell_executions)
-        all_executions.sort(key=lambda x: x.executed_at, reverse=True)
-        
-        # Take last 10
-        recent_executions = all_executions[:10]
-        
         activity_data = []
-        for execution in recent_executions:
-            # Determine if user was buyer or seller
-            if execution.buy_order.user == user:
-                side = 'BUY'
-            else:
-                side = 'SELL'
-            
-            # Calculate time ago
-            time_diff = timezone.now() - execution.executed_at
-            if time_diff.days > 0:
-                time_ago = f"{time_diff.days} day{'s' if time_diff.days > 1 else ''} ago"
-            elif time_diff.seconds >= 3600:
-                hours = time_diff.seconds // 3600
-                time_ago = f"{hours} hour{'s' if hours > 1 else ''} ago"
-            elif time_diff.seconds >= 60:
-                minutes = time_diff.seconds // 60
-                time_ago = f"{minutes} minute{'s' if minutes > 1 else ''} ago"
-            else:
-                time_ago = "Just now"
-            
+        
+        # Add TradeExecutions
+        for execution in list(buy_executions) + list(sell_executions):
+            side = 'BUY' if execution.buy_order.user == user else 'SELL'
             activity_data.append({
                 'symbol': execution.symbol,
                 'side': side,
                 'quantity': execution.executed_qty,
                 'price': float(execution.executed_price),
-                'executed_at': execution.executed_at.isoformat(),
-                'time_ago': time_ago
+                'timestamp': execution.executed_at,
+            })
+            
+        # 2. Get manual Trade records (Direct trades)
+        manual_trades = Trade.objects.filter(user=user, status='COMPLETED')
+        for trade in manual_trades:
+            activity_data.append({
+                'symbol': trade.symbol,
+                'side': trade.side,
+                'quantity': trade.qty,
+                'price': float(trade.price) if trade.price else 0,
+                'timestamp': trade.created_at,
+            })
+            
+        # Sort all by timestamp
+        activity_data.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        # Pagination logic
+        try:
+            page = int(request.GET.get('page', 1))
+        except (ValueError, TypeError):
+            page = 1
+            
+        limit = 3
+        total_items = len(activity_data)
+        total_pages = (total_items + limit - 1) // limit if total_items > 0 else 1
+        
+        # Clamp page number
+        if page < 1: page = 1
+        if page > total_pages: page = total_pages
+        
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        
+        paginated_activity = activity_data[start_idx:end_idx]
+        
+        final_data = []
+        for item in paginated_activity:
+            # Convert to local Kathmandu time
+            timestamp = timezone.localtime(item['timestamp'])
+            
+            # Formatted absolute date and time
+            # Example: Jan 26, 2026
+            formatted_date = timestamp.strftime('%b %d, %Y')
+            # Example: 03:14 PM
+            formatted_time = timestamp.strftime('%I:%M %p')
+            
+            final_data.append({
+                'symbol': item['symbol'],
+                'side': item['side'],
+                'quantity': item['quantity'],
+                'price': item['price'],
+                'executed_at': timestamp.isoformat(),
+                'formatted_date': formatted_date,
+                'formatted_time': formatted_time,
             })
         
         return JsonResponse({
             'success': True,
-            'data': activity_data
+            'data': final_data,
+            'pagination': {
+                'current_page': page,
+                'total_pages': total_pages,
+                'total_items': total_items,
+                'has_next': page < total_pages,
+                'has_prev': page > 1
+            }
         })
         
     except Exception as e:

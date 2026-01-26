@@ -163,40 +163,39 @@ class MatchingEngine:
         Buyer gains shares, seller loses shares.
         """
         price_decimal = Decimal(str(price))
+        qty_decimal = Decimal(str(qty))
         
         # Update buyer's portfolio (add shares)
-        buyer_portfolio, created = Portfolio.objects.get_or_create(
+        buyer_portfolio, created = Portfolio.objects.select_for_update().get_or_create(
             user=buyer,
             symbol=symbol,
-            defaults={'quantity': 0, 'avg_price': price_decimal}
+            defaults={'quantity': qty, 'avg_price': price_decimal}
         )
         
-        if created:
-            buyer_portfolio.quantity = qty
-            buyer_portfolio.avg_price = price_decimal
-        else:
-            # Calculate new average price
-            old_value = buyer_portfolio.quantity * buyer_portfolio.avg_price
-            new_value = qty * price_decimal
-            total_qty = buyer_portfolio.quantity + qty
-            buyer_portfolio.avg_price = (old_value + new_value) / total_qty
-            buyer_portfolio.quantity = total_qty
-        
-        buyer_portfolio.save()
+        if not created:
+            # Calculate new average price (Weighted Average)
+            old_qty = Decimal(str(buyer_portfolio.quantity))
+            old_avg = buyer_portfolio.avg_price
+            total_qty = old_qty + qty_decimal
+            
+            new_avg_price = ((old_qty * old_avg) + (qty_decimal * price_decimal)) / total_qty
+            
+            buyer_portfolio.quantity = int(total_qty)
+            buyer_portfolio.avg_price = new_avg_price.quantize(Decimal('0.01'))
+            buyer_portfolio.save(update_fields=['quantity', 'avg_price', 'updated_at'])
         
         # Update seller's portfolio (remove shares)
         try:
-            seller_portfolio = Portfolio.objects.get(user=seller, symbol=symbol)
-            seller_portfolio.quantity = F('quantity') - qty
-            seller_portfolio.save()
-            seller_portfolio.refresh_from_db()
+            seller_portfolio = Portfolio.objects.select_for_update().get(user=seller, symbol=symbol)
+            new_qty = seller_portfolio.quantity - qty
             
-            # Remove portfolio entry if quantity becomes 0
-            if seller_portfolio.quantity <= 0:
+            if new_qty <= 0:
                 seller_portfolio.delete()
+            else:
+                seller_portfolio.quantity = new_qty
+                seller_portfolio.save(update_fields=['quantity', 'updated_at'])
         except Portfolio.DoesNotExist:
-            # Seller doesn't have this stock - this shouldn't happen if validation is correct
-            # But we'll allow it for now (virtual trading)
+            # Should not happen with validation, but we'll log it or ignore
             pass
     
     @staticmethod

@@ -7,6 +7,7 @@
 let portfolioValueChart = null;
 let allocationChart = null;
 let currentRange = '1D';
+let currentActivityPage = 1;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function () {
@@ -26,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loadPortfolioAnalytics();
         loadPortfolioHoldings();
         loadPortfolioPerformance(currentRange);
-        loadRecentActivity();
+        loadRecentActivity(currentActivityPage);
     }, 30000);
 });
 
@@ -164,18 +165,23 @@ async function loadPortfolioPerformance(range = '1D') {
 }
 
 /**
- * Load recent activity feed
+ * Load recent activity feed with pagination
  */
-async function loadRecentActivity() {
+async function loadRecentActivity(page = 1) {
     try {
-        const response = await fetch('/api/portfolio/activity/');
+        console.log(`Loading activity page ${page}...`);
+        currentActivityPage = page;
+        const response = await fetch(`/api/portfolio/activity/?page=${page}`);
         const result = await response.json();
 
         if (result.success) {
             const activities = result.data;
+            const pagination = result.pagination;
             const container = document.getElementById('recentActivity');
 
-            if (activities.length === 0) {
+            if (!container) return;
+
+            if (activities.length === 0 && page === 1) {
                 container.innerHTML = `
                     <div class="text-muted" style="font-weight:700;">
                         No recent activity. <a href="/trade/" class="text-primary">Place your first trade</a>.
@@ -185,27 +191,56 @@ async function loadRecentActivity() {
             }
 
             // Build activity list
-            let html = '<div class="list-group list-group-flush">';
+            let html = '<div class="activity-list">';
             activities.forEach(activity => {
-                const sideClass = activity.side === 'BUY' ? 'text-success' : 'text-danger';
-                const sideIcon = activity.side === 'BUY' ? 'fa-arrow-up' : 'fa-arrow-down';
+                const isBuy = activity.side === 'BUY';
+                const iconClass = isBuy ? 'buy' : 'sell';
+                const icon = isBuy ? 'fa-cart-shopping' : 'fa-hand-holding-dollar';
+                const sideText = isBuy ? 'Bought' : 'Sold';
 
                 html += `
-                    <div class="list-group-item px-0 py-2 border-0">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="${sideClass}" style="font-weight:900;">
-                                    <i class="fas ${sideIcon} me-1"></i>${activity.side}
-                                </span>
-                                <strong>${activity.quantity}</strong> ${activity.symbol}
-                                @ Rs ${formatNumber(activity.price)}
+                    <div class="activity-item">
+                        <div class="activity-icon ${iconClass}">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="activity-details">
+                            <div class="activity-title">${sideText} ${activity.symbol}</div>
+                            <div class="activity-meta">
+                                <strong>${activity.quantity} shares</strong> @ Rs ${formatNumber(activity.price)}
                             </div>
-                            <small class="text-muted">${activity.time_ago}</small>
+                        </div>
+                        <div class="activity-time">
+                            <div style="color: #4a5568; font-weight: 800;">${activity.formatted_date}</div>
+                            <div style="font-size: 0.7rem; color: #a0aec0;">${activity.formatted_time}</div>
                         </div>
                     </div>
                 `;
             });
             html += '</div>';
+
+            // Add pagination controls
+            if (pagination && pagination.total_items > 0) {
+                html += `
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <button class="btn btn-pg shadow-sm ${!pagination.has_prev ? 'disabled' : ''}" 
+                                onclick="window.loadRecentActivity(${page - 1})" ${!pagination.has_prev ? 'disabled' : ''}>
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        
+                        <div class="text-center">
+                            <span class="pg-indicator">Page ${pagination.current_page} of ${pagination.total_pages}</span>
+                            <div class="text-muted mt-2" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+                                ${pagination.total_items} transactions
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-pg shadow-sm ${!pagination.has_next ? 'disabled' : ''}" 
+                                onclick="window.loadRecentActivity(${page + 1})" ${!pagination.has_next ? 'disabled' : ''}>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                `;
+            }
 
             container.innerHTML = html;
         } else {
@@ -215,6 +250,9 @@ async function loadRecentActivity() {
         console.error('Error loading activity:', error);
     }
 }
+
+// Ensure globally accessible for inline onclick
+window.loadRecentActivity = loadRecentActivity;
 
 /**
  * Update portfolio value chart

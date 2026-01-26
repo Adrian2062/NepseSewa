@@ -73,4 +73,5 @@ urlpatterns = [
     path('api/portfolio/holdings/', views.api_portfolio_holdings, name='api_portfolio_holdings'),
     path('api/portfolio/performance/', views.api_portfolio_performance, name='api_portfolio_performance'),
     path('api/portfolio/activity/', views.api_portfolio_activity, name='api_portfolio_activity'),
+    path('api/dashboard/summary/', views.api_dashboard_summary, name='api_dashboard_summary'),
 ]

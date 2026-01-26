@@ -517,24 +517,27 @@ def pricing(request):
 
 @login_required
 def join_plan(request, plan_id):
-    """Initiates manual QR payment or requests a plan change (requires admin approval)"""
+    """Initiates immediate activation for free plans or QR payment for paid plans"""
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
     
-    # If plan is free, create a pending request instead of immediate activation
+    # NEW: If plan is free, activate it immediately!
     if plan.price == 0:
+        # 1. Cleanup: Mark ALL existing pending transactions as FAILED for this user 
+        # to avoid confusion and MultipleObjectsReturned issues
+        PaymentTransaction.objects.filter(user=request.user, status='PENDING').update(status='FAILED')
+        
+        # 2. Create a fresh COMPLETED transaction
         transaction_id = f"FREE-{uuid.uuid4().hex[:8].upper()}"
-        PaymentTransaction.objects.update_or_create(
+        PaymentTransaction.objects.create(
             user=request.user,
-            status='PENDING',
-            defaults={
-                'plan': plan,
-                'amount': 0,
-                'transaction_id': transaction_id,
-                'gateway': 'system_free'
-            }
+            plan=plan,
+            amount=0,
+            transaction_id=transaction_id,
+            status='COMPLETED',
+            gateway='system_free_auto'
         )
-        messages.success(request, f"Your request for the {plan.name} plan has been submitted for admin approval!")
-        return redirect('pricing')
+        messages.success(request, f"🚀 Your {plan.name} plan has been activated immediately! Welcome to NepseSewa.")
+        return redirect('dashboard')
     
     # If plan is paid, redirect to manual payment page (QR Code)
     context = get_nepse_context()
@@ -566,27 +569,20 @@ def manual_payment_submit(request):
             messages.error(request, f"Error: Transaction ID '{transaction_id}' has already been submitted by another user.")
             return redirect(request.META.get('HTTP_REFERER', 'pricing'))
             
-        # 3. Create or Update a pending payment transaction
+        # 3. Create a new pending payment transaction
         try:
-            # Check if user already has a pending transaction for this plan
-            # If so, we update it instead of creating a new one to avoid clutter
-            transaction, created = PaymentTransaction.objects.update_or_create(
-                user=request.user,
-                status='PENDING',
-                defaults={
-                    'plan': plan,
-                    'amount': plan.price,
-                    'transaction_id': transaction_id,
-                    'verification_image': receipt if receipt else None,
-                    'gateway': 'esewa_manual'
-                }
-            )
+            # Cleanup previous attempts so only the LATEST proof is considered "PENDING"
+            PaymentTransaction.objects.filter(user=request.user, status='PENDING').update(status='FAILED')
             
-            if not created and receipt:
-                # Force update image if specifically provided during update
-                transaction.verification_image = receipt
-                transaction.save()
-
+            transaction = PaymentTransaction.objects.create(
+                user=request.user,
+                plan=plan,
+                amount=plan.price,
+                transaction_id=transaction_id,
+                verification_image=receipt if receipt else None,
+                status='PENDING',
+                gateway='esewa_manual'
+            )
             messages.success(request, "✅ Your payment proof has been submitted! An admin will verify it and activate your plan shortly.")
         except Exception as e:
             messages.error(request, f"Error submitting payment: {str(e)}")
@@ -1409,14 +1405,28 @@ def api_toggle_watchlist(request):
         return JsonResponse({'success': False, 'message': str(e)})
 
 
-@premium_required
+@login_required
 @require_http_methods(["GET"])
 def api_get_recommendations(request):
     """
     Fetch stored recommendations.
-    Params: filter='all' (returns ALL system stocks with optional recs) OR defaults to user's watchlist.
+    Enforces Premium Tier for AI signals.
     """
     try:
+        # Check tier (Premium=2, Gold=3)
+        try:
+            if not request.user.subscription.has_access(2):
+                 return JsonResponse({
+                    'success': False, 
+                    'message': 'Premium Intelligence Required',
+                    'premium_required': True
+                }, status=403)
+        except AttributeError:
+             return JsonResponse({
+                'success': False, 
+                'message': 'Subscription Required',
+                'premium_required': True
+            }, status=403)
         filter_type = request.GET.get('filter', 'watchlist')
         
         # Get latest price for context
@@ -1970,17 +1980,14 @@ def api_portfolio_holdings(request):
 @require_http_methods(["GET"])
 def api_portfolio_performance(request):
     """
-    Get portfolio performance history over time.
-    Params: range=1D|1W|1M (default: 1D)
-    Returns: time-series data for portfolio value chart
+    Get historical portfolio performance for line/area charts.
     """
     try:
         from decimal import Decimal
         user = request.user
         range_param = request.GET.get('range', '1D').upper()
-        
-        # Determine time range
         now = timezone.now()
+        
         if range_param == '1D':
             start_time = now - timedelta(days=1)
         elif range_param == '1W':
@@ -1990,95 +1997,107 @@ def api_portfolio_performance(request):
         else:
             start_time = now - timedelta(days=1)
         
-        # Get user's current holdings
         holdings = Portfolio.objects.filter(user=user, quantity__gt=0)
         
-        if not holdings.exists():
-            return JsonResponse({
-                'success': True,
-                'data': {
-                    'labels': [],
-                    'values': [],
-                    'performance': {
-                        '1d': 0,
-                        '1w': 0,
-                        '1m': 0
-                    }
-                }
-            })
-        
-        # Get distinct timestamps in the range
+        # Get distinct timestamps in range
         timestamps = NEPSEPrice.objects.filter(
             timestamp__gte=start_time
         ).values_list('timestamp', flat=True).distinct().order_by('timestamp')
         
-        # Limit to reasonable number of data points
+        # Sampling for performance
         timestamps = list(timestamps)
-        if len(timestamps) > 50:
-            # Sample every nth timestamp
-            step = len(timestamps) // 50
+        if len(timestamps) > 60:
+            step = len(timestamps) // 60
             timestamps = timestamps[::step]
         
         labels = []
         values = []
-        
         for ts in timestamps:
-            portfolio_value = Decimal('0')
+            total_value = Decimal('0')
+            # One query for all holdings at this timestamp
+            prices = NEPSEPrice.objects.filter(
+                timestamp=ts,
+                symbol__in=[h.symbol for h in holdings]
+            ).values('symbol', 'ltp')
             
-            for holding in holdings:
-                symbol = holding.symbol
-                qty = Decimal(str(holding.quantity))
-                
-                # Get price at this timestamp
-                price_obj = NEPSEPrice.objects.filter(
-                    symbol=symbol,
-                    timestamp=ts
-                ).first()
-                
-                if price_obj and price_obj.ltp:
-                    ltp = Decimal(str(price_obj.ltp))
-                    portfolio_value += qty * ltp
+            price_map = {p['symbol']: Decimal(str(p['ltp'])) for p in prices if p['ltp']}
             
-            labels.append(ts.strftime('%Y-%m-%d %H:%M'))
-            values.append(float(portfolio_value))
-        
-        # Calculate performance metrics
+            for h in holdings:
+                current_ltp = price_map.get(h.symbol, Decimal('0'))
+                total_value += Decimal(str(h.quantity)) * current_ltp
+            
+            labels.append(ts.isoformat())
+            values.append(float(total_value))
+
+        # Metrics
         performance = {'1d': 0, '1w': 0, '1m': 0}
-        
         if len(values) >= 2:
-            current_value = values[-1]
-            
-            # 1 day performance
-            day_ago_idx = max(0, len(values) - 2)
-            if values[day_ago_idx] > 0:
-                performance['1d'] = ((current_value - values[day_ago_idx]) / values[day_ago_idx]) * 100
-            
-            # 1 week performance
-            week_ago_idx = max(0, len(values) - 7)
-            if values[week_ago_idx] > 0:
-                performance['1w'] = ((current_value - values[week_ago_idx]) / values[week_ago_idx]) * 100
-            
-            # 1 month performance
-            if values[0] > 0:
-                performance['1m'] = ((current_value - values[0]) / values[0]) * 100
-        
+            performance['1d'] = ((values[-1] - values[0]) / values[0] * 100) if values[0] > 0 else 0
+
         return JsonResponse({
             'success': True,
             'data': {
                 'labels': labels,
                 'values': values,
-                'performance': performance,
-                'range': range_param
+                'performance': performance
             }
         })
-        
     except Exception as e:
-        import traceback
-        print(f"Error in api_portfolio_performance: {e}")
-        print(traceback.format_exc())
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+@login_required
+@require_http_methods(["GET"])
+def api_nepse_index_performance(request):
+    """
+    Get historical NEPSE Index data for dashboard charts.
+    """
+    try:
+        range_param = request.GET.get('range', '1D').upper()
+        now = timezone.now()
+        
+        if range_param == '1D':
+            start_time = now - timedelta(days=1)
+        elif range_param == '1W':
+            start_time = now - timedelta(weeks=1)
+        elif range_param == '1M':
+            start_time = now - timedelta(days=30)
+        else:
+            start_time = now - timedelta(days=1)
+
+        # NEPSE Index Data
+        indices = NEPSEIndex.objects.filter(timestamp__gte=start_time).order_by('timestamp')
+        
+        # Fallback if range is empty
+        if not indices.exists():
+            indices = NEPSEIndex.objects.all().order_by('-timestamp')[:50]
+            data_list = list(indices)[::-1]
+        else:
+            data_list = list(indices)
+
+        # Sampling for clean visualization
+        if len(data_list) > 100:
+            step = len(data_list) // 100
+            data_list = data_list[::step]
+
+        labels = [idx.timestamp.isoformat() for idx in data_list]
+        values = [float(idx.index_value) for idx in data_list]
+
+        # Basic performance stats
+        performance = {'1d': 0, '1w': 0, '1m': 0}
+        if len(values) >= 2:
+            performance['1d'] = ((values[-1] - values[0]) / values[0] * 100) if values[0] > 0 else 0
+
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values,
+                'performance': performance
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 @login_required
 @require_http_methods(["GET"])
 def api_portfolio_activity(request):

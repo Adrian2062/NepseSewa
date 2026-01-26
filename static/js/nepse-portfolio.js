@@ -259,37 +259,38 @@ window.loadRecentActivity = loadRecentActivity;
  */
 function updatePortfolioValueChart(labels, values) {
     const ctx = document.getElementById('portfolioValueChart');
+    if (!ctx) return;
 
-    if (!ctx) {
-        console.error('Portfolio value chart canvas not found');
-        return;
-    }
-
-    // Destroy existing chart if it exists
     if (portfolioValueChart) {
         portfolioValueChart.destroy();
     }
 
-    // Create gradient
+    // Create Premium Pro Gradient
     const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-    gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)'); // Blue
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
 
     portfolioValueChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
+            labels: labels.map(l => {
+                try {
+                    const d = new Date(l);
+                    // Format based on granularity
+                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                } catch { return ''; }
+            }),
             datasets: [{
                 label: 'Portfolio Value',
                 data: values,
-                borderColor: 'rgb(16, 185, 129)',
-                backgroundColor: gradient,
+                borderColor: '#3b82f6',
                 borderWidth: 3,
+                backgroundColor: gradient,
                 fill: true,
-                tension: 0.4,
+                tension: 0.4, // Smooth splines
                 pointRadius: 0,
                 pointHoverRadius: 6,
-                pointHoverBackgroundColor: 'rgb(16, 185, 129)',
+                pointHoverBackgroundColor: '#3b82f6',
                 pointHoverBorderColor: '#fff',
                 pointHoverBorderWidth: 2
             }]
@@ -298,60 +299,46 @@ function updatePortfolioValueChart(labels, values) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: '#1e293b',
                     padding: 12,
-                    titleFont: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    cornerRadius: 8,
+                    displayColors: false,
                     callbacks: {
-                        label: function (context) {
-                            return 'Rs ' + formatNumber(context.parsed.y);
-                        }
+                        label: (ctx) => `Value: Rs ${formatNumber(ctx.raw, 0)}`,
+                        title: (items) => new Date(labels[items[0].dataIndex]).toLocaleString()
                     }
                 }
             },
             scales: {
                 x: {
                     display: true,
-                    grid: {
-                        display: false
-                    },
+                    grid: { display: false },
                     ticks: {
-                        maxTicksLimit: 8,
-                        font: {
-                            size: 11
-                        }
+                        autoSkip: true,
+                        maxTicksLimit: 7,
+                        font: { size: 10, weight: '600' },
+                        color: '#94a3b8'
                     }
                 },
                 y: {
                     display: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
+                    grid: { color: 'rgba(0, 0, 0, 0.03)', drawTicks: false },
+                    border: { display: false },
                     ticks: {
-                        callback: function (value) {
-                            return 'Rs ' + formatNumber(value, 0);
-                        },
-                        font: {
-                            size: 11
-                        }
+                        callback: (v) => 'Rs ' + formatNumber(v, 0),
+                        font: { size: 10, weight: '600' },
+                        color: '#94a3b8',
+                        padding: 10
                     }
                 }
             },
             interaction: {
-                mode: 'nearest',
-                axis: 'x',
-                intersect: false
+                intersect: false,
+                mode: 'index'
             }
         }
     });
@@ -475,11 +462,11 @@ function setupTimeRangeButtons() {
 
                 // Update button states
                 Object.values(buttons).forEach(btn => {
-                    btn.classList.remove('btn-success');
-                    btn.classList.add('btn-outline-success');
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-primary');
                 });
-                buttons[range].classList.remove('btn-outline-success');
-                buttons[range].classList.add('btn-success');
+                buttons[range].classList.remove('btn-outline-primary');
+                buttons[range].classList.add('btn-primary');
 
                 // Load new data
                 loadPortfolioPerformance(range);

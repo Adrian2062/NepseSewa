@@ -74,4 +74,5 @@ urlpatterns = [
     path('api/portfolio/performance/', views.api_portfolio_performance, name='api_portfolio_performance'),
     path('api/portfolio/activity/', views.api_portfolio_activity, name='api_portfolio_activity'),
     path('api/dashboard/summary/', views.api_dashboard_summary, name='api_dashboard_summary'),
+    path('api/nepse-index/performance/', views.api_nepse_index_performance, name='api_nepse_index_performance'),
 ]

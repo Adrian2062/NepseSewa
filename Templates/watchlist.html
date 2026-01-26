@@ -266,6 +266,53 @@
     font-weight: 700;
     color: var(--muted);
   }
+
+  /* Premium Lock Styles */
+  .premium-lock-container {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.1) 100%);
+    border-radius: 30px;
+    padding: 4rem 2rem;
+    text-align: center;
+    border: 1px dashed #3b82f640;
+    margin: 2rem 0;
+    backdrop-filter: blur(10px);
+  }
+
+  .lock-icon-wrap {
+    width: 100px;
+    height: 100px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    font-size: 2.5rem;
+    color: var(--primary);
+  }
+
+  .premium-unlock-btn {
+    background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+    color: white;
+    font-weight: 900;
+    padding: 1rem 2.5rem;
+    border-radius: 15px;
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: inline-block;
+    text-decoration: none;
+    margin-top: 1.5rem;
+    box-shadow: 0 10px 20px rgba(13, 110, 253, 0.3);
+  }
+
+  .premium-unlock-btn:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 15px 30px rgba(13, 110, 253, 0.4);
+    color: white;
+  }
 </style>
 {% endblock %}
 
@@ -278,6 +325,7 @@
   not be used for real financial trading.
 </div>
 
+{% if user.subscription and user.subscription.plan.tier >= 2 %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h4 class="mb-0" style="font-weight:900;">LSTM Stock Recommendations</h4>
@@ -387,6 +435,44 @@
     </div>
   </div>
 </div>
+{% else %}
+<!-- Premium Conversion UI -->
+<div class="premium-lock-container shadow-sm">
+  <div class="lock-icon-wrap">
+    <i class="fas fa-brain"></i>
+  </div>
+  <h2 style="font-weight: 900; color: #1e293b; margin-bottom: 1rem;">Unlock Premium Intelligence</h2>
+  <p class="text-muted mx-auto mb-4" style="max-width: 600px; font-weight: 700; font-size: 1.1rem; line-height: 1.6;">
+    Our LSTM Neural Network recommendation model is reserved for Premium and Gold subscribers. Upgrade now to access
+    real-time AI signals, target levels, and professional market insights.
+  </p>
+
+  <div class="row g-4 justify-content-center mb-4">
+    <div class="col-md-3">
+      <div class="p-3 bg-white rounded-4 border">
+        <i class="fas fa-microchip mb-2 text-primary"></i>
+        <h6 class="fw-bold mb-0">LSTM AI Model</h6>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="p-3 bg-white rounded-4 border">
+        <i class="fas fa-bullseye mb-2 text-success"></i>
+        <h6 class="fw-bold mb-0">Target Levels</h6>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="p-3 bg-white rounded-4 border">
+        <i class="fas fa-shield-halved mb-2 text-danger"></i>
+        <h6 class="fw-bold mb-0">Risk Management</h6>
+      </div>
+    </div>
+  </div>
+
+  <a href="{% url 'pricing' %}" class="premium-unlock-btn">
+    <i class="fas fa-crown me-2"></i>Upgrade to Paid Plan
+  </a>
+</div>
+{% endif %}
 
 <!-- Add Stock Modal -->
 <div class="modal fade" id="addStockModal" tabindex="-1" aria-hidden="true">

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layouts/app_base.html" %}
 
 {% block content %}
 <div class="container py-5">
@@ -50,7 +50,9 @@
                         <div class="text-center p-2 bg-success bg-opacity-10 rounded text-success fw-bold mb-2">
                             <i class="fas fa-check-circle me-1"></i> Active Plan
                         </div>
-                        <button class="btn btn-outline-success w-100 disabled border-2">Subscribed</button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-success w-100 fw-bold shadow-sm">
+                            <i class="fas fa-home me-2"></i>Go to Dashboard
+                        </a>
                         {% elif pending_transaction.plan == plan %}
                         <div class="text-center p-2 bg-warning bg-opacity-10 rounded text-warning fw-bold mb-2">
                             <i class="fas fa-hourglass-half me-1"></i> Request Pending

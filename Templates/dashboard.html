@@ -92,11 +92,19 @@
 <div class="row">
     <div class="col-lg-8 mb-3">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">Portfolio Performance</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title">NEPSE Index</h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary active"
+                        onclick="loadDashboardPerformance('1D')">1D</button>
+                    <button class="btn btn-outline-secondary" onclick="loadDashboardPerformance('1W')">1W</button>
+                    <button class="btn btn-outline-secondary" onclick="loadDashboardPerformance('1M')">1M</button>
+                </div>
             </div>
             <div class="card-body">
-                <div class="chart-wrap"><canvas id="portfolioChart"></canvas></div>
+                <div class="chart-wrap" style="height: 350px;">
+                    <canvas id="portfolioChart"></canvas>
+                </div>
 
                 <div class="row text-center border-top pt-3 mt-3">
                     <div class="col-4">

@@ -84,83 +84,78 @@ async function loadPortfolioAnalytics() {
 }
 
 /**
- * 3. Portfolio Performance Chart
+ * 3. Bespoke Pro Choice Chart (Premium NEPSE Index Chart)
  */
 let dashboardChart = null;
 async function loadDashboardPerformance(range = '1D') {
     const canvas = document.getElementById('portfolioChart');
     if (!canvas) return;
 
+    // Update buttons
+    document.querySelectorAll('.btn-group-sm .btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${range}'`));
+    });
+
     try {
-        const res = await fetch(`/api/portfolio/performance/?range=${range}`);
+        const res = await fetch(`/api/nepse-index/performance/?range=${range}`);
         const json = await res.json();
 
         if (json.success) {
             const d = json.data;
 
-            // Update individual performance percentages
             updatePerfLabel('dashboardPerf1d', d.performance['1d']);
             updatePerfLabel('dashboardPerf1w', d.performance['1w']);
             updatePerfLabel('dashboardPerf1m', d.performance['1m']);
 
             const ctx = canvas.getContext('2d');
+            if (dashboardChart) dashboardChart.destroy();
 
-            // Create Gradient
-            let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
-
-            if (dashboardChart) {
-                dashboardChart.destroy();
-            }
+            // Create Premium Gradient (Blue for NEPSE)
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)'); // Pro Blue
+            gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.05)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
 
             dashboardChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: d.labels.map(l => {
-                        // Cleaner label formatting: Try to show only Time if same day
                         try {
                             const date = new Date(l);
                             return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                        } catch { return l; }
+                        } catch { return ''; }
                     }),
                     datasets: [{
-                        label: 'Portfolio Value',
+                        label: 'NEPSE Index',
                         data: d.values,
-                        borderColor: '#10b981',
+                        borderColor: '#3b82f6',
+                        borderWidth: 3,
                         backgroundColor: gradient,
-                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4, // Smooth Spline
                         pointRadius: 0,
-                        pointHoverRadius: 5,
-                        pointHoverBackgroundColor: '#10b981',
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#3b82f6',
                         pointHoverBorderColor: '#fff',
                         pointHoverBorderWidth: 2,
-                        fill: true,
-                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index',
-                    },
+                    interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: '#1e293b',
-                            padding: 10,
-                            titleFont: { size: 12, weight: 'bold' },
+                            padding: 12,
+                            titleFont: { size: 13, weight: 'bold' },
                             bodyFont: { size: 12 },
                             cornerRadius: 8,
                             displayColors: false,
                             callbacks: {
-                                label: (ctx) => `Value: Rs ${fmtNumber(ctx.raw, 0)}`,
-                                title: (items) => {
-                                    const idx = items[0].dataIndex;
-                                    return d.labels[idx]; // Show full timestamp in tooltip
-                                }
+                                label: (ctx) => `NEPSE Index: ${fmtNumber(ctx.raw, 2)}`,
+                                title: (items) => new Date(d.labels[items[0].dataIndex]).toLocaleString()
                             }
                         }
                     },
@@ -170,21 +165,20 @@ async function loadDashboardPerformance(range = '1D') {
                             grid: { display: false },
                             ticks: {
                                 autoSkip: true,
-                                maxTicksLimit: 6,
-                                font: { size: 10, weight: '500' },
-                                color: '#94a3b8',
-                                maxRotation: 0
+                                maxTicksLimit: 7,
+                                font: { size: 10, weight: '600' },
+                                color: '#94a3b8'
                             }
                         },
                         y: {
                             display: true,
                             border: { display: false },
-                            grid: { color: '#f1f5f9', drawTicks: false },
+                            grid: { color: 'rgba(226, 232, 240, 0.5)', drawTicks: false },
                             ticks: {
-                                font: { size: 10, weight: '500' },
+                                font: { size: 10, weight: '600' },
                                 color: '#94a3b8',
-                                callback: (v) => 'Rs ' + fmtNumber(v, 0),
-                                padding: 10
+                                padding: 10,
+                                callback: (v) => fmtNumber(v, 0)
                             }
                         }
                     }
@@ -192,7 +186,7 @@ async function loadDashboardPerformance(range = '1D') {
             });
         }
     } catch (err) {
-        console.error("Performance error:", err);
+        console.error("NEPSE Chart error:", err);
     }
 }
 
@@ -336,3 +330,21 @@ async function initTicker() {
         }
     } catch (err) { }
 }
+
+/**
+ * Global Init
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Initial Data Load
+    loadDashboardSummary();
+    loadDashboardPerformance('1D');
+    loadDashboardActivity();
+    loadDashboardWatchlist();
+    initTicker();
+
+    // 2. Refresh Loop (Every 60s for live feel)
+    setInterval(() => {
+        loadDashboardSummary();
+        initTicker();
+    }, 60000);
+});

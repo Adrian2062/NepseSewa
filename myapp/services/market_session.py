@@ -30,12 +30,13 @@ def get_current_session():
         session_date=today,
         defaults={
             'status': 'CLOSED',
-            'is_active': False
+            'is_active': False,
+            'is_manual': False
         }
     )
     
     # Auto-update session status based on time
-    if not created:
+    if not created and not session.is_manual:
         update_session_status(session, nepal_now)
     
     return session
@@ -48,10 +49,8 @@ def update_session_status(session, nepal_now=None):
     
     current_time = nepal_now.time()
     
-    # Don't auto-update if admin has paused
-    if session.status == 'PAUSED':
-        session.is_active = False
-        session.save()
+    # Don't auto-update if admin has manually set status
+    if session.is_manual:
         return session
     
     # Check if within continuous session hours
@@ -106,22 +105,29 @@ def pause_market():
     session = get_current_session()
     session.status = 'PAUSED'
     session.is_active = False
+    session.is_manual = True
     session.save()
     return session
 
 
-def resume_market():
+def resume_market(force=False):
     """Admin function to resume market"""
     session = get_current_session()
     nepal_now = get_nepal_time()
     
-    # Only resume if within trading hours
-    if is_continuous_session():
+    # If force=True, we set is_manual to prevent auto-closing
+    if force:
         session.status = 'CONTINUOUS'
         session.is_active = True
+        session.is_manual = True
+    elif is_continuous_session():
+        session.status = 'CONTINUOUS'
+        session.is_active = True
+        session.is_manual = False
     else:
         session.status = 'CLOSED'
         session.is_active = False
+        session.is_manual = False
     
     session.save()
     return session

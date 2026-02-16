@@ -19,7 +19,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('stocks/', views.stocks, name='stocks'),
 
-    # Original NEPSE API Endpoints (current/latest data)
+    # Original NEPSE API Endpoints
     path('api/latest/', views.api_latest_nepse, name='api_latest'),
     path('api/gainers/', views.api_top_gainers, name='api_gainers'),
     path('api/losers/', views.api_top_losers, name='api_losers'),
@@ -30,7 +30,7 @@ urlpatterns = [
     path('api/market-summary/', views.api_market_summary, name='api_market_summary'),
     path('api/sector-indices/', views.api_sector_indices, name='api_sector_indices'),
     
-    # NEW: Date-filtered API Endpoints
+    # Date-filtered API Endpoints
     path('api/market-data/', views.api_market_data_by_date, name='api_market_data_by_date'),
     path('api/sectors/', views.api_sectors, name='api_sectors'),
     path('api/available-dates/', views.api_available_dates, name='api_available_dates'),
@@ -49,11 +49,15 @@ urlpatterns = [
     path('api/trade/place-new/', trading_api.api_place_order_new, name='api_place_order_new'),
     path('api/trade/executions/', trading_api.api_trade_executions, name='api_trade_executions'),
 
-    # Admin Dashboard
+    # Admin Dashboard & Operations
     path('admin/trading/dashboard/', admin_views.trading_dashboard, name='admin_trading_dashboard'),
     path('admin/trading/pause/', admin_views.pause_market_view, name='admin_pause_market'),
     path('admin/trading/resume/', admin_views.resume_market_view, name='admin_resume_market'),
     path('admin/scraper/run/', admin_views.run_scraper_view, name='admin_run_scraper'),
+    path('admin/recommendations/run/', admin_views.run_recommendations_view, name='admin_run_recommendations'),
+    path('admin/recommendations/watchlist/', admin_views.run_watchlist_recommendations_view, name='admin_run_watchlist_recommendations'),
+    path('admin/trading/reset-control/', admin_views.reset_market_control_view, name='admin_reset_market_control'),
+    path('admin/trading/close/', admin_views.close_market_view, name='admin_close_market'),
 
     # Watchlist & Recommendation APIs
     path('api/watchlist/', views.api_get_watchlist, name='api_get_watchlist'),

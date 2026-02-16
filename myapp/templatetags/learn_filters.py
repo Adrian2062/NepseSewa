@@ -27,3 +27,10 @@ def youtube_embed_url(value):
             return f"https://www.youtube.com/embed/{video_id}"
 
     return value
+@register.filter(name='mul')
+def mul(value, arg):
+    """Multiplies the value by the argument"""
+    try:
+        return float(value) * float(arg)
+    except (ValueError, TypeError):
+        return 0

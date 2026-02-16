@@ -60,7 +60,7 @@ UNFOLD = {
                     {
                         "title": "Trading Dashboard",
                         "icon": "bar_chart",  # Material Icon
-                        "link": "admin_trading_dashboard", # URL Name
+                        "link": "/admin/trading/dashboard/", # Absolute Path
                     },
                     {
                         "title": "Orders",

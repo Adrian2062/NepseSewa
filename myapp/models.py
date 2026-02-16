@@ -283,6 +283,7 @@ class MarketSession(models.Model):
     opened_at = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=False)
+    is_manual = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -7,7 +7,7 @@ SECRET_KEY = 'your-secret-key-here-change-in-production'
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 INSTALLED_APPS = [
@@ -246,7 +246,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 # You must generate an App Password for this to work: https://myaccount.google.com/apppasswords
 EMAIL_HOST_USER = 'adrianpoudyal@gmail.com'  # Replace with your actual Gmail
-EMAIL_HOST_PASSWORD = 'rdrbpwoygnadghxs'  # The 16-character code from Google
+EMAIL_HOST_PASSWORD = 'xflhaikspmcwihkh'  # The 16-character code from Google
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 

@@ -188,3 +188,14 @@ class NotificationPreferenceForm(forms.ModelForm):
                 'class': 'form-check-input switch'
             })
         }
+from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class CustomPasswordResetForm(PasswordResetForm):
+    def get_users(self, email):
+        """Return active users matching the given email."""
+        active_users = User.objects.filter(email__iexact=email, is_active=True)
+        return active_users
+

@@ -18,6 +18,7 @@ class CustomUser(AbstractUser):
     buy_sell_notifications = models.BooleanField(default=True)
     
     USERNAME_FIELD = 'email'
+    EMAIL_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     
     class Meta:

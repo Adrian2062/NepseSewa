@@ -72,6 +72,23 @@ body {
     z-index: 1040;
     min-height: 70px;
 }
+.navbar > .container-fluid {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-brand {
+    flex-shrink: 0;
+}
+
+.dropdown {
+    flex-shrink: 0;
+}
+
+.btn-premium-compact {
+    flex-shrink: 0;
+}
 
 .navbar-brand {
     font-size: 1.35rem;
@@ -83,16 +100,26 @@ body {
     gap: .5rem;
 }
 
+
+.btn-premium-compact {
+    padding: 0.2rem 0.6rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 4px !important;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+}
+
 .navbar-summary-integrated {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: 1.25rem;
-    flex-grow: 1;
     justify-content: center;
-    margin: 0 1.5rem;
-    overflow-x: auto;
-    scrollbar-width: none;
+    gap: 1.5rem;
+    overflow: hidden;
+    min-width: 0;
 }
+
 
 .navbar-summary-integrated::-webkit-scrollbar {
     display: none;
@@ -101,8 +128,9 @@ body {
 .nav-index-item {
     display: flex;
     flex-direction: column;
-    line-height: 1.15;
-    min-width: 115px;
+    line-height: 1.1;
+    min-width: 90px;
+    white-space: nowrap;
 }
 
 .nav-index-name {
@@ -138,15 +166,16 @@ body {
 }
 
 .nav-session-info .nav-index-value {
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     font-weight: 800;
 }
 
 .nav-market-totals {
     display: flex;
     flex-direction: column;
-    min-width: 260px;
+    min-width: 200px;
     text-align: right;
+    white-space: nowrap;
 }
 
 .nav-total-item {
@@ -164,6 +193,11 @@ body {
     transition: all 0.2s ease;
     overflow: hidden;
 }
+.search-box {
+    width: 300px;      /* Fixed stable width */
+    flex-shrink: 0;    /* Prevent shrinking */
+}
+
 
 .search-box .input-group:focus-within {
     border-color: var(--primary);

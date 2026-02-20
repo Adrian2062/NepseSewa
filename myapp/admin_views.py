@@ -49,17 +49,23 @@ def trading_dashboard(request):
         executed_at__date=today
     ).select_related('buy_order', 'sell_order').order_by('-executed_at')[:20]
     
-    # Debug: count trades
+    # Get recent recommendations
+    recent_recommendations = StockRecommendation.objects.order_by('-last_updated')[:10]
+    
+    # Debug: count records
     total_trades_count = TradeExecution.objects.count()
     total_legacy_trades_count = Trade.objects.count()
+    total_recommendations = StockRecommendation.objects.count()
     
     context = {
         'session': session,
         'nepal_time': nepal_time,
         'recent_orders': recent_orders,
         'recent_trades': recent_trades,
+        'recent_recommendations': recent_recommendations,
         'total_trades_count': total_trades_count,
         'total_legacy_trades_count': total_legacy_trades_count,
+        'total_recommendations': total_recommendations,
         'title': 'Trading Engine Dashboard'
     }
     
@@ -88,29 +94,41 @@ def run_recommendations_logic(symbols=None):
                     continue
                     
                 ml = MLService(history_data)
-                predicted_price, rmse, mae, last_close, ma30, rsi = ml.train_and_predict(window_size=30)
-                if predicted_price is None:
+                ml_result = ml.train_and_predict(window_size=20)
+                if ml_result is None:
                     continue
 
-                rec_data = get_recommendation_data(last_close, predicted_price, ma30, rsi)
-                StockRecommendation.objects.update_or_create(
+                rec_data = get_recommendation_data(ml_result)
+                if rec_data is None:
+                    continue
+
+                # Senior Practice: Model instance save handles truncation and validation automatically
+                # We also ensure native Python types here to prevent NumPy ambiguity in Django validation
+                rec_instance, _ = StockRecommendation.objects.update_or_create(
                     symbol=symbol,
                     defaults={
-                        'current_price': last_close,
-                        'predicted_next_close': predicted_price,
-                        'predicted_return': rec_data['predicted_return'],
-                        'trend': rec_data['trend'],
-                        'recommendation': rec_data['recommendation'],
-                        'entry_price': rec_data['levels']['entry'],
-                        'target_price': rec_data['levels']['target'],
-                        'stop_loss': rec_data['levels']['stop_loss'],
-                        'exit_price': rec_data['levels']['exit'],
-                        'rmse': rmse,
-                        'mae': mae
+                        'current_price': float(ml_result['meta']['current_close']),
+                        'predicted_next_close': float(ml_result['predictions'][0]),
+                        'predicted_return': float(rec_data['expected_move']),
+                        'trend': str(rec_data['trend']),
+                        'recommendation': int(rec_data['signal']),
+                        'entry_price': float(rec_data['levels']['entry']) if rec_data['levels']['entry'] is not None else None,
+                        'target_price': float(rec_data['levels']['target']) if rec_data['levels']['target'] is not None else None,
+                        'stop_loss': float(rec_data['levels']['stop_loss']) if rec_data['levels']['stop_loss'] is not None else None,
+                        'exit_price': float(rec_data['levels']['exit']) if rec_data['levels']['exit'] is not None else None,
+                        'rmse': float(rec_data['rmse']),
+                        'mae': float(rec_data['mae']),
+                        'extra_data': {
+                            'rsi': float(rec_data['rsi']),
+                            'confidence': float(rec_data['confidence']),
+                            'expected_move': float(rec_data['expected_move'])
+                        }
                     }
                 )
             except Exception as e:
-                print(f"Error recommending {symbol}: {e}")
+                import traceback
+                print(f"Error recommending {symbol}: {str(e)}")
+                traceback.print_exc()
                 
     except Exception as e:
         print(f"ML Processing error: {e}")

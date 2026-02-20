@@ -45,6 +45,32 @@ class EmailBackend(ModelBackend):
         return None
 
 
+def get_latest_nepse_index_with_change():
+    """Helper to get latest NEPSE Index and calculate daily change percentage"""
+    try:
+        latest = NEPSEIndex.objects.latest('timestamp')
+        
+        # Calculate daily change by comparing with previous date's last record
+        previous_close = NEPSEIndex.objects.filter(
+            timestamp__date__lt=latest.timestamp.date()
+        ).order_by('-timestamp').first()
+
+        if previous_close and previous_close.index_value:
+            change = latest.index_value - previous_close.index_value
+            change_pct = (change / previous_close.index_value) * 100
+        else:
+            # Fallback to the percentage_change field if it's non-zero
+            change_pct = latest.percentage_change or 0
+            
+        return {
+            'value': latest.index_value,
+            'change_pct': float(change_pct),
+            'timestamp': latest.timestamp
+        }
+    except NEPSEIndex.DoesNotExist:
+        return None
+
+
 # ========== HELPER FUNCTIONS ==========
 def get_nepse_context():
     """Helper function to get NEPSE data for templates"""
@@ -83,10 +109,16 @@ def get_nepse_context():
         ))
 
         # --- LIVE DATA FETCHING ---
-        try:
-            nepse_index = NEPSEIndex.objects.latest('timestamp')
-        except NEPSEIndex.DoesNotExist:
-            nepse_index = None
+        nepse_data = get_latest_nepse_index_with_change()
+        nepse_index = None
+        if nepse_data:
+            # Create a pseudo-object for template compatibility or just pass values
+            # Using a simple dict or keeping nepse_index as the object but overriding change_pct
+            try:
+                nepse_index = NEPSEIndex.objects.get(timestamp=nepse_data['timestamp'])
+                nepse_index.percentage_change = nepse_data['change_pct']
+            except:
+                nepse_index = None
 
         try:
             sensitive_index = MarketIndex.objects.filter(index_name='Sensitive Index').latest('timestamp')
@@ -760,32 +792,18 @@ from .models import NEPSEIndex, MarketSummary, MarketIndex
 @require_http_methods(["GET"])
 def api_nepse_index(request):
     """Get latest NEPSE Index value with daily change"""
-    try:
-        latest = NEPSEIndex.objects.latest('timestamp')
-        
-        # Calculate daily change
-        # Find the last record from a previous date (yesterday's close)
-        previous_close = NEPSEIndex.objects.filter(
-            timestamp__date__lt=latest.timestamp.date()
-        ).order_by('-timestamp').first()
-
-        if previous_close and previous_close.index_value:
-            change = latest.index_value - previous_close.index_value
-            change_pct = (change / previous_close.index_value) * 100
-        else:
-            # Fallback if no previous day data (e.g. first day of scraping)
-            # Try to use the percentage_change field if it exists and is non-zero
-            change_pct = float(latest.percentage_change or 0)
-
+    data = get_latest_nepse_index_with_change()
+    
+    if data:
         return JsonResponse({
             'success': True,
             'data': {
-                'value': float(latest.index_value),
-                'change_pct': float(change_pct),
-                'timestamp': latest.timestamp.isoformat(),
+                'value': float(data['value']),
+                'change_pct': float(data['change_pct']),
+                'timestamp': data['timestamp'].isoformat(),
             }
         })
-    except NEPSEIndex.DoesNotExist:
+    else:
         return JsonResponse({
             'success': False,
             'error': 'No NEPSE Index data available'

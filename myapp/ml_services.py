@@ -162,7 +162,8 @@ class MLService:
             for val in future_scaled:
                 dummy = np.zeros((1, X.shape[2]))
                 dummy[0, 3] = val
-                prices_3d.append(self.scaler.inverse_transform(dummy)[0, 3])
+                # Senior Practice: Explicitly cast to float to prevent NumPy scalar issues in Django
+                prices_3d.append(float(self.scaler.inverse_transform(dummy)[0, 3]))
 
             K.clear_session()
 
@@ -196,18 +197,18 @@ def get_recommendation_data(ml_result):
     Refined RSI Quantitative Trading Engine (Strict Rules).
     Interprets RSI momentum strictly for NEPSE.
     """
-    if not ml_result:
+    if ml_result is None:
         return None
 
     meta = ml_result['meta']
     preds = ml_result['predictions']
     
-    curr_close = meta['current_close']
-    rsi = meta['rsi']
-    prev_rsi = meta['prev_rsi']
-    atr = meta['atr']
-    pred_avg = np.mean(preds)
-    expected_move_pct = ((pred_avg - curr_close) / curr_close) * 100
+    curr_close = float(meta['current_close'])
+    rsi = float(meta['rsi'])
+    prev_rsi = float(meta['prev_rsi'])
+    atr = float(meta['atr'])
+    pred_avg = float(np.mean(preds))
+    expected_move_pct = float(((pred_avg - curr_close) / curr_close) * 100)
 
     # Trend Direction
     rsi_rising = rsi > prev_rsi

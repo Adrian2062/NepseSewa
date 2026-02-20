@@ -243,6 +243,21 @@ class Command(BaseCommand):
             
             # Save if valid
             if nepse_value and 2000 < nepse_value < 4000:
+                # If change_pct is missing (None or 0), try to calculate it
+                if not change_pct:
+                    try:
+                        # Find the last record from a previous date (yesterday's close)
+                        previous_close = NEPSEIndex.objects.filter(
+                            timestamp__date__lt=timestamp.date()
+                        ).order_by('-timestamp').first()
+
+                        if previous_close and previous_close.index_value:
+                            change = nepse_value - previous_close.index_value
+                            change_pct = (change / previous_close.index_value) * 100
+                            self.stdout.write(f"  ℹ️  Calculated percentage change: {change_pct:+.2f}%")
+                    except Exception as e:
+                        self.stdout.write(f"  ⚠️  Failed to calculate change: {str(e)}")
+
                 # Save to NEPSEIndex model
                 NEPSEIndex.objects.update_or_create(
                     timestamp=timestamp,

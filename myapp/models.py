@@ -178,6 +178,12 @@ class Order(models.Model):
         ('CANCELLED', 'CANCELLED'), # Cancelled by user
     ]
 
+    ORDER_TYPE_CHOICES = [
+        ('LIMIT', 'Limit'),
+        ('MARKET', 'Market'),
+        ('STOP_LOSS', 'Stop Loss'),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -185,6 +191,7 @@ class Order(models.Model):
     )
     symbol = models.CharField(max_length=50, db_index=True)
     side = models.CharField(max_length=4, choices=SIDE_CHOICES, db_index=True)
+    order_type = models.CharField(max_length=10, choices=ORDER_TYPE_CHOICES, default='LIMIT', db_index=True)
     qty = models.PositiveIntegerField()
     filled_qty = models.PositiveIntegerField(default=0)
     price = models.DecimalField(max_digits=12, decimal_places=2)  # Limit price
@@ -369,7 +376,17 @@ class StockRecommendation(models.Model):
     current_price = models.FloatField()
     predicted_next_close = models.FloatField()
     predicted_return = models.FloatField(null=True, blank=True)
-    trend = models.CharField(max_length=20, choices=[('Bullish', 'Bullish'), ('Bearish', 'Bearish'), ('Neutral', 'Neutral')], default='Neutral')
+    trend = models.CharField(
+        max_length=100, 
+        choices=[
+            ('Bullish', 'Bullish'), 
+            ('Bearish', 'Bearish'), 
+            ('Neutral', 'Neutral'),
+            ('Bullish (Exhausted)', 'Bullish (Exhausted)'),
+            ('Bearish (Reversal Possible)', 'Bearish (Reversal Possible)')
+        ], 
+        default='Neutral'
+    )
     recommendation = models.IntegerField(choices=[(1, 'BUY'), (0, 'HOLD'), (-1, 'SELL')])
     
     # Trading Levels
@@ -385,18 +402,34 @@ class StockRecommendation(models.Model):
     market_condition = models.CharField(max_length=100, null=True, blank=True)
     reason = models.TextField(null=True, blank=True)
     
+    # Future-proofing & Expiry
+    extra_data = models.JSONField(default=dict, blank=True, help_text="AI Diagnostics and Model specific metadata")
+    valid_until = models.DateTimeField(null=True, blank=True, help_text="Signal expiry - defaults to next trading day")
+
     rmse = models.FloatField(null=True, blank=True)
     mae = models.FloatField(null=True, blank=True)
     last_updated = models.DateTimeField(auto_now=True)
     
-    # academic disclaimer is part of the logic/display, not the model
-    
     class Meta:
         db_table = 'stock_recommendations'
-        ordering = ['symbol']
+        ordering = ['-confidence', 'symbol']
 
     def __str__(self):
         return f"Rec for {self.symbol}: {self.get_recommendation_display()}"
+
+    def clean(self):
+        """Senior Best Practice: Truncate long strings before they hit the DB constraint"""
+        if self.trend and len(self.trend) > 100:
+            self.trend = self.trend[:97] + "..."
+        if self.market_condition and len(self.market_condition) > 100:
+            self.market_condition = self.market_condition[:97] + "..."
+        
+    def save(self, *args, **kwargs):
+        """Enforce validation and set default expiry if missing"""
+        self.full_clean() 
+        if not self.valid_until:
+            self.valid_until = timezone.now() + timezone.timedelta(days=1)
+        super().save(*args, **kwargs)
 
 
 

@@ -31,7 +31,10 @@ class Command(BaseCommand):
                 "expected_move": "DOUBLE PRECISION",
                 "confidence": "DOUBLE PRECISION",
                 "market_condition": "VARCHAR(100)",
-                "reason": "TEXT"
+                "trend": "VARCHAR(100)",
+                "reason": "TEXT",
+                "extra_data": "JSONB",
+                "valid_until": "TIMESTAMP WITH TIME ZONE"
             }
             
             for field, ftype in institutional_fields.items():
@@ -132,7 +135,13 @@ class Command(BaseCommand):
                         'market_condition': rec_data['market_condition'],
                         'reason': rec_data['reason'],
                         'rmse': rec_data['rmse'],
-                        'mae': rec_data['mae']
+                        'mae': rec_data['mae'],
+                        'extra_data': {
+                            'rsi': rec_data['rsi'],
+                            'confidence': rec_data['confidence'],
+                            'expected_move': rec_data['expected_move'],
+                            'institutional_validation': True
+                        }
                     }
                 )
                 

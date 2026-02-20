@@ -96,13 +96,12 @@
                                 <div class="market-stat">
                                     <span class="label">NEPSE Index</span>
                                     {% if nepse_index %}
-                                    {% with nepse_index.percentage_change|floatformat:2 as p %}
                                     {% with nepse_index.percentage_change|default:0 as u %}
-                                    <span class="value {% if u >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    <span
+                                        class="value {% if u > 0 %}text-success{% elif u < 0 %}text-danger{% else %}text-muted{% endif %}">
                                         {{ nepse_index.index_value|floatformat:2 }}
-                                        <small>({% if u >= 0 %}+{% endif %}{{ p }}%)</small>
+                                        <small>({% if u > 0 %}+{% endif %}{{ u|floatformat:2 }}%)</small>
                                     </span>
-                                    {% endwith %}
                                     {% endwith %}
                                     {% else %}
                                     <span class="value">N/A</span>
@@ -235,17 +234,18 @@
                     <div class="market-overview-card animate-fade-in">
                         <div class="market-stat-large text-center">
                             {% if nepse_index %}
-                            {% with nepse_index.percentage_change|floatformat:2 as p %}
                             {% with nepse_index.percentage_change|default:0 as u %}
-                            <div class="stat-value {% if u >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            <div
+                                class="stat-value {% if u > 0 %}text-success{% elif u < 0 %}text-danger{% else %}text-muted{% endif %}">
                                 {{ nepse_index.index_value|floatformat:2 }}
                             </div>
                             <div class="stat-label">NEPSE Index</div>
-                            <div class="stat-change {% if u >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                {% if u >= 0 %}+{% endif %}{{ p }}%
-                                <i class="fas {% if u >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} ms-1"></i>
+                            <div
+                                class="stat-change {% if u > 0 %}text-success{% elif u < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                {% if u > 0 %}+{% endif %}{{ u|floatformat:2 }}%
+                                <i
+                                    class="fas {% if u > 0 %}fa-arrow-up{% elif u < 0 %}fa-arrow-down{% else %}fa-minus{% endif %} ms-1"></i>
                             </div>
-                            {% endwith %}
                             {% endwith %}
                             {% else %}
                             <div class="stat-value">N/A</div>

@@ -202,15 +202,43 @@ class MatchingEngine:
     def validate_order(order):
         """
         Validate order before placing.
+        Enforces realistic prices (±5% of LTP) and checks balance/holdings.
         Returns (is_valid, error_message)
         """
-        # Check user balance for BUY orders
-        if order.side == 'BUY':
-            total_cost = Decimal(str(order.qty)) * Decimal(str(order.price))
-            if order.user.virtual_balance < total_cost:
-                return False, f"Insufficient balance. Required: Rs {total_cost:,.2f}, Available: Rs {order.user.virtual_balance:,.2f}"
+        from myapp.models import NEPSEPrice
         
-        # Check user holdings for SELL orders
+        # 1. Fetch latest price (LTP) for enforcement
+        try:
+            latest = NEPSEPrice.objects.filter(symbol=order.symbol).latest('timestamp')
+            ltp = Decimal(str(latest.ltp))
+        except NEPSEPrice.DoesNotExist:
+            return False, f"Price data for {order.symbol} not found. Cannot place order."
+
+        # 2. Handle Market Orders Price Setting
+        if order.order_type == 'MARKET':
+            if order.side == 'BUY':
+                # For Market Buy, we use a ceiling price (LTP + 5%) for balance check and matching
+                order.price = (ltp * Decimal('1.05')).quantize(Decimal('0.01'))
+            else:
+                # For Market Sell, we use a floor price (LTP - 5%) for matching
+                order.price = (ltp * Decimal('0.95')).quantize(Decimal('0.01'))
+
+        # 3. Enforce Realistic Prices (±5% of LTP)
+        elif order.order_type == 'LIMIT':
+            if order.side == 'BUY':
+                if order.price > ltp * Decimal('1.05'):
+                    return False, f"Buy price too high. Max allowed: Rs {(ltp * Decimal('1.05')):.2f} (+5% of LTP: {ltp})"
+            elif order.side == 'SELL':
+                if order.price < ltp * Decimal('0.95'):
+                    return False, f"Sell price too low. Min allowed: Rs {(ltp * Decimal('0.95')):.2f} (-5% of LTP: {ltp})"
+
+        # 4. Check user balance for BUY orders
+        if order.side == 'BUY':
+            total_cost = Decimal(str(order.qty)) * order.price
+            if order.user.virtual_balance < total_cost:
+                return False, f"Insufficient balance. Required (incl. margin for Market): Rs {total_cost:,.2f}, Available: Rs {order.user.virtual_balance:,.2f}"
+        
+        # 5. Check user holdings for SELL orders
         elif order.side == 'SELL':
             try:
                 portfolio = Portfolio.objects.get(user=order.user, symbol=order.symbol)

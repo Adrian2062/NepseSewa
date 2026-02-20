@@ -161,11 +161,14 @@ def api_place_order_new(request):
         data = json.loads(request.body)
         symbol = (data.get('symbol') or '').strip().upper()
         side = (data.get('side') or '').strip().upper()
+        order_type = (data.get('order_type') or 'LIMIT').strip().upper()
         
         try:
             qty = int(data.get('qty', 0))
-            price = float(data.get('price', 0.0))
-        except ValueError:
+            # Price is optional for MARKET orders
+            price_val = data.get('price')
+            price = float(price_val) if price_val is not None else 0.0
+        except (ValueError, TypeError):
             return JsonResponse({'success': False, 'message': 'Invalid quantity or price.'})
         
         # Validate inputs
@@ -174,12 +177,15 @@ def api_place_order_new(request):
         
         if side not in ['BUY', 'SELL']:
             return JsonResponse({'success': False, 'message': 'Invalid side (BUY/SELL).'})
+            
+        if order_type not in ['LIMIT', 'MARKET', 'STOP_LOSS']:
+            return JsonResponse({'success': False, 'message': 'Invalid order type.'})
         
         if qty <= 0:
             return JsonResponse({'success': False, 'message': 'Quantity must be positive.'})
         
-        if price <= 0:
-            return JsonResponse({'success': False, 'message': 'Price must be positive.'})
+        if order_type == 'LIMIT' and price <= 0:
+            return JsonResponse({'success': False, 'message': 'Price must be positive for limit orders.'})
         
         # Check market is open
         if not is_market_open():
@@ -193,19 +199,20 @@ def api_place_order_new(request):
             user=request.user,
             symbol=symbol,
             side=side,
+            order_type=order_type,
             qty=qty,
             price=Decimal(str(price)),
             status='OPEN'
         )
         
-        # Validate order
+        # Validate order (this will set the price for MARKET orders based on LTP)
         is_valid, error_msg = MatchingEngine.validate_order(order)
         if not is_valid:
             return JsonResponse({'success': False, 'message': error_msg})
         
         # Deduct balance for BUY orders
         if side == 'BUY':
-            total_cost = Decimal(str(qty)) * Decimal(str(price))
+            total_cost = Decimal(str(qty)) * order.price
             order.user.virtual_balance -= total_cost
             order.user.save()
         

@@ -8,13 +8,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import chromedriver_autoinstaller
 
-# Install driver if needed
-chromedriver_autoinstaller.install()
-
 class NepseScraperService:
     @staticmethod
     def create_driver():
         """Create a new Chrome driver with optimal settings"""
+        # Install driver only when actually needed
+        chromedriver_autoinstaller.install()
         options = Options()
         options.add_argument('--headless')
         options.add_argument('--disable-blink-features=AutomationControlled')

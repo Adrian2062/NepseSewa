@@ -1,10 +1,15 @@
-from django.core.management.base import BaseCommand
-from myapp.models import Sector, Stock
+import os
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'NepseSewa.settings')
+django.setup()
+
+from myapp.models import Stock, Sector
 
 SECTOR_MAP = {
     "Commercial Banks": ["ADBL", "GBIME", "CZBIL", "NIMBPO", "SBL", "SANIMA", "NMB", "NICA", "MBL", "NBL", "EBL", "PCBL", "SCB", "LSL", "SBI", "KBL", "PRVU"],
     "Development Banks": ["MLBL", "KSBBL", "MDB", "MNBBL", "SINDU", "GRDBL", "JBBL", "EDBL", "GBBL", "NABBC", "SADBL", "CORBL", "SHINE", "LBBL", "SAPDBL", "SABBL"],
-    "Microfinance": ["LLBS", "SMFBS", "MERO", "SKBBL", "CYCL", "FOWAD", "NUBL", "SWBBL", "DDBL", "GLBSL", "GMFBS", "MSLB", "FMDBL", "JBLB", "ULBSL", "DLBS", "NMFBS", "NMLBBL", "MLBSL", "ALBSL", "ANLB"],
+    "Microfinance": ["LLBS", "SMFBS", "MERO", "SKBBL", "CYCL", "FOWAD", "NUBL", "SWBBL", "DDBL", "GLBSL", "GMFBS", "MSLB", "FMDBL", "JBLB", "ULBSL", "DLBS", "NMFBS", "NMLBBL", "MLBSL", "ALBSL"],
     "Finance": ["PROFL", "MPFL", "CFCL", "MFIL", "JFL", "SFCL", "GFCL", "PFL", "NFS", "SIFC", "RLFL", "ICFC", "BFC"],
     "Investment": ["NRN", "HATHY", "NIFRA", "CIT", "HIDCL", "CHDC"],
     "Hotels & Tourism": ["BANDIPUR", "KDL", "TRH", "SHL", "OHL", "CITY", "CGH"],
@@ -18,40 +23,36 @@ SECTOR_MAP = {
     "Trading": ["BBC", "STC"],
 }
 
+print("=== Assigning Sectors ===")
+updated = 0
+skipped_locked = 0
+not_found = 0
 
-class Command(BaseCommand):
-    help = 'Populates the 14 required stock sectors and seeds Stock rows from the authoritative SECTOR_MAP'
-
-    def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS('🚀 Starting sector + stock population...'))
-
-        sectors_created = 0
-        stocks_created = 0
-        stocks_assigned = 0
-
-        for sector_name, symbols in SECTOR_MAP.items():
-            sector_obj, created = Sector.objects.get_or_create(name=sector_name)
-            if created:
-                self.stdout.write(f'  ✓ Sector created: {sector_name}')
-                sectors_created += 1
+for sector_name, symbols in SECTOR_MAP.items():
+    # Ensure sector exists
+    sector_obj, _ = Sector.objects.get_or_create(name=sector_name)
+    
+    for symbol in symbols:
+        stock = Stock.objects.filter(symbol__iexact=symbol.strip()).first()
+        if stock:
+            if getattr(stock, 'sector_locked', False):
+                print(f"  LOCKED (skip): {symbol}")
+                skipped_locked += 1
             else:
-                self.stdout.write(f'  - Sector exists: {sector_name}')
+                stock.sector = sector_obj
+                stock.save(update_fields=['sector'])
+                updated += 1
+        else:
+            not_found += 1
 
-            for symbol in symbols:
-                symbol = symbol.strip().upper()
-                stock, stock_created = Stock.objects.get_or_create(
-                    symbol=symbol,
-                    defaults={'company_name': symbol, 'sector': sector_obj}
-                )
-                if stock_created:
-                    stocks_created += 1
-                elif stock.sector != sector_obj and not getattr(stock, 'sector_locked', False):
-                    stock.sector = sector_obj
-                    stock.save(update_fields=['sector'])
-                    stocks_assigned += 1
+print(f"\nDone!")
+print(f"  Updated:        {updated}")
+print(f"  Skipped(locked):{skipped_locked}")
+print(f"  Not in DB:      {not_found}")
 
-        self.stdout.write(self.style.SUCCESS(
-            f'\n✅ Done! {sectors_created} sectors created, '
-            f'{stocks_created} stocks created, '
-            f'{stocks_assigned} stocks re-assigned.'
-        ))
+print("\n=== Verification ===")
+for sym in ['SABBL', 'RSML', 'ADBL', 'NTC']:
+    s = Stock.objects.filter(symbol__iexact=sym).select_related('sector').first()
+    sec = s.sector.name if s and s.sector else 'None'
+    locked = getattr(s, 'sector_locked', False) if s else False
+    print(f"  {sym}: sector='{sec}' locked={locked}")

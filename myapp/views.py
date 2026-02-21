@@ -1100,15 +1100,47 @@ def sanitize_float(val):
 @require_http_methods(["GET"])
 @login_required
 def api_sectors(request):
-    """Return list of distinct sectors for dropdown"""
+    """Return list of sectors with id and name"""
     from myapp.models import Sector
-    sectors = list(Sector.objects.values_list('name', flat=True).order_by('name'))
-    
-    # Ensure 'Others' or 'Uncategorized' exists if needed
-    if 'Uncategorized' not in sectors:
-        sectors.append('Uncategorized')
-        
+    sectors = list(Sector.objects.values('id', 'name').order_by('name'))
     return JsonResponse({'success': True, 'sectors': sectors})
+
+
+@require_http_methods(["GET"])
+@login_required
+def api_stocks(request):
+    """
+    GET /api/stocks/           → all stocks with sector info
+    GET /api/stocks/?sector=<id> → filtered by sector id
+    GET /api/stocks/?search=<q>  → filtered by symbol or company_name
+    """
+    from myapp.models import Stock
+    qs = Stock.objects.select_related('sector').order_by('symbol')
+
+    sector_id = request.GET.get('sector', '').strip()
+    if sector_id:
+        try:
+            qs = qs.filter(sector_id=int(sector_id))
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'error': 'Invalid sector id'}, status=400)
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(symbol__icontains=search) | Q(company_name__icontains=search)
+        )
+
+    data = [
+        {
+            'symbol': s.symbol,
+            'company_name': s.company_name or s.symbol,
+            'sector_id': s.sector_id,
+            'sector_name': s.sector.name if s.sector else 'Others',
+        }
+        for s in qs
+    ]
+    return JsonResponse({'success': True, 'stocks': data, 'count': len(data)})
 
 @require_http_methods(["GET"])
 @login_required

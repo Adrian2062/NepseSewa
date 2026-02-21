@@ -8,15 +8,28 @@ logger = logging.getLogger(__name__)
 def scrape_market_data():
     """
     Task to scrape NEPSE market data.
-    Runs every minute between 11:00 AM and 3:00 PM.
+    Runs every minute during market hours.
     """
     logger.info("Starting market data scrape task")
     try:
-        # Run the existing scraper command in 'once' mode
+        # Run the existing scraper command which now uses StockService
         call_command('scrape_nepse', once=True)
         logger.info("Market data scrape task completed successfully")
     except Exception as e:
         logger.error(f"Error in market data scrape task: {str(e)}")
+
+@shared_task
+def sync_stock_metadata():
+    """
+    Task to sync stock metadata (symbols, names, sectors).
+    Runs daily.
+    """
+    logger.info("Starting stock metadata sync task")
+    try:
+        call_command('sync_metadata')
+        logger.info("Stock metadata sync task completed successfully")
+    except Exception as e:
+        logger.error(f"Error in stock metadata sync task: {str(e)}")
 
 @shared_task
 def generate_watchlist_recommendations():

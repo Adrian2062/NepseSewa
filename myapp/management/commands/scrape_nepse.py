@@ -9,8 +9,10 @@ from bs4 import BeautifulSoup
 import time
 from django.utils import timezone
 import chromedriver_autoinstaller
-from myapp.models import NEPSEPrice, MarketIndex, MarketSummary, NEPSEIndex
 import re
+import chromedriver_autoinstaller
+from myapp.models import NEPSEPrice, MarketIndex, MarketSummary, NEPSEIndex
+from myapp.services.stock_service import StockService
 chromedriver_autoinstaller.install()
 
 class Command(BaseCommand):
@@ -100,15 +102,15 @@ class Command(BaseCommand):
 
     def scrape_all_data(self):
         """Scrape all market data from Merolagani"""
-        driver = self.create_driver()
+        # 1. Update live prices for all stocks using the service
+        # This handles Stock model updates and NEPSEPrice history
+        self.stdout.write("\n[📈 Updating live stock prices...]")
+        StockService.update_live_prices()
         
+        # 2. Update market summary and indices (legacy logic kept for specific market data)
+        driver = self.create_driver()
         try:
-            # Scrape market summary (NEPSE Index and overview)
             self.scrape_market_summary(driver)
-            
-            # Scrape stock prices
-            self.scrape_stock_prices(driver)
-            
         finally:
             driver.quit()
 

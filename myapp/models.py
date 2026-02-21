@@ -29,13 +29,40 @@ class CustomUser(AbstractUser):
         return f"{self.first_name} {self.last_name}"
 
 
+# ============= SECTOR MODEL =============
+class Sector(models.Model):
+    """Categorize stocks into sectors (e.g., Banking, Hydropower)"""
+    name = models.CharField(max_length=100, unique=True)
+    
+    class Meta:
+        db_table = 'sectors'
+        verbose_name_plural = "Sectors"
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        import re
+        # Prevent numeric values or strings with mostly numbers (like market cap)
+        if re.match(r'^[\d,.\s]+$', self.name):
+            raise ValidationError({'name': "Sector name cannot be a numeric value."})
+
+
 # ============= STOCK METADATA (NEW) =============
 class Stock(models.Model):
-    """Store static stock details (Symbol, Name, Sector)"""
-    symbol = models.CharField(max_length=50, unique=True, db_index=True)
-    name = models.CharField(max_length=200)
-    sector = models.CharField(max_length=100, db_index=True)
+    """Store static stock details and current market price for quick lookup"""
+    symbol = models.CharField(max_length=20, unique=True, db_index=True)
+    company_name = models.CharField(max_length=255, default="")
+    sector = models.ForeignKey(Sector, on_delete=models.SET_NULL, null=True, blank=True, related_name='stocks')
+    
+    # Live data fields (updated every minute)
+    last_price = models.FloatField(default=0)
+    change = models.FloatField(null=True, blank=True)
+    volume = models.FloatField(null=True, blank=True)
+    
     is_active = models.BooleanField(default=True)
+    sector_locked = models.BooleanField(default=False, help_text="If True, the scraper will not overwrite the sector.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -46,8 +73,13 @@ class Stock(models.Model):
             models.Index(fields=['sector', 'symbol']),
         ]
 
+    def save(self, *args, **kwargs):
+        if self.symbol:
+            self.symbol = self.symbol.strip().upper()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.symbol} ({self.sector})"
+        return f"{self.symbol} - {self.company_name}"
 
 
 # ============= NEPSE STOCK PRICES =============

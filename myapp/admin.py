@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import (
     CustomUser, NEPSEPrice, NEPSEIndex, MarketIndex, 
     MarketSummary, Trade, Order, Portfolio, TradeExecution, MarketSession,
-    Stock, CandlestickLesson, LessonQuiz, UserLessonProgress,
+    Stock, Sector, CandlestickLesson, LessonQuiz, UserLessonProgress,
     Course, CourseCategory, UserCourseProgress,
     SubscriptionPlan, UserSubscription, PaymentTransaction
 )
@@ -17,6 +17,11 @@ admin.site.register(MarketSummary)
 admin.site.register(Trade)
 admin.site.register(CourseCategory)
 
+@admin.register(Sector)
+class SectorAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+
 
 # Trading Engine Models
 @admin.register(Order)
@@ -28,9 +33,14 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    list_display = ('symbol', 'name', 'sector', 'is_active', 'updated_at')
-    search_fields = ('symbol', 'name', 'sector')
-    list_filter = ('sector', 'is_active')
+    list_display = ('symbol', 'company_name', 'get_sector_name', 'last_price', 'is_active', 'sector_locked', 'updated_at')
+    search_fields = ('symbol', 'company_name', 'sector__name')
+    list_filter = ('sector', 'is_active', 'sector_locked')
+    autocomplete_fields = ['sector'] # Enables better dropdown if many sectors
+
+    def get_sector_name(self, obj):
+        return obj.sector.name if obj.sector else "-"
+    get_sector_name.short_description = 'Sector'
 
 @admin.register(Portfolio)
 class PortfolioAdmin(admin.ModelAdmin):

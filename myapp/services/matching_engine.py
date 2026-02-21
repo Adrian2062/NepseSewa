@@ -205,14 +205,21 @@ class MatchingEngine:
         Enforces realistic prices (±5% of LTP) and checks balance/holdings.
         Returns (is_valid, error_message)
         """
-        from myapp.models import NEPSEPrice
+        from myapp.models import Stock, MarketSession
         
-        # 1. Fetch latest price (LTP) for enforcement
+        # 0. Check Market Status (Professional requirement)
+        active_session = MarketSession.objects.filter(is_active=True).first()
+        if not active_session or active_session.status != 'CONTINUOUS':
+            return False, "Market is currently CLOSED. Trading is only allowed during continuous sessions."
+
+        # 1. Fetch latest price from Stock model (Professional Architecture)
         try:
-            latest = NEPSEPrice.objects.filter(symbol=order.symbol).latest('timestamp')
-            ltp = Decimal(str(latest.ltp))
-        except NEPSEPrice.DoesNotExist:
-            return False, f"Price data for {order.symbol} not found. Cannot place order."
+            stock = Stock.objects.get(symbol=order.symbol)
+            if not stock.last_price or stock.last_price <= 0:
+                return False, f"Trading for {order.symbol} is unavailable until a first valid price is recorded."
+            ltp = Decimal(str(stock.last_price))
+        except Stock.DoesNotExist:
+            return False, f"Stock {order.symbol} is not registered in the system."
 
         # 2. Handle Market Orders Price Setting
         if order.order_type == 'MARKET':

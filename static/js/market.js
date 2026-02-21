@@ -1,23 +1,5 @@
 // Market Page Logic with Strict Client-Side Sector Mapping
 
-// User-provided Sector Data
-const SECTOR_DATA = {
-    "Commercial Banks": ["ADBL", "GBIME", "CZBIL", "NIMBPO", "SBL", "SANIMA", "NMB", "NICA", "MBL", "NBL", "EBL", "PCBL", "SCB", "LSL", "SBI", "KBL", "PRVU"],
-    "Development Banks": ["MLBL", "KSBBL", "MDB", "MNBBL", "SINDU", "GRDBL", "JBBL", "EDBL", "GBBL", "NABBC", "SADBL", "CORBL", "SHINE", "LBBL", "SAPDBL"],
-    "Microfinance": ["LLBS", "SMFBS", "MERO", "SKBBL", "CYCL", "FOWAD", "NUBL", "SWBBL", "DDBL", "GLBSL", "GMFBS", "MSLB", "FMDBL", "JBLB", "ULBSL", "DLBS", "NMFBS", "NMLBBL", "MLBSL", "ALBSL"],
-    "Finance": ["PROFL", "MPFL", "CFCL", "MFIL", "JFL", "SFCL", "GFCL", "PFL", "NFS", "SIFC", "RLFL", "ICFC", "BFC"],
-    "Investment": ["NRN", "HATHY", "NIFRA", "CIT", "HIDCL", "CHDC"],
-    "Hotels & Tourism": ["BANDIPUR", "KDL", "TRH", "SHL", "OHL", "CITY", "CGH"],
-    "Manufacturing & Processing": ["GCIL", "SHIVM", "OMPL", "SONA", "SYPNL", "SAIL", "BNT", "SAGAR", "SARBTM", "UNL", "HDL", "BNL"],
-    "Others": ["NTC", "NRM", "NWCL", "MKCL", "TTL", "JHAPA", "HRL", "NRIC", "PURE"],
-    "Hydropower": ["SANVI", "KKHC", "BHCL", "AKJCL", "TPC", "DHEL", "SSHL", "HDHPC", "NHPC", "SPL", "SMHL", "IHL", "NHDL", "AHL", "BUNGAL", "TSHL", "RFPL", "MHCL", "GVL", "BNHC", "LEC", "UMRH", "SHEL", "SHPC", "RIDI", "NGPL", "MBJC", "DORDI", "SGHC", "MHL", "USHEC", "BHPL", "SMH", "MKHC", "MAKAR", "MKHL", "DOLTI", "MCHL", "MEL", "RAWA", "KBSH", "MEHL", "ULHC", "MANDU", "BGWT", "TVCL", "VLUCL", "CKHL", "BEDC", "UPPER", "GHL", "UPCL", "MHNL", "PPCL", "SJCL", "MEN", "GLH", "RURU", "SAHAS", "SPC", "NYADI", "BHDC", "HHL", "UHEWA", "PPL", "SPHL", "SIKLES", "EHPL", "SMJC", "MMKJL", "PHCL"],
-    "Life Insurance": ["HLI", "CLI", "ILI", "PMLI", "RNLI", "SNLI", "SRLI", "CREST", "GMLI", "ALICL", "NLICL", "LICN", "NLIC"],
-    "Non-Life Insurance": ["SGIC", "NMIC", "SICL", "IGI", "RBCL", "HEI", "NIL", "PRIN", "NICL", "SPIL", "UAIL", "NLG"],
-    "Mutual Fund": ["NMBHF2", "GBIMESY2", "SIGS2", "SFEF", "NICBF", "NSIF2", "LVF2", "C30MF", "GIBF1", "NIBLSTF", "CMF2", "SIGS3", "NICGF2", "HLICF", "NICFC", "NBF2", "H8020", "MMF1", "SEF", "KDBY"],
-    "Corporate Debentures": ["NBBD2085", "SBLD2091", "PBD85", "ADBLD83", "SBID83", "ICFCD88", "EBLD91", "NABILD2089", "EBLEB89", "MBLD2085", "SRBLD83", "SBID89", "PBD88", "GBBD85", "CIZBD86", "NICAD2091", "CIZBD90", "SAND2085", "RBBD2088"],
-    "Trading": ["BBC", "STC"]
-};
-
 // Global state
 let allMarketData = []; // Stores the full fetched list
 let filteredData = [];  // Stores the list currently shown (after search/filter)
@@ -55,21 +37,28 @@ async function initMarketPage() {
 }
 
 /**
- * Function 1: Populates the dropdown menu with all sectors as options.
+ * Function 1: Populates the dropdown menu with all sectors from the database.
  */
-function populateSectorsDropdown() {
+async function populateSectorsDropdown() {
     const select = document.getElementById('sectorSelect');
     if (!select) return;
 
-    select.innerHTML = '<option value="">All Sectors</option>';
+    try {
+        const res = await fetch('/api/sectors/');
+        const json = await res.json();
 
-    // Sort sectors alphabetically if desired, or keep order
-    Object.keys(SECTOR_DATA).forEach(sector => {
-        const option = document.createElement('option');
-        option.value = sector;
-        option.textContent = sector;
-        select.appendChild(option);
-    });
+        if (json.success) {
+            select.innerHTML = '<option value="">All Sectors</option>';
+            json.sectors.forEach(sector => {
+                const option = document.createElement('option');
+                option.value = sector;
+                option.textContent = sector;
+                select.appendChild(option);
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load sectors", e);
+    }
 }
 
 /**
@@ -151,10 +140,9 @@ function applyFilters() {
     // Start with all data
     let result = allMarketData;
 
-    // 1. Filter by Sector (using SECTOR_DATA JSON)
-    if (selectedSector && SECTOR_DATA[selectedSector]) {
-        const allowedSymbols = SECTOR_DATA[selectedSector].map(s => s.toUpperCase()); // Ensure upper case
-        result = result.filter(item => allowedSymbols.includes(item.symbol.toUpperCase()));
+    // 1. Filter by Sector (Trusting backend sector name)
+    if (selectedSector) {
+        result = result.filter(item => (item.sector || 'Others') === selectedSector);
     }
 
     // 2. Filter by Search
@@ -197,18 +185,8 @@ function renderTable() {
         const chg = Number(item.change_pct);
         const cls = chg >= 0 ? 'text-success' : 'text-danger';
 
-        // Try to find sector from our JSON first, fallback to item.sector
-        let displaySector = item.sector || '';
-        if (!displaySector || displaySector === 'Others') {
-            // Find which sector this symbol belongs to in our map
-            for (const [sec, syms] of Object.entries(SECTOR_DATA)) {
-                if (syms.includes(item.symbol.toUpperCase())) { // Case insensitive check
-                    displaySector = sec;
-                    break;
-                }
-            }
-        }
-
+        // Trust the sector sent by the API
+        const displaySector = item.sector || '';
         const sectorHtml = displaySector ? `<br><small class="text-muted" style="font-size:0.75em">${displaySector}</small>` : '';
 
         return `
@@ -224,7 +202,7 @@ function renderTable() {
           <td class="text-end">${fmtNumber(item.open, 2)}</td>
           <td class="text-end">${fmtNumber(item.high, 2)}</td>
           <td class="text-end">${fmtNumber(item.low, 2)}</td>
-          <td class="text-end">${fmtInt(item.volume)}</td>
+          <td class="text-end pe-4">${fmtInt(item.volume)}</td>
         </tr>
       `;
     }).join('');

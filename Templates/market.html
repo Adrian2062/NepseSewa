@@ -105,14 +105,14 @@
       <span class="input-group-text bg-transparent border-end-0">
         <i class="fa-solid fa-search text-muted"></i>
       </span>
-      <input id="marketSearch" type="text" class="form-control border-start-0 ps-0"
+      <input id="market-search-input" type="text" class="form-control border-start-0 ps-0"
         placeholder="Search symbol (e.g. NICA)...">
     </div>
   </div>
 
   <!-- Sector select -->
   <div style="width: 200px;">
-    <select class="form-select" id="sectorSelect">
+    <select class="form-select" id="market-sector-select" style="min-width:180px;">
       <option value="">All Sectors</option>
       <!-- Populated dynamically via JS -->
       <option value="Commercial Banks">Commercial Banks</option>
@@ -173,5 +173,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/market.js' %}?v={{ 1767533110 }}"></script>
+<script src="{% static 'js/market.js' %}?v=1767533111"></script>
 {% endblock %}

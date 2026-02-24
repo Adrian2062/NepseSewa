@@ -1405,7 +1405,7 @@ def api_get_watchlist(request):
     latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
     
     # 3. Fetch stock metadata (names)
-    stocks_meta = {s.symbol: s.name for s in Stock.objects.filter(symbol__in=watchlist_symbols)}
+    stocks_meta = {s.symbol: s.company_name for s in Stock.objects.filter(symbol__in=watchlist_symbols)}
     
     # 4. Fetch latest prices
     prices_map = {}

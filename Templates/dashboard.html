@@ -231,29 +231,26 @@
 </div>
 
 <!-- Watchlist Preview (Static Example) -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title">My Watchlist</h5>
+<div class="card market-card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title text-success">My Watchlist</h5>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light">
-                    <tr>
-                        <th class="ps-3">Symbol</th>
-                        <th>Name</th>
-                        <th>Price</th>
-                        <th>Change</th>
-                        <th class="text-end pe-3">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="dashboardWatchlistTbody">
-                    <tr>
-                        <td colspan="5" class="text-center p-4 text-muted">Loading watchlist...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <table class="table premium-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-3">Symbol</th>
+                    <th>Price</th>
+                    <th>Change</th>
+                    <th class="text-end pe-3">Action</th>
+                </tr>
+            </thead>
+            <tbody id="dashboardWatchlistTbody">
+                <tr>
+                    <td colspan="4" class="text-center p-4 text-muted">Loading watchlist...</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 

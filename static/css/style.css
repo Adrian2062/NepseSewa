@@ -632,3 +632,83 @@ body {
         display: none !important;
     }
 }
+
+/* Premium Table Styling */
+.premium-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.premium-table thead th {
+    background: transparent;
+    /* Removed header row color */
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #64748b;
+    /* Muted slate for clean header */
+    border-bottom: 2px solid #f1f5f9;
+    padding: 0.85rem 0.75rem;
+}
+
+.premium-table tbody tr {
+    transition: all 0.15s ease;
+    border-bottom: 1px solid var(--border);
+
+}
+
+.premium-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.premium-table tbody tr:hover td {
+    background-color: var(--primary-light) !important;
+    color: var(--primary-dark) !important;
+}
+
+.premium-table td {
+    padding: 0.85rem 0.75rem;
+    vertical-align: middle;
+}
+
+/* Change Badges (Matching Top Gainers simplified look) */
+.change-badge {
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.change-badge.up {
+    background: transparent;
+    color: var(--success);
+}
+
+.change-badge.down {
+    background: transparent;
+    color: var(--danger);
+}
+
+/* Action Button */
+.btn-trade-premium {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.35rem 0.8rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--dark);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-trade-premium:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white !important;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}

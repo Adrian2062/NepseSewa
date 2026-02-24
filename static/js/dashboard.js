@@ -265,23 +265,34 @@ async function loadDashboardWatchlist() {
         if (json.success) {
             const list = json.data;
             if (!list || list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">Your watchlist is empty.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted">Your watchlist is empty.</td></tr>';
                 return;
             }
 
             let html = '';
             list.forEach(item => {
-                const cls = item.change >= 0 ? 'text-success' : 'text-danger';
-                const sign = item.change >= 0 ? '+' : '';
+                const isUp = item.change >= 0;
+                const textClass = isUp ? 'text-success' : 'text-danger';
+                const sign = isUp ? '+' : '';
+                const icon = isUp ? 'fa-caret-up' : 'fa-caret-down';
 
                 html += `
                 <tr>
-                    <td class="ps-3 fw-bold">${item.symbol}</td>
-                    <td class="text-muted">${item.name}</td>
-                    <td class="fw-bold">${fmtNumber(item.price)}</td>
-                    <td class="${cls} fw-bold">${sign}${fmtNumber(item.change)}%</td>
+                    <td class="ps-3">
+                        <a href="/trade/?symbol=${item.symbol}" class="fw-bold text-dark text-decoration-none hover-link" style="font-size: 0.95rem;">${item.symbol}</a>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark">Rs ${fmtNumber(item.price)}</div>
+                    </td>
+                    <td>
+                        <div class="${textClass} fw-bold" style="font-size: 0.85rem;">
+                            <i class="fas ${icon} me-1"></i>${sign}${fmtNumber(item.change)}%
+                        </div>
+                    </td>
                     <td class="text-end pe-3">
-                        <a href="/trade/?symbol=${item.symbol}" class="btn btn-sm btn-outline-success">Trade</a>
+                        <a href="/trade/?symbol=${item.symbol}" class="btn-trade-premium">
+                            Trade <i class="fas fa-arrow-right ms-1" style="font-size: 0.7rem;"></i>
+                        </a>
                     </td>
                 </tr>
                 `;

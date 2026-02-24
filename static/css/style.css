@@ -72,7 +72,8 @@ body {
     z-index: 1040;
     min-height: 70px;
 }
-.navbar > .container-fluid {
+
+.navbar>.container-fluid {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -193,9 +194,12 @@ body {
     transition: all 0.2s ease;
     overflow: hidden;
 }
+
 .search-box {
-    width: 300px;      /* Fixed stable width */
-    flex-shrink: 0;    /* Prevent shrinking */
+    width: 300px;
+    /* Fixed stable width */
+    flex-shrink: 0;
+    /* Prevent shrinking */
 }
 
 
@@ -410,7 +414,10 @@ body {
     /* Visible height */
     overflow-y: auto;
     /* Internal scrolling */
-    padding: 1.5rem 1.5rem 2rem;
+    padding: 1.5rem 1.5rem 0rem;
+    /* Bottom padding handled by footer */
+    display: flex;
+    flex-direction: column;
 }
 
 /* ticker */

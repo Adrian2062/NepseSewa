@@ -1,0 +1,139 @@
+<style>
+    .app-footer {
+        background: #fff;
+        border-top: 1px solid var(--border);
+        padding: 2rem 0;
+        margin-top: auto;
+        /* Sticky footer in flexbox */
+    }
+
+    .app-footer h6 {
+        color: var(--dark);
+        font-weight: 700;
+        margin-bottom: 1.25rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .app-footer ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .app-footer ul li {
+        margin-bottom: 0.75rem;
+    }
+
+    .app-footer ul li a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        display: inline-block;
+    }
+
+    .app-footer ul li a:hover {
+        color: var(--primary);
+        transform: translateX(3px);
+    }
+
+    .app-footer-bottom {
+        border-top: 1px solid var(--border);
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        font-size: 0.8rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .app-footer-social {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .app-footer-social a {
+        color: var(--muted);
+        font-size: 1rem;
+        transition: color 0.2s ease;
+    }
+
+    .app-footer-social a:hover {
+        color: var(--primary);
+    }
+
+    .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        text-decoration: none;
+    }
+</style>
+
+<footer class="app-footer">
+    <div class="container-fluid px-4">
+        <div class="row">
+            <div class="col-lg-4 mb-4 mb-lg-0">
+                <a href="{% url 'dashboard' %}" class="footer-brand">
+                    <i class="fas fa-chart-line"></i> NepseSewa
+                </a>
+                <p class="small pe-lg-5">
+                    Master the Nepal Stock Exchange with our virtual trading platform.
+                    Practice with zero risk and real-time market data.
+                </p>
+                <div class="app-footer-social">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-3 col-lg-2 mb-4">
+                <h6>Navigation</h6>
+                <ul>
+                    <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'market' %}">Market Data</a></li>
+                    <li><a href="{% url 'trade' %}">Trade Stocks</a></li>
+                    <li><a href="{% url 'watchlist' %}">Watchlist</a></li>
+                </ul>
+            </div>
+            <div class="col-sm-6 col-md-3 col-lg-2 mb-4">
+                <h6>Learn</h6>
+                <ul>
+                    <li><a href="{% url 'learn' %}">Learning Center</a></li>
+                    <li><a href="#">Trading Basics</a></li>
+                    <li><a href="#">Technical Analysis</a></li>
+                    <li><a href="#">Market News</a></li>
+                </ul>
+            </div>
+            <div class="col-sm-6 col-md-3 col-lg-2 mb-4">
+                <h6>Support</h6>
+                <ul>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                    <li><a href="#">Status</a></li>
+                    <li><a href="#">FAQ</a></li>
+                </ul>
+            </div>
+            <div class="col-sm-6 col-md-3 col-lg-2 mb-4">
+                <h6>Legal</h6>
+                <ul>
+                    <li><a href="#">Terms of Use</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Cookie Policy</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="app-footer-bottom">
+            <div>&copy; {% now "Y" %} NepseSewa. Built for education.</div>
+        </div>
+    </div>
+</footer>

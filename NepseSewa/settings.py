@@ -251,16 +251,15 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 
-
-# ========== ESEWA INTEGRATION SETTINGS ==========
-# For production, change to: https://epay.esewa.com.np
-ESEWA_EPAY_URL = "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-# Sandbox credentials:
-ESEWA_MERCHANT_CODE = "EPAYTEST"
-ESEWA_SECRET_KEY = "8g8M898P8Go7iwK6H169w9S8alot76bG"
-
+# ========== INTEGRATION SETTINGS ==========
 # Redirect URLs (Must be accessible from web for verification or redirect back)
 # In production, use your actual domain
 BASE_URL = "http://127.0.0.1:8000"
-ESEWA_SUCCESS_URL = f"{BASE_URL}/payment/esewa/success/"
-ESEWA_FAILURE_URL = f"{BASE_URL}/payment/esewa/failure/"
+# ========== KHALTI INTEGRATION SETTINGS ==========
+KHALTI_PUBLIC_KEY = "e62e4d9b16a84b1eb0cbd2dc24f23603"
+KHALTI_SECRET_KEY = "1025bef34dfe40f58667375da641f6e7"
+KHALTI_INITIATE_URL = "https://a.khalti.com/api/v2/epayment/initiate/"
+KHALTI_LOOKUP_URL = "https://a.khalti.com/api/v2/epayment/lookup/"
+
+# Redirect URLs
+KHALTI_RETURN_URL = f"{BASE_URL}/payment/khalti/success/"

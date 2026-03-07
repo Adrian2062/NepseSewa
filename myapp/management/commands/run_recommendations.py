@@ -32,6 +32,7 @@ class Command(BaseCommand):
                 "confidence": "DOUBLE PRECISION",
                 "market_condition": "VARCHAR(100)",
                 "trend": "VARCHAR(100)",
+                "market_state": "VARCHAR(50)",
                 "reason": "TEXT",
                 "extra_data": "JSONB",
                 "valid_until": "TIMESTAMP WITH TIME ZONE"
@@ -41,6 +42,9 @@ class Command(BaseCommand):
                 if field not in cols:
                     self.stdout.write(f'   Self-Healing: Adding institutional column {field}...')
                     cursor.execute(f'ALTER TABLE stock_recommendations ADD COLUMN "{field}" {ftype};')
+                else:
+                    # Ensure it's nullable if it already exists (fixes the NOT NULL constraint error)
+                    cursor.execute(f'ALTER TABLE stock_recommendations ALTER COLUMN "{field}" DROP NOT NULL;')
         
         watchlist_only = options.get('watchlist_only', False)
         target_symbol = options.get('symbol')

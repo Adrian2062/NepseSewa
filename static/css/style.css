@@ -61,16 +61,49 @@ body {
 /* navbar */
 .navbar {
     background: #fff;
-    border-bottom: 1px solid var(--border);
-    padding: 0.65rem 1rem;
+    border-bottom: 2px solid #f1f5f9;
+    padding: 0;
     position: fixed;
-    /* Fixed top */
     top: 0;
     left: 0;
     right: 0;
-    /* Full width */
-    z-index: 1040;
-    min-height: 70px;
+    z-index: 1050;
+    height: 72px;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-content-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+}
+
+.navbar-section {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.navbar-left {
+    flex: 1 1 30%;
+    justify-content: flex-start;
+}
+
+.navbar-center {
+    flex: 1 1 40%;
+    justify-content: center;
+    gap: 2rem;
+    padding: 0 1rem;
+}
+
+.navbar-right {
+    flex: 1 1 30%;
+    justify-content: flex-end;
+    gap: 1.25rem;
 }
 
 .navbar>.container-fluid {
@@ -92,15 +125,15 @@ body {
 }
 
 .navbar-brand {
-    font-size: 1.35rem;
+    font-size: 1.4rem;
     font-weight: 800;
     color: var(--primary) !important;
-    letter-spacing: -0.4px;
+    letter-spacing: -0.5px;
     display: flex;
     align-items: center;
-    gap: .5rem;
+    gap: 0.6rem;
+    white-space: nowrap;
 }
-
 
 .btn-premium-compact {
     padding: 0.2rem 0.6rem !important;
@@ -135,35 +168,34 @@ body {
 }
 
 .nav-index-name {
-    font-size: 0.70rem;
+    font-size: 0.65rem;
     font-weight: 800;
-    color: #9ca3af;
+    color: #94a3b8;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.5px;
 }
 
 .nav-index-value {
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 800;
-    color: #111827;
+    color: #1e293b;
 }
 
 .nav-index-change {
-    font-size: 0.80rem;
+    font-size: 0.75rem;
     font-weight: 700;
 }
 
 .nav-v-separator {
     width: 1px;
-    height: 34px;
-    background: #e5e7eb;
+    height: 32px;
+    background: #f1f5f9;
     flex-shrink: 0;
 }
 
 .nav-session-info {
     display: flex;
     flex-direction: column;
-    min-width: 180px;
 }
 
 .nav-session-info .nav-index-value {
@@ -180,10 +212,10 @@ body {
 }
 
 .nav-total-item {
-    font-size: 1.0rem;
+    font-size: 0.95rem;
     font-weight: 800;
     color: #2563eb;
-    line-height: 1.2;
+    line-height: 1.3;
 }
 
 /* search */
@@ -611,10 +643,18 @@ body {
 }
 
 @media (max-width: 992px) {
+    .navbar {
+        height: 64px;
+    }
+
+    .navbar-center {
+        display: none !important;
+    }
+
     .sidebar {
         left: -100%;
-        top: 70px;
-        height: calc(100vh - 70px);
+        top: 64px;
+        height: calc(100vh - 64px);
         transition: left 0.25s ease;
         box-shadow: 6px 0 18px rgba(0, 0, 0, 0.14);
     }
@@ -625,12 +665,18 @@ body {
 
     .main-content {
         margin-left: 0;
+        margin-top: 64px;
+        height: calc(100vh - 64px);
         padding: 1rem;
     }
+}
 
-    .navbar-summary-integrated {
+@media (max-width: 1200px) {
+    .market-indicators-integrated {
         display: none !important;
     }
+
+    <<<<<<< HEAD
 }
 
 /* Premium Table Styling */
@@ -711,4 +757,149 @@ body {
     border-color: var(--primary);
     color: white !important;
     box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
+
+/* Premium Footer Styles */
+.main-footer {
+    background: #ffffff;
+    padding: 5rem 0 2rem;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 4rem;
+}
+
+.footer-brand {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.5px;
+}
+
+.footer-brand i {
+    font-size: 1.4rem;
+}
+
+.footer-desc {
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+    font-weight: 500;
+}
+
+.footer-heading {
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #1e293b;
+    margin-bottom: 1.75rem;
+}
+
+.footer-links {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.footer-links li {
+    margin-bottom: 1rem;
+    list-style-type: none !important;
+}
+
+.footer-link {
+    color: #64748b !important;
+    text-decoration: none !important;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+}
+
+.footer-link:hover {
+    color: var(--primary) !important;
+    transform: translateX(5px);
+}
+
+.social-links {
+    display: flex;
+    gap: 1rem;
+}
+
+.social-link {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none !important;
+    transition: all 0.3s ease;
+    border: 1px solid #f1f5f9;
+}
+
+.social-link:hover {
+    background: var(--primary);
+    color: #ffffff;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+    border-color: var(--primary);
+}
+
+.footer-bottom {
+    margin-top: 5rem;
+    padding: 2.5rem 0;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.footer-copy {
+    color: #94a3b8;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.footer-legal-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.legal-link {
+    color: #94a3b8 !important;
+    text-decoration: none !important;
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: color 0.2s ease;
+}
+
+.legal-link:hover {
+    color: var(--primary) !important;
+}
+
+@media (max-width: 768px) {
+    .main-footer {
+        padding: 4rem 1.5rem 2rem;
+    }
+
+    .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .footer-legal-links {
+        justify-content: center;
+        width: 100%;
+    }
+
+    >>>>>>>23fee82 (feat: Integrate Khalti payment gateway, update database models for premium status, and remove legacy eSewa manual payment system)
 }

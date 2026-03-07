@@ -73,8 +73,10 @@ urlpatterns = [
     # Manual Payment
     path('pricing/', views.pricing, name='pricing'),
     path('subscribe/<int:plan_id>/', views.join_plan, name='subscribe'),
-    path('payment/manual-submit/', views.manual_payment_submit, name='manual_payment_submit'),
-    path('api/payment-status/', views.api_check_payment_status, name='api_payment_status'),
+
+    # Khalti Payment
+    path('pay/khalti/', views.khalti_initiate, name='khalti_pay'),
+    path('payment/khalti/success/', views.khalti_verify, name='khalti_success'),
 
     # Portfolio Analytics APIs
     path('api/portfolio/analytics/', views.api_portfolio_analytics, name='api_portfolio_analytics'),

@@ -16,6 +16,7 @@ class CustomUser(AbstractUser):
     # Settings fields
     phone = models.CharField(max_length=15, blank=True, null=True)
     buy_sell_notifications = models.BooleanField(default=True)
+    is_premium = models.BooleanField(default=False) # Added for Khalti Premium
     
     USERNAME_FIELD = 'email'
     EMAIL_FIELD = 'email'
@@ -629,7 +630,8 @@ class PaymentTransaction(models.Model):
     transaction_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    gateway = models.CharField(max_length=50, default='esewa')
+    gateway = models.CharField(max_length=50, default='khalti')
+    pidx = models.CharField(max_length=255, null=True, blank=True) # Added for Khalti
     verification_image = models.ImageField(upload_to='payment_proofs/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

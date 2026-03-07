@@ -15,6 +15,8 @@ from django.views.decorators.http import require_GET
 from .forms import RegistrationForm
 import uuid
 import json
+import requests
+from django.conf import settings
 from .models import (
     NEPSEPrice, NEPSEIndex, MarketIndex, MarketSummary, Order, TradeExecution, 
     Portfolio, Watchlist, StockRecommendation, CandlestickLesson, UserLessonProgress,
@@ -532,18 +534,10 @@ def pricing(request):
     """View to display subscription plans"""
     plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
     
-    pending_transaction = None
-    if request.user.is_authenticated:
-        pending_transaction = PaymentTransaction.objects.filter(
-            user=request.user, 
-            status='PENDING'
-        ).first()
-
     context = get_nepse_context()
     context.update({
         'active_page': 'pricing',
         'plans': plans,
-        'pending_transaction': pending_transaction,
     })
     return render(request, 'pricing.html', context)
 
@@ -571,57 +565,63 @@ def join_plan(request, plan_id):
         messages.success(request, f"🚀 Your {plan.name} plan has been activated immediately! Welcome to NepseSewa.")
         return redirect('dashboard')
     
-    # If plan is paid, redirect to manual payment page (QR Code)
-    context = get_nepse_context()
-    context.update({
-        'plan': plan,
-        'active_page': 'pricing'
-    })
-    return render(request, 'manual_payment.html', context)
-
-@login_required
-def manual_payment_submit(request):
-    """Handle receipt upload for manual payment"""
-    if request.method == "POST":
-        plan_id = request.POST.get('plan_id')
-        transaction_id = request.POST.get('transaction_id', '').strip()
-        receipt = request.FILES.get('receipt')
-        
-        # 1. Basic validation
-        if not transaction_id:
-            messages.error(request, "Transaction ID is required.")
-            return redirect(request.META.get('HTTP_REFERER', 'pricing'))
-            
-        plan = get_object_or_404(SubscriptionPlan, id=plan_id)
-
-        # 2. Check for duplicate transaction IDs from OTHER users to prevent collisions
-        # If the SAME user is re-submitting, we'll allow updating their own pending one
-        existing_other = PaymentTransaction.objects.filter(transaction_id=transaction_id).exclude(user=request.user).exists()
-        if existing_other:
-            messages.error(request, f"Error: Transaction ID '{transaction_id}' has already been submitted by another user.")
-            return redirect(request.META.get('HTTP_REFERER', 'pricing'))
-            
-        # 3. Create a new pending payment transaction
-        try:
-            # Cleanup previous attempts so only the LATEST proof is considered "PENDING"
-            PaymentTransaction.objects.filter(user=request.user, status='PENDING').update(status='FAILED')
-            
-            transaction = PaymentTransaction.objects.create(
-                user=request.user,
-                plan=plan,
-                amount=plan.price,
-                transaction_id=transaction_id,
-                verification_image=receipt if receipt else None,
-                status='PENDING',
-                gateway='esewa_manual'
-            )
-            messages.success(request, "✅ Your payment proof has been submitted! An admin will verify it and activate your plan shortly.")
-        except Exception as e:
-            messages.error(request, f"Error submitting payment: {str(e)}")
-            
-        return redirect('subscribe', plan_id=plan_id)
+    # NEW: If plan is paid, use Khalti integration
+    purchase_id = str(uuid.uuid4())
+    amount_in_paisa = int(plan.price * 100)
     
-    return redirect('pricing')
+    # Cleanup previous Khalti attempts
+    PaymentTransaction.objects.filter(user=request.user, status='PENDING', gateway='khalti').update(status='FAILED')
+    
+    PaymentTransaction.objects.create(
+        user=request.user,
+        plan=plan,
+        amount=plan.price,
+        transaction_id=purchase_id,
+        gateway='khalti',
+        status='PENDING'
+    )
+
+    url = settings.KHALTI_INITIATE_URL
+    payload = {
+        "return_url": settings.KHALTI_RETURN_URL,
+        "website_url": settings.BASE_URL,
+        "amount": amount_in_paisa,
+        "purchase_order_id": purchase_id,
+        "purchase_order_name": f"{plan.name} Subscription",
+        "customer_info": {
+            "name": request.user.get_full_name() or request.user.username,
+            "email": request.user.email or "user@example.com",
+            "phone": "9800000000"
+        }
+    }
+
+    headers = {
+        "Authorization": f"Key {settings.KHALTI_SECRET_KEY}"
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        data = response.json()
+        
+        if "pidx" in data:
+            PaymentTransaction.objects.filter(transaction_id=purchase_id).update(pidx=data["pidx"])
+            return redirect(data["payment_url"])
+        else:
+            messages.error(request, f"Khalti Error: {data.get('detail', 'Failed to initiate payment')}")
+            return redirect('pricing')
+    except Exception as e:
+        messages.error(request, f"Connection error: {str(e)}")
+        return redirect('pricing')
+        
+    # Kept for reference but unreachable now, replacing manual flow
+    # context = get_nepse_context()
+    # context.update({
+    #     'plan': plan,
+    #     'active_page': 'pricing'
+    # })
+    # return render(request, 'manual_payment.html', context)
+
+# Removed manual_payment_submit
 
 
 def logout_view(request):
@@ -2302,31 +2302,104 @@ def api_portfolio_activity(request):
         print(f"Error in api_portfolio_activity: {e}")
         print(traceback.format_exc())
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+# Removed api_check_payment_status
+
 @login_required
-def api_check_payment_status(request):
-    """API endpoint to check if the user's latest payment has been verified"""
-    latest_payment = PaymentTransaction.objects.filter(
-        user=request.user, 
-        status='PENDING'
-    ).order_by('-created_at').first()
-    
-    # If no pending, check if a COMPLETED one was created/verified recently
-    if not latest_payment:
-        success_payment = PaymentTransaction.objects.filter(
-            user=request.user, 
-            status='COMPLETED'
-        ).order_by('-updated_at').first()
+def khalti_initiate(request):
+    """Initiates payment with Khalti API and redirects user"""
+    # Use the Premium Monthly plan for the 'Go Premium' flow
+    plan = SubscriptionPlan.objects.filter(name='Premium Monthly').first()
+    if not plan:
+        # Fallback to any Premium plan if Monthly specifically doesn't exist
+        plan = SubscriptionPlan.objects.filter(name__icontains='Premium').first()
         
-        # If updated in last 2 minutes, assume it was just verified
-        if success_payment:
-            time_diff = timezone.now() - success_payment.updated_at
-            if time_diff.total_seconds() < 120: # 2 minutes
-                 return JsonResponse({'status': 'COMPLETED', 'plan': success_payment.plan.name})
-                 
-        return JsonResponse({'status': 'none'})
+    if not plan:
+        messages.error(request, "Premium plan not available at the moment.")
+        return redirect('pricing')
+        
+    # Clear any existing pending transactions for this user so they don't get stuck on the pricing page
+    PaymentTransaction.objects.filter(user=request.user, status='PENDING').update(status='FAILED')
+        
+    purchase_id = str(uuid.uuid4())
+    amount_in_paisa = int(plan.price * 100) # Khalti expects amount in paisa
     
-    return JsonResponse({
-        'status': latest_payment.status,
-        'plan': latest_payment.plan.name if latest_payment.plan else None,
-        'transaction_id': latest_payment.transaction_id
-    })
+    # Create the transaction record
+    PaymentTransaction.objects.create(
+        user=request.user,
+        plan=plan,
+        amount=plan.price,
+        transaction_id=purchase_id,
+        gateway='khalti',
+        status='PENDING'
+    )
+
+    url = settings.KHALTI_INITIATE_URL
+    payload = {
+        "return_url": settings.KHALTI_RETURN_URL,
+        "website_url": settings.BASE_URL,
+        "amount": amount_in_paisa,
+        "purchase_order_id": purchase_id,
+        "purchase_order_name": f"{plan.name} Subscription",
+        "customer_info": {
+            "name": request.user.get_full_name() or request.user.username,
+            "email": request.user.email or "user@example.com",
+            "phone": "9800000000"
+        }
+    }
+
+    headers = {
+        "Authorization": f"Key {settings.KHALTI_SECRET_KEY}"
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        data = response.json()
+        
+        if "pidx" in data:
+            # Update transaction with pidx
+            PaymentTransaction.objects.filter(transaction_id=purchase_id).update(pidx=data["pidx"])
+            return redirect(data["payment_url"])
+        else:
+            messages.error(request, f"Khalti Error: {data.get('detail', 'Failed to initiate payment')}")
+            return redirect('pricing')
+    except Exception as e:
+        messages.error(request, f"Connection error: {str(e)}")
+        return redirect('pricing')
+
+@login_required
+def khalti_verify(request):
+    """Callback handler that verifies payment via Khalti Lookup API"""
+    pidx = request.GET.get("pidx")
+    if not pidx:
+        messages.error(request, "Invalid payment reference.")
+        return redirect('pricing')
+
+    url = settings.KHALTI_LOOKUP_URL
+    payload = {"pidx": pidx}
+    headers = {"Authorization": f"Key {settings.KHALTI_SECRET_KEY}"}
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        data = response.json()
+
+        if data.get("status") == "Completed":
+            # Query by pidx since it is reliably returned in the callback URL and we saved it during initiation.
+            transaction = get_object_or_404(PaymentTransaction, pidx=pidx)
+            
+            # 1. Update Transaction
+            transaction.status = 'COMPLETED'
+            transaction.save()
+            
+            # 2. Mark user as premium (requested flag)
+            user = request.user
+            user.is_premium = True
+            user.save()
+            
+            messages.success(request, f"👑 Payment successful! You are now a Premium member.")
+            return redirect('dashboard')
+        else:
+            messages.error(request, "Payment verification failed or was cancelled.")
+            return redirect('pricing')
+    except Exception as e:
+        messages.error(request, f"Verification error: {str(e)}")
+        return redirect('pricing')

@@ -1166,59 +1166,10 @@ def api_market_data_by_date(request):
                  return JsonResponse({'success': True, 'stocks': [], 'date': str(timezone.now().date())})
             filter_date = latest_entry.timestamp.date()
 
-    # 2. Optimization: Filter by Sector at DB level
-    relevant_symbols = None
-    if sector_filter and sector_filter != 'All Sectors' and sector_filter != 'Others':
-        relevant_symbols = list(Stock.objects.filter(sector__name__iexact=sector_filter).values_list('symbol', flat=True))
-    
-    # 3. Fetch Prices
-    qs = NEPSEPrice.objects.filter(timestamp__date=filter_date)
-    
-    if relevant_symbols is not None:
-        qs = qs.filter(symbol__in=relevant_symbols)
-        
-    if search_query:
-        qs = qs.filter(symbol__icontains=search_query)
-
-    all_prices_that_day = qs.values(
-        'symbol', 'open', 'high', 'low', 'close', 'ltp',
-        'change_pct', 'volume', 'turnover', 'timestamp'
-    ).order_by('symbol', '-timestamp')
-
-    # Deduplicate: Keep only latest timestamp for each symbol
-    unique_prices = {}
-    for p in all_prices_that_day:
-        sym = p['symbol'].strip().upper()
-        if sym not in unique_prices:
-            unique_prices[sym] = p
-
-    # Batch fetch sectors and company names for the found symbols
-    found_symbols = list(unique_prices.keys())
-    # Normalizing keys to upper case for robust matching and fallback logic
-    stock_info = {s.symbol.upper(): {
-        'sector': s.sector.name if getattr(s, 'sector', None) else 'Others',
-        'company_name': s.company_name
-    } for s in Stock.objects.filter(symbol__in=found_symbols).select_related('sector')}
-
-    stocks_data = []
-    for sym, item in unique_prices.items():
-        # Get info from the stock map
-        info = stock_info.get(sym, {'sector': 'Others', 'company_name': sym})
-        item_sector = info['sector']
-        
-        # Final Sector Filter (if client sent a sector name)
-        if sector_filter and sector_filter != 'All Sectors' and sector_filter.lower() != item_sector.lower():
-            continue
-            
-        item['sector'] = item_sector
-        item['company_name'] = info['company_name']
-        item['symbol'] = sym
-        stocks_data.append(item)
-=======
-        # 2. Optimization: Filter by Sector at DB level if possible
+        # 2. Optimization: Filter by Sector at DB level
         relevant_symbols = None
-        if sector_filter and sector_filter != 'All Sectors':
-            relevant_symbols = list(Stock.objects.filter(sector__iexact=sector_filter).values_list('symbol', flat=True))
+        if sector_filter and sector_filter != 'All Sectors' and sector_filter != 'Others':
+            relevant_symbols = list(Stock.objects.filter(sector__name__iexact=sector_filter).values_list('symbol', flat=True))
         
         # 3. Fetch Prices
         qs = NEPSEPrice.objects.filter(timestamp__date=filter_date)
@@ -1228,7 +1179,6 @@ def api_market_data_by_date(request):
             
         if search_query:
             qs = qs.filter(symbol__icontains=search_query)
->>>>>>> 848ed2c (fix: resolve market data API errors and refine stock sector mapping)
 
         all_prices_that_day = qs.values(
             'symbol', 'open', 'high', 'low', 'close', 'ltp',
@@ -1242,24 +1192,26 @@ def api_market_data_by_date(request):
             if sym not in unique_prices:
                 unique_prices[sym] = p
 
-        # Batch fetch sectors for the found symbols
+        # Batch fetch sectors and company names for the found symbols
         found_symbols = list(unique_prices.keys())
-        stock_map = {s.symbol: s.sector for s in Stock.objects.filter(symbol__in=found_symbols)}
+        # Normalizing keys to upper case for robust matching and fallback logic
+        stock_info = {s.symbol.upper(): {
+            'sector': s.sector.name if getattr(s, 'sector', None) else 'Others',
+            'company_name': s.company_name
+        } for s in Stock.objects.filter(symbol__in=found_symbols).select_related('sector')}
 
         stocks_data = []
         for sym, item in unique_prices.items():
-            # Final Search Filter
-            if search_query and search_query not in sym:
-                continue
-                
-            # Get sector
-            item_sector = stock_map.get(sym, 'Others')
+            # Get info from the stock map
+            info = stock_info.get(sym, {'sector': 'Others', 'company_name': sym})
+            item_sector = info['sector']
             
-            # Final Sector Filter
+            # Final Sector Filter (if client sent a sector name)
             if sector_filter and sector_filter != 'All Sectors' and sector_filter.lower() != item_sector.lower():
                 continue
                 
             item['sector'] = item_sector
+            item['company_name'] = info['company_name']
             item['symbol'] = sym
             stocks_data.append(item)
 

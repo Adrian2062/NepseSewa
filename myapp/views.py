@@ -2355,3 +2355,55 @@ def khalti_verify(request):
     except Exception as e:
         messages.error(request, f"Verification error: {str(e)}")
         return redirect('pricing')
+@require_http_methods(["GET"])
+@login_required
+def api_stock_quote(request, symbol):
+    """Get complete quote details for the trade page info grid"""
+    try:
+        symbol = symbol.upper()
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Max, Min
+        from myapp.models import NEPSEPrice
+        
+        # 1. Get latest price entry
+        latest = NEPSEPrice.objects.filter(symbol=symbol).order_by('-timestamp').first()
+        if not latest:
+            return JsonResponse({'success': False, 'message': 'Stock data not found'})
+            
+        # 2. Get 52-week high/low (Last 365 days)
+        one_year_ago = timezone.now() - timedelta(days=365)
+        yearly_stats = NEPSEPrice.objects.filter(
+            symbol=symbol, 
+            timestamp__gte=one_year_ago
+        ).aggregate(
+            high_52=Max('high'), 
+            low_52=Min('low')
+        )
+        
+        # 3. Calculate Previous Close (The close price of the day BEFORE the latest timestamp)
+        prev_record = NEPSEPrice.objects.filter(
+            symbol=symbol,
+            timestamp__date__lt=latest.timestamp.date()
+        ).order_by('-timestamp').first()
+        
+        prev_close = prev_record.close if prev_record and prev_record.close else latest.close
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'symbol': latest.symbol,
+                'ltp': float(latest.ltp or 0),
+                'change_pct': float(latest.change_pct or 0),
+                'open': float(latest.open or 0),
+                'high': float(latest.high or 0),
+                'low': float(latest.low or 0),
+                'close': float(latest.close or 0),
+                'prev_close': float(prev_close or 0),
+                'volume': float(latest.volume or 0),
+                'high_52': float(yearly_stats['high_52'] or latest.high or 0),
+                'low_52': float(yearly_stats['low_52'] or latest.low or 0),
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

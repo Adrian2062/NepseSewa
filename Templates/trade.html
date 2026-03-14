@@ -6,214 +6,33 @@
 {% block extra_css %}
 <style>
   /* Trade page specific styles */
-  .stock-hero {
-    background: linear-gradient(135deg, rgba(16, 185, 129, .12) 0%, rgba(5, 150, 105, .06) 100%);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.25rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .stock-hero h4 {
-    margin: 0;
-    font-weight: 900;
-    letter-spacing: -.3px;
-  }
-
-  .stock-hero .sub {
-    color: var(--muted);
-    font-weight: 700;
-    font-size: .92rem;
-  }
-
-  .quote-box {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .quote-item {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.2;
-  }
-
-  .quote-label {
-    font-size: .72rem;
-    font-weight: 900;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: .8px;
-  }
-
-  .quote-value {
-    font-size: 1.2rem;
-    font-weight: 900;
-    color: #111827;
-  }
-
-  .quote-change {
-    font-size: .9rem;
-    font-weight: 900;
-  }
-
-  /* Side Toggle */
-  .side-toggle {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: .25rem;
-    display: inline-flex;
-    gap: .25rem;
-    align-items: center;
-  }
-
-  .side-btn {
-    border: none;
-    border-radius: 999px;
-    padding: .55rem 1rem;
-    font-weight: 900;
-    font-size: .9rem;
-    background: transparent;
-    color: #111827;
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
-    transition: all .15s ease;
-  }
-
-  .side-btn:hover {
-    background: rgba(16, 185, 129, .08);
-  }
-
-  .side-btn.active-buy {
-    background: rgba(16, 185, 129, .12);
-    color: var(--primary-dark);
-    border: 1px solid rgba(16, 185, 129, .25);
-  }
-
-  .side-btn.active-sell {
-    background: rgba(239, 68, 68, .10);
-    color: #b91c1c;
-    border: 1px solid rgba(239, 68, 68, .20);
-  }
-
-  .side-btn.middle {
-    background: #fff;
-    border: 1px solid var(--border);
-    opacity: .9;
-  }
-
-  /* Trade Search */
-  .trade-search {
-    position: relative;
-  }
-
-  .trade-search .input-group {
-    background: var(--light);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    transition: all .2s ease;
-    overflow: hidden;
-  }
-
-  .trade-search .input-group:focus-within {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, .10);
-  }
-
-  .trade-search .form-control {
-    border: none;
-    background: transparent;
-    font-size: .95rem;
-    padding: .75rem .95rem;
-    font-weight: 700;
-  }
-
-  .trade-search .form-control:focus {
-    box-shadow: none;
-  }
-
-  .search-results-dropdown {
-    position: absolute;
-    top: 52px;
-    right: 0;
-    left: 0;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, .15);
-    overflow-y: auto;
-    max-height: 300px;
-    display: none;
-    z-index: 9999;
-  }
-
-  .search-result-item {
-    padding: .75rem .9rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: .75rem;
-    border-bottom: 1px solid var(--border);
-    font-size: .95rem;
-    font-weight: 700;
-    color: #1f2937;
-    background: #fff;
-  }
-
-  .search-result-item:last-child {
-    border-bottom: none;
-  }
-
-  .search-result-item:hover {
-    background: var(--primary-light);
-  }
-
-  /* Info Grid */
-  .stock-info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(0, 0, 0, .06);
-  }
-
-  .info-label {
-    font-size: .7rem;
-    font-weight: 800;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-  }
-
-  .info-value {
-    font-size: .95rem;
-    font-weight: 800;
-    color: #111827;
-  }
-
-  /* Symbol Pill */
-  .symbol-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: .45rem;
-    padding: .3rem .55rem;
-    border-radius: 999px;
-    font-weight: 900;
-    border: 1px solid rgba(16, 185, 129, .25);
-    background: rgba(16, 185, 129, .08);
-    color: var(--primary-dark);
-    font-size: .82rem;
-  }
+  .stock-hero { background: linear-gradient(135deg, rgba(16, 185, 129, .12) 0%, rgba(5, 150, 105, .06) 100%); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .stock-hero h4 { margin: 0; font-weight: 900; letter-spacing: -.3px; }
+  .stock-hero .sub { color: var(--muted); font-weight: 700; font-size: .92rem; }
+  .quote-box { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .quote-item { display: flex; flex-direction: column; line-height: 1.2; }
+  .quote-label { font-size: .72rem; font-weight: 900; color: #6b7280; text-transform: uppercase; letter-spacing: .8px; }
+  .quote-value { font-size: 1.2rem; font-weight: 900; color: #111827; }
+  .quote-change { font-size: .9rem; font-weight: 900; }
+  .side-toggle { background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: .25rem; display: inline-flex; gap: .25rem; align-items: center; }
+  .side-btn { border: none; border-radius: 999px; padding: .55rem 1rem; font-weight: 900; font-size: .9rem; background: transparent; color: #111827; display: inline-flex; align-items: center; gap: .5rem; transition: all .15s ease; }
+  .side-btn:hover { background: rgba(16, 185, 129, .08); }
+  .side-btn.active-buy { background: rgba(16, 185, 129, .12); color: var(--primary-dark); border: 1px solid rgba(16, 185, 129, .25); }
+  .side-btn.active-sell { background: rgba(239, 68, 68, .10); color: #b91c1c; border: 1px solid rgba(239, 68, 68, .20); }
+  .side-btn.middle { background: #fff; border: 1px solid var(--border); opacity: .9; }
+  .trade-search { position: relative; }
+  .trade-search .input-group { background: var(--light); border-radius: 12px; border: 1px solid var(--border); transition: all .2s ease; overflow: hidden; }
+  .trade-search .input-group:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, .10); }
+  .trade-search .form-control { border: none; background: transparent; font-size: .95rem; padding: .75rem .95rem; font-weight: 700; }
+  .trade-search .form-control:focus { box-shadow: none; }
+  .search-results-dropdown { position: absolute; top: 52px; right: 0; left: 0; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 28px rgba(0, 0, 0, .15); overflow-y: auto; max-height: 300px; display: none; z-index: 9999; }
+  .search-result-item { padding: .75rem .9rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-bottom: 1px solid var(--border); font-size: .95rem; font-weight: 700; color: #1f2937; background: #fff; }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:hover { background: var(--primary-light); }
+  .stock-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0, 0, 0, .06); }
+  .info-label { font-size: .7rem; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; }
+  .info-value { font-size: .95rem; font-weight: 800; color: #111827; }
+  .symbol-pill { display: inline-flex; align-items: center; gap: .45rem; padding: .3rem .55rem; border-radius: 999px; font-weight: 900; border: 1px solid rgba(16, 185, 129, .25); background: rgba(16, 185, 129, .08); color: var(--primary-dark); font-size: .82rem; }
 </style>
 {% endblock %}
 
@@ -241,36 +60,15 @@
   </div>
 </div>
 
-<!-- Info Grid (optional) -->
+<!-- Info Grid -->
 <div class="stock-info-grid" id="stockInfoGrid" style="display:none;">
-  <div>
-    <div class="info-label">Open</div>
-    <div class="info-value" id="valOpen">—</div>
-  </div>
-  <div>
-    <div class="info-label">High</div>
-    <div class="info-value" id="valHigh">—</div>
-  </div>
-  <div>
-    <div class="info-label">Low</div>
-    <div class="info-value" id="valLow">—</div>
-  </div>
-  <div>
-    <div class="info-label">Prev Close</div>
-    <div class="info-value" id="valPrev">—</div>
-  </div>
-  <div>
-    <div class="info-label">Volume</div>
-    <div class="info-value" id="valVol">—</div>
-  </div>
-  <div>
-    <div class="info-label">52W High</div>
-    <div class="info-value" id="val52H">—</div>
-  </div>
-  <div>
-    <div class="info-label">52W Low</div>
-    <div class="info-value" id="val52L">—</div>
-  </div>
+  <div><div class="info-label">Open</div><div class="info-value" id="valOpen">—</div></div>
+  <div><div class="info-label">High</div><div class="info-value" id="valHigh">—</div></div>
+  <div><div class="info-label">Low</div><div class="info-value" id="valLow">—</div></div>
+  <div><div class="info-label">Prev Close</div><div class="info-value" id="valPrev">—</div></div>
+  <div><div class="info-label">Volume</div><div class="info-value" id="valVol">—</div></div>
+  <div><div class="info-label">52W High</div><div class="info-value" id="val52H">—</div></div>
+  <div><div class="info-label">52W Low</div><div class="info-value" id="val52L">—</div></div>
 </div>
 
 <div class="row mt-3">
@@ -279,7 +77,6 @@
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="card-title mb-0">Place Order</h5>
-
         <div class="side-toggle" title="Choose side">
           <button id="btnBuy" class="side-btn" type="button"><i class="fa-solid fa-arrow-up"></i> Buy</button>
           <button id="btnMid" class="side-btn middle" type="button"><i class="fa-solid fa-minus"></i></button>
@@ -293,11 +90,8 @@
             <span class="input-group-text bg-transparent border-0" style="font-weight:900;">
               <i class="fa-solid fa-magnifying-glass"></i>
             </span>
-            <input id="tradeSearch" type="text" class="form-control" placeholder="Search stock (e.g. SHPC, NBL)..."
-              autocomplete="off" />
-            <button class="btn btn-light" type="button" id="clearSearch" title="Clear">
-              <i class="fa-solid fa-xmark"></i>
-            </button>
+            <input id="tradeSearch" type="text" class="form-control" placeholder="Search stock (e.g. SHPC, NBL)..." autocomplete="off" />
+            <button class="btn btn-light" type="button" id="clearSearch" title="Clear"><i class="fa-solid fa-xmark"></i></button>
           </div>
           <div id="tradeSearchResults" class="search-results-dropdown"></div>
         </div>
@@ -316,98 +110,69 @@
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label fw-bold">Price (Rs)</label>
-              <input id="priceInput" class="form-control" type="number" min="0" step="0.01"
-                placeholder="Use LTP or enter" required />
-              <div class="text-muted mt-1" style="font-weight:700;font-size:.85rem;">
-                Tip: click “Use LTP” to auto-fill.
+              <input id="priceInput" class="form-control" type="number" min="0" step="0.01" placeholder="Use LTP or enter" required />
+              
+              <!-- NEW: Allowed Range Text -->
+              <div id="circuitLimitText" class="text-primary mt-1" style="font-weight:800; font-size:.80rem; display:none;">
+                <i class="fa-solid fa-shield-halved"></i> Allowed Range: Rs <span id="lowerLimit">0</span> - Rs <span id="upperLimit">0</span>
+              </div>
+              
+              <!-- NEW: Error Message -->
+              <div id="priceError" class="text-danger mt-1" style="font-weight:700; font-size:.80rem; display:none;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Price is outside allowed circuit limits!
               </div>
             </div>
           </div>
 
           <div class="d-flex flex-wrap gap-2">
-            <button type="button" class="btn btn-outline-success" id="btnUseLtp"
-              style="border-radius:12px;font-weight:900;">
+            <button type="button" class="btn btn-outline-success" id="btnUseLtp" style="border-radius:12px;font-weight:900;">
               <i class="fa-solid fa-bolt me-2"></i>Use LTP
             </button>
-
-            <button type="submit" class="btn btn-success ms-auto" id="btnPlaceOrder"
-              style="border-radius:12px;font-weight:900;padding:.65rem 1rem;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);border:none;">
+            <button type="submit" class="btn btn-success ms-auto" id="btnPlaceOrder" style="border-radius:12px;font-weight:900;padding:.65rem 1rem;background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);border:none;">
               <i class="fa-solid fa-check me-2"></i>Place Order
             </button>
           </div>
-
           <div class="mt-3">
             <span class="chip" id="sideChip"><i class="fa-solid fa-circle-info"></i> Select Buy or Sell</span>
             <span class="chip ms-2" id="estValueChip"><i class="fa-solid fa-calculator"></i> Est: Rs —</span>
           </div>
-
           <div class="alert alert-warning mt-3 mb-0" id="tradeMsg" style="display:none;font-weight:700;"></div>
         </form>
-
       </div>
     </div>
   </div>
 
   <!-- RIGHT -->
   <div class="col-lg-5 mb-3">
-    <!-- Market Depth Card -->
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="card-title mb-0"><i class="fas fa-layer-group me-2"></i>Market Depth</h5>
         <span class="chip" id="marketStatusChip"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading...</span>
       </div>
-
       <div class="card-body p-0" id="marketDepthContainer" style="display:none;">
-        <!-- Top 5 Sell Orders (Asks) -->
         <div class="p-3 border-bottom">
-          <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--danger);"><i
-              class="fa-solid fa-arrow-down me-1"></i>TOP 5 SELL ORDERS</h6>
+          <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--danger);"><i class="fa-solid fa-arrow-down me-1"></i>TOP 5 SELL ORDERS</h6>
           <div class="table-responsive">
             <table class="table table-sm mb-0">
-              <thead>
-                <tr>
-                  <th style="font-size:.75rem;">Price</th>
-                  <th class="text-end" style="font-size:.75rem;">Qty</th>
-                </tr>
-              </thead>
-              <tbody id="asksTbody">
-                <tr>
-                  <td colspan="2" class="text-center text-muted">No sell orders</td>
-                </tr>
-              </tbody>
+              <thead><tr><th style="font-size:.75rem;">Price</th><th class="text-end" style="font-size:.75rem;">Qty</th></tr></thead>
+              <tbody id="asksTbody"><tr><td colspan="2" class="text-center text-muted">No sell orders</td></tr></tbody>
             </table>
           </div>
         </div>
-
-        <!-- Top 5 Buy Orders (Bids) -->
         <div class="p-3">
-          <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--primary);"><i
-              class="fa-solid fa-arrow-up me-1"></i>TOP 5 BUY ORDERS</h6>
+          <h6 class="mb-2" style="font-weight:900;font-size:.85rem;color:var(--primary);"><i class="fa-solid fa-arrow-up me-1"></i>TOP 5 BUY ORDERS</h6>
           <div class="table-responsive">
             <table class="table table-sm mb-0">
-              <thead>
-                <tr>
-                  <th style="font-size:.75rem;">Price</th>
-                  <th class="text-end" style="font-size:.75rem;">Qty</th>
-                </tr>
-              </thead>
-              <tbody id="bidsTbody">
-                <tr>
-                  <td colspan="2" class="text-center text-muted">No buy orders</td>
-                </tr>
-              </tbody>
+              <thead><tr><th style="font-size:.75rem;">Price</th><th class="text-end" style="font-size:.75rem;">Qty</th></tr></thead>
+              <tbody id="bidsTbody"><tr><td colspan="2" class="text-center text-muted">No buy orders</td></tr></tbody>
             </table>
           </div>
         </div>
       </div>
-
       <div class="card-body text-center" id="marketDepthPlaceholder">
-        <p class="text-muted mb-0"><i class="fa-solid fa-chart-line me-2"></i>Select a stock to view market depth
-        </p>
+        <p class="text-muted mb-0"><i class="fa-solid fa-chart-line me-2"></i>Select a stock to view market depth</p>
       </div>
     </div>
-
-    <!-- Order Book Card -->
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="card-title mb-0">Order Book</h5>
@@ -416,40 +181,115 @@
           <span class="chip"><i class="fa-solid fa-clock"></i> <span id="orderBookAsOf">—</span></span>
         </div>
       </div>
-
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table mb-0">
-            <thead>
-              <tr>
-                <th class="ps-3">Time</th>
-                <th>Symbol</th>
-                <th>Side</th>
-                <th class="text-end">Qty</th>
-                <th class="text-end">Price</th>
-                <th class="text-end pe-3">Status</th>
-              </tr>
-            </thead>
-            <tbody id="orderBookTbody">
-              <tr>
-                <td colspan="6" class="text-muted p-3 ps-3">Loading...</td>
-              </tr>
-            </tbody>
+            <thead><tr><th class="ps-3">Time</th><th>Symbol</th><th>Side</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end pe-3">Status</th></tr></thead>
+            <tbody id="orderBookTbody"><tr><td colspan="6" class="text-muted p-3 ps-3">Loading...</td></tr></tbody>
           </table>
-        </div>
-      </div>
-
-      <div class="card-body border-top">
-        <div class="text-muted" style="font-weight:700;font-size:.9rem;">
-          Shows your complete BUY/SELL history.
         </div>
       </div>
     </div>
   </div>
-
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/trade.js' %}"></script>
+<script>
+  // MAGIC SCRIPT: Populates Grid & Validates Circuit automatically!
+  document.addEventListener('DOMContentLoaded', function() {
+    let activeSymbol = '';
+    let exactPrevClose = 0;
+
+    async function fetchFullStockDetails(symbol) {
+        try {
+            const res = await fetch(`/api/stock-quote/${symbol}/`);
+            const json = await res.json();
+            if (json.success) {
+                const d = json.data;
+                
+                // 1. Unhide and populate the Info Grid
+                document.getElementById('stockInfoGrid').style.display = 'grid';
+                document.getElementById('valOpen').innerText = d.open ? d.open.toFixed(2) : '—';
+                document.getElementById('valHigh').innerText = d.high ? d.high.toFixed(2) : '—';
+                document.getElementById('valLow').innerText = d.low ? d.low.toFixed(2) : '—';
+                document.getElementById('valPrev').innerText = d.prev_close ? d.prev_close.toFixed(2) : '—';
+                document.getElementById('valVol').innerText = d.volume ? d.volume.toLocaleString() : '—';
+                document.getElementById('val52H').innerText = d.high_52 ? d.high_52.toFixed(2) : '—';
+                document.getElementById('val52L').innerText = d.low_52 ? d.low_52.toFixed(2) : '—';
+
+                // 2. Set Exact Prev Close for 10% Circuit Math
+                exactPrevClose = d.prev_close > 0 ? d.prev_close : d.ltp;
+                validatePriceCircuit(); // Instantly apply UI limits
+            }
+        } catch(e) { console.error("Error fetching full details:", e); }
+    }
+
+    // Monitor input box. When trade.js puts a stock in the box, we catch it instantly.
+    setInterval(() => {
+        const symbolInput = document.getElementById('symbolInput');
+        if (symbolInput && symbolInput.value) {
+            const sym = symbolInput.value.trim().toUpperCase();
+            if (sym !== activeSymbol) {
+                activeSymbol = sym;
+                fetchFullStockDetails(sym); // Fetch the grid data
+            }
+        }
+    }, 500);
+
+    // Validate the Price Input Box
+    function validatePriceCircuit() {
+        const priceInput = document.getElementById('priceInput');
+        const btnPlaceOrder = document.getElementById('btnPlaceOrder');
+        
+        // Hide limits if we don't have a valid previous close yet
+        if (!exactPrevClose || exactPrevClose <= 0) {
+            document.getElementById('circuitLimitText').style.display = 'none';
+            document.getElementById('priceError').style.display = 'none';
+            return;
+        }
+
+        // Calculate 10% Circuit Limits
+        const upper_circuit = (exactPrevClose * 1.10).toFixed(2);
+        const lower_circuit = (exactPrevClose * 0.90).toFixed(2);
+
+        // Update Text
+        document.getElementById('lowerLimit').innerText = lower_circuit;
+        document.getElementById('upperLimit').innerText = upper_circuit;
+        document.getElementById('circuitLimitText').style.display = 'block';
+
+        // Apply HTML constraints
+        priceInput.min = lower_circuit;
+        priceInput.max = upper_circuit;
+
+        // Check user input in real-time
+        if (priceInput.value) {
+            const currentVal = parseFloat(priceInput.value);
+            if (currentVal < parseFloat(lower_circuit) || currentVal > parseFloat(upper_circuit)) {
+                // Invalid - Block UI
+                document.getElementById('priceError').style.display = 'block';
+                btnPlaceOrder.disabled = true;
+                priceInput.style.borderColor = '#ef4444'; 
+                priceInput.style.backgroundColor = '#fef2f2';
+            } else {
+                // Valid - Unlock UI
+                document.getElementById('priceError').style.display = 'none';
+                btnPlaceOrder.disabled = false;
+                priceInput.style.borderColor = '#10b981'; 
+                priceInput.style.backgroundColor = '#fff';
+            }
+        } else {
+            // Empty box
+            document.getElementById('priceError').style.display = 'none';
+            btnPlaceOrder.disabled = false;
+            priceInput.style.borderColor = '';
+            priceInput.style.backgroundColor = '';
+        }
+    }
+
+    // Bind event listener to user typing
+    document.getElementById('priceInput').addEventListener('input', validatePriceCircuit);
+  });
+</script>
 {% endblock %}

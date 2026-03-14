@@ -1,5 +1,6 @@
 from celery import shared_task
 from django.core.management import call_command
+from custom_admin.models import SystemSetting
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,13 @@ def scrape_market_data():
     Runs every minute during market hours.
     """
     logger.info("Starting market data scrape task")
+    
+    # Execution Guard
+    setting = SystemSetting.objects.filter(key='scraper_running').first()
+    if setting and setting.value.lower() != 'true':
+        logger.info("Market data scrape task skipped (system setting is false)")
+        return
+
     try:
         # Run the existing scraper command which now uses StockService
         call_command('scrape_nepse', once=True)
@@ -38,6 +46,13 @@ def generate_watchlist_recommendations():
     Runs daily at 3:00 PM.
     """
     logger.info("Starting watchlist recommendation task")
+    
+    # Execution Guard
+    setting = SystemSetting.objects.filter(key='recommendation_running').first()
+    if setting and setting.value.lower() != 'true':
+        logger.info("Watchlist recommendation task skipped (system setting is false)")
+        return
+        
     try:
         # Run the recommendation engine for watchlist only
         call_command('run_recommendations', watchlist_only=True)

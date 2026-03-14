@@ -4,8 +4,8 @@
  *           symbol+company search, client-side caching, pagination.
  */
 
-const STOCKS_CACHE_KEY = 'nepsesewa_stocks_v1';
-const SECTORS_CACHE_KEY = 'nepsesewa_sectors_v1';
+const STOCKS_CACHE_KEY = 'nepsesewa_stocks_v2';
+const SECTORS_CACHE_KEY = 'nepsesewa_sectors_v2';
 const PAGE_SIZE = 50;
 
 let allStocks = [];        // raw data from API

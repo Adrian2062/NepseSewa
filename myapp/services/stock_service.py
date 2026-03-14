@@ -1,147 +1,302 @@
+
+
+
+# import logging
+# import re
+# import time
+# from django.utils import timezone
+# from myapp.models import Stock, Sector, NEPSEPrice
+# from .nepse_scraper import NepseScraperService
+# from bs4 import BeautifulSoup
+
+# logger = logging.getLogger(__name__)
+
+# class StockService:
+#     _AUTHORITATIVE_CACHE = None
+
+#     @classmethod
+#     def get_authoritative_sector_obj(cls, symbol):
+#         """Get the authoritative Sector object for a symbol, defaulting to Others"""
+#         if cls._AUTHORITATIVE_CACHE is None:
+#             from myapp.management.commands.update_sectors import Command as UpdateSectorsCommand
+#             cls._AUTHORITATIVE_CACHE = {}
+#             for sector_name, symbols in UpdateSectorsCommand.SECTOR_MAPPING.items():
+#                 for s in symbols:
+#                     cls._AUTHORITATIVE_CACHE[s.strip().upper()] = sector_name
+                    
+#         sector_name = cls._AUTHORITATIVE_CACHE.get(symbol.strip().upper(), "Others")
+#         sector_obj, _ = Sector.objects.get_or_create(name=sector_name)
+#         return sector_obj
+
+#     @staticmethod
+#     def update_live_prices():
+#         """Scrape all live prices using JS-driven pagination. All stocks assigned to 'Others'."""
+#         print("\n" + "="*60)
+#         print("🚀 STARTING NEPSE LIVE PRICE SCRAPE")
+#         print("="*60)
+#         timestamp = timezone.now()
+        
+#         from selenium.webdriver.common.by import By
+#         from selenium.webdriver.support.ui import WebDriverWait
+#         from selenium.webdriver.support import expected_conditions as EC
+        
+#         scraper = NepseScraperService()
+#         driver = scraper.create_driver()
+        
+#         try:
+#             print("🌐 Connecting to Merolagani...")
+#             driver.get('https://merolagani.com/StockQuote.aspx')
+            
+#             # STEP 1: JS Alert Killer
+#             # Disables window alerts so popups don't freeze the scraper
+#             driver.execute_script("window.alert = function() {}; window.confirm = function() {};")
+
+#             wait = WebDriverWait(driver, 20)
+#             wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
+#             time.sleep(3)
+
+#             # STEP 2: Force 100 entries via JS
+#             driver.execute_script("""
+#                 var sel = document.querySelector('select[name*="length"], .dataTables_length select');
+#                 if(sel) { 
+#                     sel.value = '100'; 
+#                     sel.dispatchEvent(new Event('change', {bubbles: true})); 
+#                 }
+#             """)
+#             time.sleep(5)
+
+#             total_saved = 0
+#             page_num = 1
+#             max_pages = 5 
+
+#             while page_num <= max_pages:
+#                 print(f"📄 Processing Page {page_num}...")
+                
+#                 soup = BeautifulSoup(driver.page_source, 'html.parser')
+#                 target_table = None
+#                 for table in soup.find_all('table'):
+#                     if 'symbol' in table.get_text().lower() or 'ltp' in table.get_text().lower():
+#                         target_table = table
+#                         break
+                
+#                 if not target_table:
+#                     print("❌ Could not find table structure.")
+#                     break
+
+#                 # STEP 3: DYNAMIC COLUMN MAPPING
+#                 # Detects columns for Symbol, LTP, and Change to avoid S.N. column issues
+#                 headers = [th.get_text(strip=True).upper() for th in target_table.find_all(['th', 'td'])[:15]]
+#                 col_map = {'symbol': 1, 'ltp': 2, 'change': 3, 'high': 4, 'low': 5, 'open': 6, 'vol': 7}
+#                 for i, h in enumerate(headers):
+#                     if 'SYMBOL' in h or 'SCRIP' in h: col_map['symbol'] = i
+#                     elif 'LTP' in h: col_map['ltp'] = i
+#                     elif '%' in h or 'CHANGE' in h: col_map['change'] = i
+
+#                 rows = target_table.find_all('tr')
+#                 start_row = 1 if target_table.find('thead') else 0
+                
+#                 # First symbol on page to detect refresh
+#                 first_sym_current = ""
+#                 if len(rows) > start_row:
+#                     first_sym_current = rows[start_row].find_all('td')[col_map['symbol']].get_text(strip=True)
+
+#                 # STEP 4: DATABASE SYNC
+#                 for row in rows[start_row:]:
+#                     cols = row.find_all('td')
+#                     if len(cols) <= col_map['symbol']: continue
+                    
+#                     try:
+#                         symbol = cols[col_map['symbol']].get_text(strip=True).upper()
+                        
+#                         # Skip numeric Serial Numbers and Header repeats
+#                         if not symbol or re.match(r'^\d+$', symbol) or symbol == "SYMBOL":
+#                             continue
+
+#                         ltp = scraper.parse_float(cols[col_map['ltp']].get_text(strip=True))
+#                         if ltp is None: continue
+
+#                         # Save/Update Stock
+#                         target_sector = StockService.get_authoritative_sector_obj(symbol)
+#                         stock, _ = Stock.objects.update_or_create(
+#                             symbol=symbol, 
+#                             defaults={
+#                                 'company_name': symbol, 
+#                                 'sector': target_sector, 
+#                                 'last_price': ltp,
+#                                 'change': scraper.parse_float(cols[col_map['change']].get_text(strip=True)) if len(cols) > col_map['change'] else 0,
+#                             }
+#                         )
+                        
+#                         # Create History Log
+#                         NEPSEPrice.objects.create(
+#                             symbol=symbol,
+#                             timestamp=timestamp,
+#                             ltp=ltp,
+#                             change_pct=stock.change,
+#                             high=scraper.parse_float(cols[col_map['high']].get_text(strip=True)) if len(cols) > col_map['high'] else 0,
+#                             low=scraper.parse_float(cols[col_map['low']].get_text(strip=True)) if len(cols) > col_map['low'] else 0,
+#                             open=scraper.parse_float(cols[col_map['open']].get_text(strip=True)) if len(cols) > col_map['open'] else 0,
+#                             volume=scraper.parse_float(cols[col_map['vol']].get_text(strip=True)) if len(cols) > col_map['vol'] else 0,
+#                             turnover=scraper.parse_float(cols[8].get_text(strip=True)) if len(cols) > 8 else 0
+#                         )
+#                         total_saved += 1
+#                     except: continue
+
+#                 print(f"✅ Page {page_num} saved. Progress: {total_saved} stocks.")
+
+#                 # STEP 5: JS-DRIVEN PAGINATION
+#                 js_clicked = driver.execute_script("""
+#                     var links = document.querySelectorAll('a');
+#                     for (var i = 0; i < links.length; i++) {
+#                         if (links[i].textContent.trim() === 'Next' || links[i].textContent.trim() === '›') {
+#                             if(!links[i].parentElement.classList.contains('disabled')) {
+#                                 links[i].click();
+#                                 return true;
+#                             }
+#                         }
+#                     }
+#                     return false;
+#                 """)
+
+#                 if not js_clicked:
+#                     print("🏁 End of list reached.")
+#                     break
+                
+#                 # Wait for AJAX refresh
+#                 refreshed = False
+#                 for _ in range(10):
+#                     time.sleep(1.5)
+#                     driver.execute_script("window.alert = function() {};") # Keep alerts dead
+#                     check_soup = BeautifulSoup(driver.page_source, 'html.parser')
+#                     try:
+#                         new_sym = check_soup.find('table').find_all('tr')[start_row].find_all('td')[col_map['symbol']].get_text(strip=True)
+#                         if new_sym != first_sym_current:
+#                             refreshed = True
+#                             break
+#                     except: pass
+                
+#                 if not refreshed: break
+#                 page_num += 1
+
+#             print(f"\n✨ FINISHED! Total Stocks Scraped: {total_saved}")
+#             print("="*60)
+#             return True
+
+#         except Exception as e:
+#             print(f"🚨 CRITICAL ERROR: {e}")
+#             return False
+#         finally:
+#             driver.quit()
+
 import logging
 import re
+import time
 from django.utils import timezone
-from django.db import transaction
 from myapp.models import Stock, Sector, NEPSEPrice
 from .nepse_scraper import NepseScraperService
 from bs4 import BeautifulSoup
-import requests
-import time
 
 logger = logging.getLogger(__name__)
 
 class StockService:
-    # Standard sector names as requested by user
-    SECTOR_MAPPING = {
-        "Commercial Bank": "Commercial Banks",
-        "Commercial Banks Limited": "Commercial Banks",
-        "Development Bank Limited": "Development Banks",
-        "Development Bank": "Development Banks",
-        "Development Banks": "Development Banks",
-        "Hotels And Tourism": "Hotels & Tourism",
-        "Hotel And Tourism": "Hotels & Tourism",
-        "Manufacturing And Processing": "Manufacturing & Processing",
-        "Hydro Power": "Hydropower",
-        "Non Life Insurance": "Non-Life Insurance",
-        "Mutual Funds": "Mutual Fund",
-        "Corporate Debenture": "Corporate Debentures",
-        "Tradings": "Trading",
-        "Uncategorized": "Others",
+    SECTOR_MAP_DATA = {
+        "Commercial Banks": [
+            "ADBL", "GBIME", "CZBIL", "NIMBPO", "SBL", "SANIMA", "NMB", "NICA", "MBL", 
+            "NBL", "EBL", "PCBL", "SCB", "LSL", "SBI", "KBL", "PRVU", "NABIL", "NIMB", "HBL"
+        ],
+        "Development Banks": [
+            "MLBL", "KSBBL", "MDB", "MNBBL", "SINDU", "GRDBL", "JBBL", "EDBL", "GBBL", 
+            "NABBC", "SADBL", "CORBL", "SHINE", "LBBL", "SAPDBL", "SABBL", "SHINED"
+        ],
+        "Microfinance": [
+            "LLBS", "SMFBS", "MERO", "SKBBL", "CYCL", "FOWAD", "NUBL", "SWBBL", "DDBL", 
+            "GLBSL", "GMFBS", "MSLB", "FMDBL", "JBLB", "ULBSL", "DLBS", "NMFBS", "NMLBBL", 
+            "MLBSL", "ALBSL", "ANLB", "ACLBSL", "AVYAN", "CBBL", "GILB", "HLBSL", "ILBS", 
+            "JSLBB", "KMCDB", "MATRI", "MLBBL", "MLBS", "NADEP", "NESDO", "NICLBSL", 
+            "NMBMF", "NSLB", "SMB", "USLB", "VLBS", "WNLB", "RSDC", 
+            "SHLB", "SLBBL", "SLBSL", "SMATA", "SWMF", "UNLB", "GBLBS", "SWASTIK", "SMPDA"
+        ],
+        "Finance": [
+            "PROFL", "MPFL", "CFCL", "MFIL", "JFL", "SFCL", "GFCL", "PFL", "NFS", 
+            "SIFC", "RLFL", "ICFC", "BFC", "GMFIL", "GUFL"
+        ],
+        "Investment": [
+            "NRN", "HATHY", "NIFRA", "CIT", "HIDCL", "CHDC", "HIDCLP", "NIFRAGED", 
+        ],
+        "Hotels & Tourism": [
+            "BANDIPUR", "KDL", "TRH", "SHL", "OHL", "CITY", "CGH", "HFIN"
+        ],
+        "Manufacturing & Processing": [
+            "GCIL", "SHIVM", "OMPL", "SONA", "SYPNL", "SAIL", "BNT", "SAGAR", 
+            "SARBTM", "UNL", "HDL", "BNL", "RSML"
+        ],
+        "Hydropower": [
+            "SANVI", "KKHC", "SMH", "BHCL", "AKJCL", "TPC", "DHEL", "SSHL", "HDHPC", "NHPC", 
+            "SPL", "SMHL", "IHL", "NHDL", "AHL", "BUNGAL", "TSHL", "RFPL", "MHCL", "SMHL",
+            "GVL", "BNHC", "LEC", "UMRH", "SHEL", "SHPC", "RIDI", "NGPL", "MBJC", 
+            "DORDI", "SGHC", "MHL", "USHEC", "BHPL", "SMH", "MKHC", "MAKAR", "MKHL", 
+            "DOLTI", "MCHL", "MEL", "RAWA", "KBSH", "MEHL", "ULHC", "MANDU", "BGWT", 
+            "TVCL", "VLUCL", "CKHL", "BEDC", "UPPER", "GHL", "UPCL", "MHNL", "PPCL", 
+            "SJCL", "MEN", "GLH", "RURU", "SAHAS", "SPC", "NYADI", "BHDC", "HHL", 
+            "UHEWA", "PPL", "SPHL", "SIKLES", "EHPL", "SMJC", "MMKJL", "PHCL", 
+            "AHPC", "AKPL", "API", "BARUN", "BHL", "BPCL", "CHCL", "CHL", "DHPL", 
+            "ENL", "HPPL", "HURJA", "JOSHI", "KPCL", "MKJC", "MSHL", "PMHPL", 
+            "RADHI", "RHGCL", "RHPL", "SPDL", "TAMOR", "UMHL", "UNHPL", "USHL", "MABEL"
+        ],
+        "Life Insurance": [
+            "HLI", "CLI", "ILI", "PMLI", "RNLI", "SNLI", "SRLI", "CREST", "GMLI", 
+            "ALICL", "NLICL", "LICN", "NLIC", "SJLIC"
+        ],
+        "Non-Life Insurance": [
+            "SGIC", "NMIC", "SICL", "IGI", "RBCL", "HEI", "NIL", "PRIN", "NICL", 
+            "SPIL", "UAIL", "NLG", "HEIP", "SALICO"
+        ],
+        "Mutual Fund": [
+            "NMBHF2", "GBIMESY2", "SIGS2", "SFEF", "NICBF", "NSIF2", "LVF2", "C30MF", 
+            "GIBF1", "NIBLSTF", "CMF2", "SIGS3", "NICGF2", "HLICF", "NICFC", "NBF2", 
+            "H8020", "MMF1", "SEF", "KDBY", "CSY", "GSY", "KEF", "KSY", "LUK", 
+            "MBLEF", "MNMF1", "NIBLPF", "NICGF", "RMF1", "SAEF", "SBCF", "SFMF", 
+            "NBF3", "NIBLGF", "NIBSF2", "NICSF", "NMB50", "PRSF", "PSF", "RBBF40", 
+            "RMF2", "RSY", "SAGF", "SLCF"
+        ],
+        "Corporate Debentures": [
+            "NBBD2085", "SBLD2091", "PBD85", "ADBLD83", "SBID83", "ICFCD88", "EBLD91", 
+            "NABILD2089", "EBLEB89", "MBLD2085", "SRBLD83", "SBID89", "PBD88", "GBBD85", 
+            "CIZBD86", "NICAD2091", "CIZBD90", "SAND2085", "RBBD2088", "EBLD85", 
+            "MFLD85", "GBILD84/85", "GBILD86/87", "NBLD87", "NIBD2082", "NIBD84", 
+            "NICD88", "PBLD87", "SBID2090"
+        ],
+        "Trading": [
+            "BBC", "STC", "HIMSTAR"
+        ],
+        "Others": [
+            "NTC", "NRM", "NWCL", "MKCL", "TTL", "JHAPA", "HRL", "NRIC", "PURE"
+        ],
     }
 
     @staticmethod
-    def get_standard_sector(name):
-        """Map scraped sector names to standardized names"""
-        clean_name = name.strip()
-        return StockService.SECTOR_MAPPING.get(clean_name, clean_name)
+    def get_correct_sector_instance(symbol):
+        """Returns the actual database Sector object based on the exhaustive symbol map."""
+        clean_sym = symbol.strip().upper()
+        target_name = "Others" # Default fallback for newly listed scrips
 
-    @staticmethod
-    def sync_company_metadata():
-        """
-        Scrape NEPSE company list from Merolagani and update Stock/Sector models.
-        Handles both table-based and header-based structures.
-        """
-        logger.info("Starting company metadata sync...")
-        url = "https://merolagani.com/CompanyList.aspx"
+        for sector_name, symbols in StockService.SECTOR_MAP_DATA.items():
+            if clean_sym in symbols:
+                target_name = sector_name
+                break
         
-        try:
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            sync_count = 0
-            
-            # --- Method 1: Table-based scraping (Legacy/Detailed) ---
-            table = soup.find('table', {'id': 'ctl00_ContentPlaceHolder1_gvCompany'})
-            if not table:
-                table = soup.find('table', class_='table')
-                
-            if table:
-                rows = table.find_all('tr')[1:]
-                for row in rows:
-                    cols = row.find_all('td')
-                    if len(cols) >= 3:
-                        symbol = cols[0].get_text(strip=True).upper()
-                        name = cols[1].get_text(strip=True)
-                        sector_name = cols[2].get_text(strip=True)
-                        
-                        if symbol and sector_name:
-                            standard_name = StockService.get_standard_sector(sector_name)
-                            sector_obj, _ = Sector.objects.get_or_create(name=standard_name)
-                            
-                            # Check if stock exists and has sector locked
-                            stock_obj = Stock.objects.filter(symbol=symbol).first()
-                            if stock_obj and stock_obj.sector_locked:
-                                # Update fields EXCEPT sector
-                                Stock.objects.filter(symbol=symbol).update(
-                                    company_name=name,
-                                    is_active=True
-                                )
-                            else:
-                                # Standard update_or_create
-                                Stock.objects.update_or_create(
-                                    symbol=symbol,
-                                    defaults={'company_name': name, 'sector': sector_obj, 'is_active': True}
-                                )
-                            sync_count += 1
-
-            # --- Method 2: Header-based scraping (Modern Merolagani UI) ---
-            # This handles cases where stocks are listed under H3/H4 headers
-            # We iterate through all headers to find sectors
-            headers = soup.find_all(['h3', 'h4'])
-            numeric_pattern = re.compile(r'^[\d,]+$')
-            
-            for header in headers:
-                sector_name = header.get_text(strip=True)
-                
-                # Validation: Ignore if empty, known nav items, or numeric strings (common mistakes)
-                if not sector_name or sector_name.lower() in ['search', 'filter', 'navigation']:
-                    continue
-                if numeric_pattern.match(sector_name):
-                    continue
-                
-                # The companies are usually in the next div or sibling
-                # Merolagani uses a collapsible structure
-                container = header.find_next_sibling('div')
-                if container:
-                    links = container.find_all('a', href=re.compile(r'CompanyDetail\.aspx\?symbol='))
-                    if links:
-                        standard_name = StockService.get_standard_sector(sector_name)
-                        sector_obj, _ = Sector.objects.get_or_create(name=standard_name)
-                        for link in links:
-                            symbol = link.get_text(strip=True).upper()
-                            if symbol:
-                                # Check if sector is locked for this stock
-                                stock_obj = Stock.objects.filter(symbol=symbol).first()
-                                if stock_obj and stock_obj.sector_locked:
-                                    # Just ensure it's active
-                                    stock_obj.is_active = True
-                                    stock_obj.save()
-                                else:
-                                    Stock.objects.update_or_create(
-                                        symbol=symbol,
-                                        defaults={'company_name': symbol, 'sector': sector_obj, 'is_active': True}
-                                    )
-                                sync_count += 1
-            
-            logger.info(f"Successfully synced metadata. Total processed entries: {sync_count}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error during metadata sync: {str(e)}")
-            return False
+        sector = Sector.objects.filter(name=target_name).first()
+        if not sector:
+            sector, _ = Sector.objects.get_or_create(name="Others")
+        return sector
 
     @staticmethod
     def update_live_prices():
-        """
-        Scrape live prices from Merolagani and update Stock model and NEPSEPrice history.
-        Runs every minute.
-        """
-        logger.info("Starting live price update...")
+        """Scrape all 329 stocks and FORCE sync sectors from exhaustive mapping."""
+        print("\n" + "="*60)
+        print("🚀 STARTING GLOBAL SECTOR SYNC & LIVE PRICE SCRAPE")
+        print("="*60)
         timestamp = timezone.now()
-        
-        # We can reuse the driver-based logic from scrape_nepse or a more lightweight version if available
-        # For simplicity and modularity, I'll implement a clean version here using Selenium as per existing patterns
         
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support.ui import WebDriverWait
@@ -151,93 +306,120 @@ class StockService:
         driver = scraper.create_driver()
         
         try:
+            print("🌐 Connecting to Merolagani...")
             driver.get('https://merolagani.com/StockQuote.aspx')
-            time.sleep(2)
-            scraper.dismiss_alerts(driver)
             
-            # Wait for table
+            # Kill Alerts via JS Injection
+            driver.execute_script("window.alert = function() {}; window.confirm = function() {};")
+
             wait = WebDriverWait(driver, 20)
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "table")))
-            
-            # Scrape all pages if necessary, or just the first if it's "Show All"
-            # For this service, let's assume we want all data
-            
-            total_updated = 0
-            detected_new = 0
-            
-            # Reusing the existing extraction logic structure
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
-            table = soup.find('table') # Usually the first table on StockQuote
-            if not table:
-                return False
+            time.sleep(3)
 
-            rows = table.find_all('tr')[1:] # Skip header
-            
-            # Get sector "Uncategorized" as fallback
-            uncategorized_sector, _ = Sector.objects.get_or_create(name="Uncategorized")
+            # Force 100 entries via JS
+            driver.execute_script("""
+                var sel = document.querySelector('select[name*="length"], .dataTables_length select');
+                if(sel) { sel.value = '100'; sel.dispatchEvent(new Event('change', {bubbles: true})); }
+            """)
+            time.sleep(5)
 
-            for row in rows:
-                cols = row.find_all('td')
-                if len(cols) < 3: continue
+            total_saved = 0
+            page_num = 1
+            max_pages = 5 
+
+            while page_num <= max_pages:
+                print(f"📄 Processing Page {page_num}...")
+                soup = BeautifulSoup(driver.page_source, 'html.parser')
+                target_table = None
+                for table in soup.find_all('table'):
+                    if 'symbol' in table.get_text().lower() or 'ltp' in table.get_text().lower():
+                        target_table = table
+                        break
                 
-                # Merolagani Stock Quote Columns: Symbol, LTP, % Change, High, Low, Open, Qty, ...
-                try:
-                    symbol = cols[0].get_text(strip=True).upper()
-                    ltp = scraper.parse_float(cols[1].get_text(strip=True))
-                    change_pct = scraper.parse_float(cols[2].get_text(strip=True))
-                    high = scraper.parse_float(cols[3].get_text(strip=True))
-                    low = scraper.parse_float(cols[4].get_text(strip=True))
-                    open_price = scraper.parse_float(cols[5].get_text(strip=True))
-                    volume = scraper.parse_float(cols[6].get_text(strip=True))
-                    turnover = scraper.parse_float(cols[7].get_text(strip=True))
+                if not target_table: break
 
-                    if not symbol or ltp is None:
-                        continue
+                # Robust Column Mapping
+                headers = [th.get_text(strip=True).upper() for th in target_table.find_all(['th', 'td'])[:15]]
+                col_map = {'symbol': 1, 'ltp': 2, 'change': 3, 'high': 4, 'low': 5, 'open': 6, 'vol': 7}
+                for i, h in enumerate(headers):
+                    if 'SYMBOL' in h or 'SCRIP' in h: col_map['symbol'] = i
+                    elif 'LTP' in h: col_map['ltp'] = i
+                    elif '%' in h or 'CHANGE' in h: col_map['change'] = i
 
-                    # 1. Automatic Stock Detection
-                    stock, created = Stock.objects.get_or_create(
-                        symbol=symbol,
-                        defaults={
-                            'company_name': symbol, # Default to symbol if name unknown
-                            'sector': uncategorized_sector,
-                            'is_active': True
+                rows = target_table.find_all('tr')
+                start_row = 1 if target_table.find('thead') else 0
+                
+                if len(rows) <= start_row: break
+                first_sym_current = rows[start_row].find_all('td')[col_map['symbol']].get_text(strip=True)
+
+                for row in rows[start_row:]:
+                    cols = row.find_all('td')
+                    if len(cols) <= col_map['symbol']: continue
+                    
+                    try:
+                        symbol = cols[col_map['symbol']].get_text(strip=True).upper()
+                        if not symbol or re.match(r'^\d+$', symbol) or symbol == "SYMBOL":
+                            continue
+
+                        ltp = scraper.parse_float(cols[col_map['ltp']].get_text(strip=True))
+                        if ltp is None: continue
+
+                        # --- FORCED SECTOR SYNC ---
+                        correct_sector = StockService.get_correct_sector_instance(symbol)
+
+                        # Update metadata and overwrite sector
+                        stock, _ = Stock.objects.update_or_create(
+                            symbol=symbol, 
+                            defaults={
+                                'company_name': symbol, 
+                                'sector': correct_sector, 
+                                'last_price': ltp,
+                                'change': scraper.parse_float(cols[col_map['change']].get_text(strip=True)) if len(cols) > col_map['change'] else 0,
+                            }
+                        )
+                        
+                        # Save history
+                        NEPSEPrice.objects.create(
+                            symbol=symbol, timestamp=timestamp, ltp=ltp, change_pct=stock.change,
+                            high=scraper.parse_float(cols[col_map['high']].get_text(strip=True)) if len(cols) > col_map['high'] else 0,
+                            low=scraper.parse_float(cols[col_map['low']].get_text(strip=True)) if len(cols) > col_map['low'] else 0,
+                            open=scraper.parse_float(cols[col_map['open']].get_text(strip=True)) if len(cols) > col_map['open'] else 0,
+                            volume=scraper.parse_float(cols[col_map['vol']].get_text(strip=True)) if len(cols) > col_map['vol'] else 0,
+                            turnover=scraper.parse_float(cols[8].get_text(strip=True)) if len(cols) > 8 else 0
+                        )
+                        total_saved += 1
+                    except: continue
+
+                print(f"✅ Finished Page {page_num}. Total so far: {total_saved}")
+
+                # JS PAGINATION
+                js_clicked = driver.execute_script("""
+                    var links = document.querySelectorAll('a');
+                    for (var i = 0; i < links.length; i++) {
+                        if (links[i].textContent.trim() === 'Next' || links[i].textContent.trim() === '›') {
+                            if(!links[i].parentElement.classList.contains('disabled')) {
+                                links[i].click(); return true;
+                            }
                         }
-                    )
-                    
-                    if created:
-                        logger.warning(f"New stock detected during price update: {symbol}")
-                        detected_new += 1
+                    }
+                    return false;
+                """)
+                if not js_clicked: break
+                
+                refreshed = False
+                for _ in range(10):
+                    time.sleep(1.5)
+                    check_soup = BeautifulSoup(driver.page_source, 'html.parser')
+                    try:
+                        new_sym = check_soup.find('table').find_all('tr')[start_row].find_all('td')[col_map['symbol']].get_text(strip=True)
+                        if new_sym != first_sym_current:
+                            refreshed = True
+                            break
+                    except: pass
+                if not refreshed: break
+                page_num += 1
 
-                    # 2. Update Stock Model Current State
-                    stock.last_price = ltp
-                    stock.change = change_pct
-                    stock.volume = volume or 0
-                    stock.save()
-
-                    # 3. Create NEPSEPrice record for history
-                    NEPSEPrice.objects.create(
-                        symbol=symbol,
-                        timestamp=timestamp,
-                        open=open_price,
-                        high=high,
-                        low=low,
-                        close=ltp,
-                        ltp=ltp,
-                        change_pct=change_pct,
-                        volume=volume or 0,
-                        turnover=turnover or 0
-                    )
-                    
-                    total_updated += 1
-                except Exception as e:
-                    logger.error(f"Error parsing row for {symbol if 'symbol' in locals() else 'unknown'}: {str(e)}")
-                    continue
-
-            logger.info(f"Live price update completed. Updated: {total_updated}, New Detected: {detected_new}")
+            print(f"\n✨ FINISHED! Saved {total_saved} stocks with COMPREHENSIVE sector mapping.")
             return True
-
-        except Exception as e:
-            logger.error(f"Error during live price update: {str(e)}")
-            return False
         finally:
             driver.quit()

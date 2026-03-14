@@ -1,0 +1,189 @@
+{% extends 'custom_admin/panel_base.html' %}
+{% load admin_tags %}
+
+{% block extra_css %}
+<style>
+    .table-custom th {
+        background-color: #f8f9fa;
+        color: #4c5258;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 13px;
+        padding: 15px;
+        border-bottom: 1px solid #ebedf2;
+    }
+    .table-custom td {
+        padding: 15px;
+        vertical-align: middle;
+        color: #4c5258;
+        font-size: 14px;
+        border-bottom: 1px solid #ebedf2;
+    }
+    .btn-action {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .btn-action i {
+        font-size: 16px;
+    }
+    .btn-action-edit {
+        color: #0dceec;
+        background-color: rgb(13 206 236 / 15%);
+    }
+    .btn-action-edit:hover {
+        background-color: #0dceec;
+        color: #fff;
+    }
+    .btn-action-delete {
+        color: #fd3550;
+        background-color: rgb(253 53 80 / 15%);
+    }
+    .btn-action-delete:hover {
+        background-color: #fd3550;
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block panel_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="mb-0 fw-bold">{{ page_title }}</h5>
+    <a href="{% url 'custom_admin:generic_create' app_name model_name %}" class="btn btn-primary shadow-sm rounded-pill px-4"><i class='bx bx-plus me-1'></i> Add New</a>
+</div>
+
+{% if filters_config %}
+<div class="card radius-10 border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="GET" class="row g-3 align-items-end">
+            <!-- Keep global search if q exists -->
+            <input type="hidden" name="q" value="{{ active_filters.q|default:'' }}">
+            <input type="hidden" name="sort" value="{{ current_sort|default:'' }}">
+            
+            {% for cfg in filters_config %}
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">{{ cfg.label }}</label>
+                {% if cfg.type == 'select' %}
+                <select name="{{ cfg.name }}" class="form-select form-select-sm">
+                    {% for val, lab in cfg.options %}
+                    <option value="{{ val }}" {% if active_filters|get_item:cfg.name == val|stringformat:"s" %}selected{% endif %}>{{ lab }}</option>
+                    {% endfor %}
+                </select>
+                {% elif cfg.type == 'date' %}
+                <input type="date" name="{{ cfg.name }}" class="form-control form-control-sm" value="{{ active_filters|get_item:cfg.name|default:'' }}">
+                {% elif cfg.type == 'number' %}
+                <input type="number" name="{{ cfg.name }}" class="form-control form-control-sm" placeholder="{{ cfg.label }}" value="{{ active_filters|get_item:cfg.name|default:'' }}">
+                {% else %}
+                <input type="text" name="{{ cfg.name }}" class="form-control form-control-sm" placeholder="{{ cfg.label }}" value="{{ active_filters|get_item:cfg.name|default:'' }}">
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary flex-grow-1 rounded-pill px-3">Apply Filters</button>
+                <a href="?" class="btn btn-sm btn-outline-secondary flex-grow-1 rounded-pill px-3">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card radius-10 w-100">
+    <div class="card-header bg-transparent border-bottom-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold">Records List</h6>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Small Search for current list -->
+            <form method="GET" class="input-group" style="width: 250px;">
+                {% for key, value in active_filters.items %}
+                    {% if key != 'q' %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endif %}
+                {% endfor %}
+                <input type="text" name="q" class="form-control form-control-sm border-end-0" placeholder="Search keywords..." value="{{ active_filters.q|default:'' }}">
+                <button type="submit" class="btn btn-sm border border-start-0 bg-transparent text-muted"><i class='bx bx-search'></i></button>
+            </form>
+        </div>
+    </div>
+    <div class="card-body px-0 pt-3 pb-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-custom mb-0">
+                <thead>
+                    <tr>
+                        {% for header in headers %}
+                            <th>
+                                <a href="?{% if current_sort == header %}{% url_replace request 'sort' '-'|add:header %}{% else %}{% url_replace request 'sort' header %}{% endif %}" class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
+                                    {{ header|title|replace:"_, " }}
+                                    <i class='bx {% if current_sort == header %}bx-sort-up text-primary{% elif current_sort == "-"|add:header %}bx-sort-down text-primary{% else %}bx-sort-alt text-muted{% endif %} ms-1'></i>
+                                </a>
+                            </th>
+                        {% endfor %}
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obj in objects %}
+                        <tr>
+                            {% for field in fields %}
+                                <td>
+                                    {% if 'is_' in field or '_active' in field %}
+                                        {% if obj|get_attribute:field %}
+                                            <span class="badge border-0 bg-light-success text-success rounded-pill px-3">Active</span>
+                                        {% else %}
+                                            <span class="badge border-0 bg-light-danger text-danger rounded-pill px-3">Inactive</span>
+                                        {% endif %}
+                                    {% elif field == 'status' %}
+                                        <span class="badge border-0 bg-light-{% if obj.status == 'COMPLETED' or obj.status == 'FILLED' or obj.status == 'OPEN' %}primary{% elif obj.status == 'PENDING' or obj.status == 'PARTIAL' %}warning{% else %}danger{% endif %} text-{% if obj.status == 'COMPLETED' or obj.status == 'FILLED' or obj.status == 'OPEN' %}primary{% elif obj.status == 'PENDING' or obj.status == 'PARTIAL' %}warning{% else %}danger{% endif %} rounded-pill px-3">
+                                            {{ obj.status }}
+                                        </span>
+                                    {% else %}
+                                        {{ obj|get_attribute:field|truncatechars:50|default:"-" }}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                            <td class="text-end pe-4">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{% url 'custom_admin:generic_edit' app_name model_name obj.pk %}" class="btn-action btn-action-edit text-decoration-none" title="Edit"><i class='bx bxs-edit'></i></a>
+                                    <a href="{% url 'custom_admin:generic_delete' app_name model_name obj.pk %}" class="btn-action btn-action-delete text-decoration-none" onclick="return confirm('Delete this record?');" title="Delete"><i class='bx bxs-trash'></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="100%" class="text-center py-5 text-muted"><i class='bx bx-info-circle fs-4 mb-2 d-block'></i> No records found matching your filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if objects.has_other_pages %}
+    <div class="card-footer bg-transparent border-top-0 px-4 pt-4 pb-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm justify-content-end mb-0">
+                {% if objects.has_previous %}
+                    <li class="page-item"><a class="page-link rounded-start px-3" href="?{% url_replace request 'page' objects.previous_page_number %}">Previous</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link rounded-start px-3">Previous</span></li>
+                {% endif %}
+
+                {% for num in objects.paginator.page_range %}
+                    {% if objects.number == num %}
+                        <li class="page-item active"><span class="page-link px-3">{{ num }}</span></li>
+                    {% elif num > objects.number|add:'-3' and num < objects.number|add:'3' %}
+                        <li class="page-item"><a class="page-link px-3" href="?{% url_replace request 'page' num %}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if objects.has_next %}
+                    <li class="page-item"><a class="page-link rounded-end px-3" href="?{% url_replace request 'page' objects.next_page_number %}">Next</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link rounded-end px-3">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

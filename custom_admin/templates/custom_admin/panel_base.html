@@ -1,0 +1,374 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | NepseSewa Admin</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Boxicons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+    <style>
+        :root { 
+            --onedash-primary: #008cff;
+            --onedash-secondary: #6c757d;
+            --onedash-success: #15ca20;
+            --onedash-info: #0dceec;
+            --onedash-warning: #ffc107;
+            --onedash-danger: #fd3550;
+            --onedash-light: #f7f7fa;
+            --onedash-dark: #212529;
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #4c5258;
+            --sidebar-hover-bg: rgb(0 140 255 / 8%);
+            --sidebar-hover-text: #008cff;
+            --body-bg: #f2f3f9;
+            --card-border-radius: 10px;
+            --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--body-bg); 
+            overflow-x: hidden; 
+            color: #4c5258;
+        }
+        
+        /* Sidebar Navigation */
+        .sidebar { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 250px; 
+            height: 100vh; 
+            background: var(--sidebar-bg); 
+            overflow-y: auto; 
+            z-index: 1000; 
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            border-right: 1px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        .sidebar-brand { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 60px; 
+            color: var(--onedash-primary); 
+            font-size: 22px; 
+            font-weight: 700; 
+            text-decoration: none; 
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .sidebar-brand i {
+            font-size: 28px;
+            margin-right: 8px;
+        }
+        .menu-title { 
+            color: #a4abc5; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            font-weight: 600; 
+            padding: 20px 20px 5px; 
+            letter-spacing: 1px; 
+        }
+        
+        .sidebar-nav {
+            padding: 10px 0;
+            list-style: none;
+            margin: 0;
+        }
+        .sidebar-nav li {
+            padding: 2px 15px;
+        }
+        .sidebar a { 
+            display: flex; 
+            align-items: center; 
+            padding: 10px 15px; 
+            color: var(--sidebar-text); 
+            text-decoration: none; 
+            font-size: 14px; 
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.3s; 
+        }
+        .sidebar a i { 
+            font-size: 20px; 
+            margin-right: 10px;
+            color: #aeb0b4;
+            transition: all 0.3s;
+        }
+        .sidebar a:hover, .sidebar a.active { 
+            color: var(--sidebar-hover-text); 
+            background: var(--sidebar-hover-bg); 
+        }
+        .sidebar a:hover i, .sidebar a.active i {
+            color: var(--sidebar-hover-text);
+        }
+        
+        /* Main Content Wrapper */
+        .main-wrapper { 
+            margin-left: 250px; 
+            min-height: 100vh; 
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+        
+        /* Topbar Header */
+        .topbar { 
+            height: 60px; 
+            background: #ffffff; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 20px; 
+            justify-content: space-between; 
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+        .nav-icon {
+            font-size: 24px;
+            color: #4c5258;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .nav-icon:hover {
+            background: #f2f3f9;
+        }
+        
+        /* Page Content */
+        .page-content { 
+            padding: 24px; 
+            flex-grow: 1;
+        }
+        
+        .page-breadcrumb {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .breadcrumb-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            color: #4c5258;
+            border-right: 1px solid #e9ecef;
+            padding-right: 15px;
+            margin-right: 15px;
+        }
+        
+        /* Cards & Tables */
+        .card { 
+            border: none; 
+            border-radius: var(--card-border-radius); 
+            box-shadow: var(--card-shadow); 
+            margin-bottom: 24px; 
+            background-color: #ffffff;
+        }
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid #ebedf2;
+            padding: 15px 20px;
+            /* font-weight: 600; */
+        }
+        .table > :not(caption) > * > * {
+            padding: 12px 15px;
+            border-bottom-color: #ebedf2;
+            color: #4c5258;
+        }
+        .table thead th { 
+            font-size: 13px; 
+            text-transform: uppercase; 
+            font-weight: 600; 
+            color: #4c5258; 
+            background-color: #f8f9fa;
+            border-bottom: 0;
+        }
+        
+        /* Form Controls */
+        .form-control, .form-select {
+            border: 1px solid #ced4da;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            font-size: 14px;
+        }
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 0.25rem rgb(0 140 255 / 25%);
+            border-color: #80c6ff;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1; 
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <a href="{% url 'custom_admin:admin_trading_dashboard' %}" class="sidebar-brand">
+            <i class='bx bx-line-chart'></i> NepseSewa
+        </a>
+        
+        <ul class="sidebar-nav">
+            <li class="menu-title">Core Engine</li>
+            <li><a href="{% url 'custom_admin:admin_trading_dashboard' %}"><i class='bx bx-home-circle'></i> Dashboard</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'MarketSession' %}"><i class='bx bx-time-five'></i> Market Sessions</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Order' %}"><i class='bx bx-receipt'></i> Active Orders</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'TradeExecution' %}"><i class='bx bx-transfer'></i> Executions</a></li>
+
+            <li class="menu-title">Market Intel</li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Stock' %}"><i class='bx bx-buildings'></i> Stocks Library</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Sector' %}"><i class='bx bx-category'></i> Sectors</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'NEPSEPrice' %}"><i class='bx bx-trending-up'></i> Live Scrapes</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'StockRecommendation' %}"><i class='bx bx-brain'></i> AI Signals</a></li>
+
+            <li class="menu-title">Accounts</li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'CustomUser' %}"><i class='bx bx-group'></i> Users</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Portfolio' %}"><i class='bx bx-pie-chart-alt-2'></i> Portfolios</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'UserSubscription' %}"><i class='bx bx-id-card'></i> Subscriptions</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'PaymentTransaction' %}"><i class='bx bx-money'></i> Payments</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'SubscriptionPlan' %}"><i class='bx bx-purchase-tag'></i> Plans</a></li>
+
+            <li class="menu-title">Learning</li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Course' %}"><i class='bx bx-book-reader'></i> Courses</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'CandlestickLesson' %}"><i class='bx bx-chalkboard'></i> Lessons</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'CourseCategory' %}"><i class='bx bx-folder'></i> Categories</a></li>
+
+            <li class="menu-title">System Admin</li>
+            <li><a href="{% url 'custom_admin:generic_list' 'custom_admin' 'ActivityLog' %}"><i class='bx bx-shield-quarter'></i> Activity Logs</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'custom_admin' 'Notification' %}"><i class='bx bx-bell'></i> Notifications</a></li>
+            <li><a href="{% url 'custom_admin:generic_list' 'custom_admin' 'SystemSetting' %}"><i class='bx bx-cog'></i> Global Settings</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="d-flex align-items-center">
+                <div class="nav-icon me-3">
+                    <i class='bx bx-menu'></i>
+                </div>
+                <!-- Search bar styling like OneDash -->
+                <form action="{% url 'custom_admin:admin_search' %}" method="GET" class="input-group d-none d-md-flex" style="width: 250px;">
+                    <span class="input-group-text bg-transparent border-0 pe-1"><i class='bx bx-search fs-5 text-muted'></i></span>
+                    <input type="text" name="q" class="form-control border-0 bg-transparent shadow-none" placeholder="Search..." value="{{ query|default:'' }}">
+                    <button type="submit" class="d-none"></button>
+                </form>
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <a href="/" target="_blank" class="nav-icon" title="View Site">
+                    <i class='bx bx-world'></i>
+                </a>
+                <div class="nav-icon position-relative">
+                    <i class='bx bx-bell'></i>
+                    {% if unread_notifications_count %}
+                    <span class="position-absolute translate-middle badge rounded-pill bg-danger" style="top: 10px; right: -5px; font-size: 10px; padding: 3px 6px;">
+                        {{ unread_notifications_count }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=008cff&color=fff" alt="mdo" width="38" height="38" class="rounded-circle">
+                        <div class="d-none d-md-block ms-2 text-start">
+                            <span class="d-block fw-semibold text-dark" style="font-size: 14px; line-height: 1;">Admin</span>
+                            <span class="d-block text-muted" style="font-size: 12px; margin-top: 4px;">Superuser</span>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                        <li><a class="dropdown-item d-flex align-items-center" href="#"><i class='bx bx-user fs-5 me-2'></i> Profile</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="{% url 'custom_admin:generic_list' 'custom_admin' 'SystemSetting' %}"><i class='bx bx-cog fs-5 me-2'></i> Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item d-flex align-items-center text-danger" href="{% url 'custom_admin:admin_logout' %}"><i class='bx bx-log-out fs-5 me-2'></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="page-content">
+            <div class="page-breadcrumb d-flex align-items-center">
+                <div class="breadcrumb-title pe-3">{{ page_title }}</div>
+                <div class="ps-3 d-none d-md-block">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0 p-0">
+                            <li class="breadcrumb-item"><a href="{% url 'custom_admin:admin_trading_dashboard' %}"><i class='bx bx-home-alt text-muted'></i></a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+            
+            {% if messages %}
+            <div class="row">
+                <div class="col-12">
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show border-0 bg-white shadow-sm" style="border-left: 4px solid var(--onedash-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}) !important;" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% block panel_content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Simple sidebar toggle logic
+        document.querySelector('.nav-icon .bx-menu').parentElement.addEventListener('click', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const main = document.querySelector('.main-wrapper');
+            if (sidebar.style.left === '-250px') {
+                sidebar.style.left = '0';
+                main.style.marginLeft = window.innerWidth > 991 ? '250px' : '0';
+            } else {
+                sidebar.style.left = '-250px';
+                main.style.marginLeft = '0';
+            }
+        });
+        
+        // Auto mark active sidebar link
+        document.addEventListener("DOMContentLoaded", function () {
+            let currentUrl = window.location.pathname;
+            document.querySelectorAll(".sidebar-nav a").forEach(link => {
+                if (link.getAttribute("href") === currentUrl) {
+                    link.classList.add("active");
+                }
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

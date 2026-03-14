@@ -1,0 +1,79 @@
+{% extends 'custom_admin/panel_base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Auto-style all generated Django form inputs to Bootstrap 5 OneDash style */
+    form input[type="text"], form input[type="email"], form input[type="number"], form input[type="password"], form select, form textarea, form input[type="file"] {
+        display: block; 
+        width: 100%; 
+        padding: 0.5rem 1rem; 
+        font-size: 14px; 
+        font-weight: 400; 
+        line-height: 1.5; 
+        color: #4c5258; 
+        background-color: #fff; 
+        background-clip: padding-box; 
+        border: 1px solid #ced4da; 
+        appearance: none; 
+        border-radius: 6px; 
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    }
+    form input[type="text"]:focus, form input[type="email"]:focus, form input[type="number"]:focus, form select:focus, form textarea:focus {
+        border-color: #80c6ff;
+        box-shadow: 0 0 0 0.25rem rgb(0 140 255 / 25%);
+        outline: 0;
+    }
+    form input[type="checkbox"] { 
+        width: 40px; 
+        height: 20px; 
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block panel_content %}
+<div class="row">
+    <div class="col-12 col-lg-8 mx-auto">
+        <div class="card radius-10 border-top border-0 border-4 border-primary">
+            <div class="card-body p-5">
+                <div class="card-title d-flex align-items-center mb-4">
+                    <div><i class='bx bxs-file-plus me-2 fs-4 text-primary'></i></div>
+                    <h5 class="mb-0 text-primary fw-bold">{{ page_title }}</h5>
+                </div>
+                <hr>
+                
+                <form method="post" enctype="multipart/form-data" class="mt-4">
+                    {% csrf_token %}
+                    
+                    {% for field in form %}
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small text-uppercase" style="letter-spacing: 0.5px;">{{ field.label }}</label>
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                <div class="form-check form-switch mt-2">
+                                    {{ field }}
+                                </div>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+                            
+                            {% if field.help_text %}
+                                <div class="form-text small opacity-75 mt-2"><i class='bx bx-info-circle'></i> {{ field.help_text }}</div>
+                            {% endif %}
+                            
+                            {% if field.errors %}
+                                <div class="text-danger small mt-2 fw-medium"><i class='bx bx-error-circle'></i> {{ field.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-5">
+                        <a href="{% url 'custom_admin:generic_list' app_name model_name %}" class="btn btn-light px-4 border rounded-pill">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill d-flex align-items-center"><i class='bx bx-save me-2'></i> Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

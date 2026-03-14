@@ -1,0 +1,105 @@
+{% extends 'custom_admin/panel_base.html' %}
+
+{% block panel_content %}
+<div class="card radius-10 border-0 shadow-sm">
+    <div class="card-body p-4">
+        <div class="d-flex align-items-center mb-4">
+            <h5 class="mb-0 fw-bold">Search Results for "{{ query }}"</h5>
+            <span class="ms-3 badge bg-light text-dark border">{{ total_results }} items found</span>
+        </div>
+
+        {% if user_results %}
+        <h6 class="text-uppercase text-secondary font-13 fw-semibold mb-3">Users</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-hover align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in user_results %}
+                    <tr>
+                        <td>{{ u.username }}</td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.date_joined|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'custom_admin:generic_edit' 'myapp' 'CustomUser' u.id %}" class="btn btn-sm btn-light border">Edit</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if stock_results %}
+        <h6 class="text-uppercase text-secondary font-13 fw-semibold mb-3">Stocks</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-hover align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>LTP</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in stock_results %}
+                    <tr>
+                        <td><span class="badge bg-light text-dark border">{{ s.symbol }}</span></td>
+                        <td>{{ s.company_name }}</td>
+                        <td>Rs {{ s.last_price }}</td>
+                        <td>
+                            <a href="{% url 'custom_admin:generic_edit' 'myapp' 'Stock' s.id %}" class="btn btn-sm btn-light border">Edit</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if order_results %}
+        <h6 class="text-uppercase text-secondary font-13 fw-semibold mb-3">Orders</h6>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Symbol</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in order_results %}
+                    <tr>
+                        <td>{{ o.user.username }}</td>
+                        <td>{{ o.symbol }}</td>
+                        <td>{{ o.side }} / {{ o.order_type }}</td>
+                        <td><span class="badge {% if o.status == 'OPEN' %}bg-light-info text-info{% else %}bg-light-secondary text-secondary{% endif %}">{{ o.status }}</span></td>
+                        <td>
+                            <a href="{% url 'custom_admin:generic_edit' 'myapp' 'Order' o.id %}" class="btn btn-sm btn-light border">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if not user_results and not stock_results and not order_results %}
+        <div class="text-center py-5">
+            <i class='bx bx-search-alt fs-1 text-muted opacity-25'></i>
+            <p class="mt-3 text-secondary">No results found for your query.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

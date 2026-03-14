@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | NepseSewa ERP</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Boxicons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --onedash-primary: #008cff;
+            --body-bg: #f2f3f9;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--body-bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4c5258;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            overflow: hidden;
+            width: 100%;
+            max-width: 450px;
+            border: none;
+            border-top: 4px solid var(--onedash-primary);
+        }
+        .login-header {
+            text-align: center;
+            padding: 40px 20px 20px;
+        }
+        .login-body {
+            padding: 20px 40px 40px;
+        }
+        .btn-primary {
+            background-color: var(--onedash-primary);
+            border-color: var(--onedash-primary);
+        }
+        .btn-primary:hover {
+            background-color: #0077d9;
+            border-color: #0077d9;
+        }
+        .form-control {
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            padding: 0.6rem 1rem;
+            font-size: 14px;
+        }
+        .form-control:focus {
+            border-color: #80c6ff;
+            box-shadow: 0 0 0 0.25rem rgb(0 140 255 / 25%);
+        }
+        .input-group-text {
+            background-color: #f8f9fa;
+            border-color: #ced4da;
+            color: #aeb0b4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="login-header">
+            <h3 class="fw-bold mb-0 text-dark d-flex align-items-center justify-content-center">
+                <i class='bx bx-line-chart me-2 fs-1' style="color: var(--onedash-primary);"></i> NepseSewa
+            </h3>
+            <p class="text-muted mt-2 mb-0" style="font-size: 14px;">Enterprise Resource Planning</p>
+        </div>
+        <div class="login-body">
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show small border-0 bg-light shadow-sm" role="alert" style="border-left: 4px solid var(--onedash-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}) !important;">
+                        {{ message }}
+                        <button type="button" class="btn-close shadow-none" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-secondary small">Email Address (Staff)</label>
+                    <div class="input-group">
+                        <span class="input-group-text border-end-0"><i class='bx bx-envelope fs-5'></i></span>
+                        <input type="email" name="email" class="form-control border-start-0 ps-0" placeholder="admin@nepsesewa.com" required>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-secondary small">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text border-end-0"><i class='bx bx-lock-alt fs-5'></i></span>
+                        <input type="password" name="password" class="form-control border-start-0 ps-0" placeholder="Enter your password" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 fw-semibold py-2 shadow-sm rounded-pill mt-2">Secure Login</button>
+                
+                <div class="text-center mt-4">
+                    <a href="/" class="text-muted text-decoration-none small"><i class='bx bx-arrow-back me-1'></i> Return to User Site</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

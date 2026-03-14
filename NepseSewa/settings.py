@@ -9,17 +9,14 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
-INSTALLED_APPS = [
-    'unfold',
-    'unfold.contrib.filters',
-    'django.contrib.admin',
+INSTALLED_APPS =[
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'myapp',  
+    'myapp',
+    'custom_admin',  # New customized dashboard app
     'rest_framework',
     'corsheaders',
     'allauth',
@@ -28,58 +25,13 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
 ]
 
-# Unfold Admin Configuration
-UNFOLD = {
-    "SITE_TITLE": "NepseSewa Admin",
-    "SITE_HEADER": "NepseSewa Trading Engine",
-    "SITE_URL": "/",
-    "DASHBOARD_CALLBACK": "myapp.admin_views.dashboard_callback",  # Optional: For custom dashboard metrics
-    "COLORS": {
-        "primary": {
-            "50": "239 246 255",
-            "100": "219 234 254",
-            "200": "191 219 254",
-            "300": "147 197 253",
-            "400": "96 165 250",
-            "500": "59 130 246",
-            "600": "37 99 235",
-            "700": "29 78 216",
-            "800": "30 64 175",
-            "900": "30 58 138",
-            "950": "23 37 84",
-        },
-    },
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": True,
-        "navigation": [
-            {
-                "title": "Trading Operations",
-                "separator": True,
-                "items": [
-                    {
-                        "title": "Trading Dashboard",
-                        "icon": "bar_chart",  # Material Icon
-                        "link": "/admin/trading/dashboard/", # Absolute Path
-                    },
-                    {
-                        "title": "Orders",
-                        "icon": "list_alt",
-                        "link": "admin:myapp_order_changelist",
-                    },
-                    {
-                        "title": "Executions",
-                        "icon": "receipt_long",
-                        "link": "admin:myapp_tradeexecution_changelist",
-                    },
-                ],
-            },
-        ],
-    },
-}
+# Custom Admin Configuration
+# We are using a fully custom Django admin panel built locally.
+
+
 SITE_ID = 1
 
-MIDDLEWARE = [
+MIDDLEWARE =[
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',  
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -93,13 +45,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'NepseSewa.urls'
 
-TEMPLATES = [
+TEMPLATES =[
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR / 'Templates'],
         'APP_DIRS': True,
         'OPTIONS': {
-            'context_processors': [
+            'context_processors':[
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -127,14 +79,14 @@ DATABASES = {
 AUTH_USER_MODEL = 'myapp.CustomUser'
 
 # Authentication Backends
-AUTHENTICATION_BACKENDS = [
+AUTHENTICATION_BACKENDS =[
     'myapp.views.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 # Password validation
-AUTH_PASSWORD_VALIDATORS = [
+AUTH_PASSWORD_VALIDATORS =[
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
@@ -190,26 +142,13 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # ========== ALLAUTH SETTINGS ==========
-# Skip intermediate pages and go directly to Google login
 SOCIALACCOUNT_LOGIN_ON_GET = True
-
-# Auto-create user accounts on social login
 SOCIALACCOUNT_AUTO_SIGNUP = True
-
-# Allow login with email or username
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_UNIQUE_EMAIL = True
-
-# Email verification (optional - no verification needed)
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
-
-# Redirect after signup
 SOCIALACCOUNT_ADAPTER = 'allauth.socialaccount.adapter.DefaultSocialAccountAdapter'
 
-# Prevent showing allauth's default signup page
-ACCOUNT_SIGNUP_FIELDS = []
-
-# ========== OPTIONAL: Google OAuth Credentials ==========
 # Store these securely in environment variables in production
 SOCIALACCOUNT_PROVIDERS['google']['APP'] = {
     'client_id': '698946278656-gcv1iunmrr66dthuquen430pfjlk57g8.apps.googleusercontent.com',
@@ -218,7 +157,7 @@ SOCIALACCOUNT_PROVIDERS['google']['APP'] = {
 }
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS =[
     "http://localhost:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -230,36 +169,34 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 100,
 }
 
-
-
-
-
-
-# Email Configuration (Development - Saves to 'emails' folder)
-# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-# EMAIL_FILE_PATH = BASE_DIR / "emails"
-
-# Email Configuration (Production/Real Emails)
+# Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# You must generate an App Password for this to work: https://myaccount.google.com/apppasswords
-EMAIL_HOST_USER = 'adrianpoudyal@gmail.com'  # Replace with your actual Gmail
-EMAIL_HOST_PASSWORD = 'xflhaikspmcwihkh'  # The 16-character code from Google
+EMAIL_HOST_USER = 'adrianpoudyal@gmail.com'  
+EMAIL_HOST_PASSWORD = 'xflhaikspmcwihkh'  
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-
-
 # ========== INTEGRATION SETTINGS ==========
-# Redirect URLs (Must be accessible from web for verification or redirect back)
-# In production, use your actual domain
 BASE_URL = "http://127.0.0.1:8000"
+
 # ========== KHALTI INTEGRATION SETTINGS ==========
 KHALTI_PUBLIC_KEY = "e62e4d9b16a84b1eb0cbd2dc24f23603"
 KHALTI_SECRET_KEY = "1025bef34dfe40f58667375da641f6e7"
 KHALTI_INITIATE_URL = "https://a.khalti.com/api/v2/epayment/initiate/"
 KHALTI_LOOKUP_URL = "https://a.khalti.com/api/v2/epayment/lookup/"
-
-# Redirect URLs
 KHALTI_RETURN_URL = f"{BASE_URL}/payment/khalti/success/"
+
+# ========== CELERY SETTINGS ==========
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# For development: Set this to True to run tasks synchronously without Redis
+# Set to False once Redis and Celery worker are running locally
+CELERY_TASK_ALWAYS_EAGER = True 
+

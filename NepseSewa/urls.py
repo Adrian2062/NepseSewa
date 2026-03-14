@@ -1,5 +1,5 @@
-from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from myapp import views
 from django.contrib.auth import views as auth_views
 from django.conf import settings
@@ -15,8 +15,11 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('accounts/', include('allauth.urls')),  # Social login
 
-    # Django admin
-    path('admin/', admin.site.urls),
+    # Custom Admin backoffice routes
+    path('panel/', include('custom_admin.urls')),
+
+    # Redirect default admin to our custom ERP dashboard
+    path('admin/', RedirectView.as_view(url='/panel/dashboard/', permanent=False)),
 
     # Password reset routes (Restored to working templates)
     path(

@@ -24,7 +24,7 @@ from .models import (
     PaymentTransaction, Trade
 )
 from .decorators import subscription_required, premium_required, gold_required
-
+from myapp.services.matching_engine import MatchingEngine
 
 
 User = get_user_model()
@@ -903,166 +903,64 @@ def api_trade_history(request):
     return JsonResponse({"success": True, "data": data})
 
 
+
+
 @require_http_methods(["POST"])
 @login_required
 def api_place_order(request):
-    """
-    POST /api/trade/place/
-    body: {symbol, side, qty, price}
-    
-    CORRECTED VERSION:
-    - Updates Portfolio table (BUY/SELL)
-    - Atomic transactions
-    - SELL validation
-    - Concurrency safety
-    """
     try:
+        import json
+        from decimal import Decimal, InvalidOperation
+        
         data = json.loads(request.body)
         symbol = (data.get('symbol') or '').strip().upper()
         side = (data.get('side') or '').strip().upper()
         
+        # SAFETY CHECK: Handle empty or null inputs
         try:
-            qty = int(data.get('qty', 0))
-            price = float(data.get('price', 0.0))
-        except (ValueError, TypeError):
-            return JsonResponse({'success': False, 'message': 'Invalid quantity or price.'})
+            qty_val = data.get('qty')
+            price_val = data.get('price')
+            
+            if qty_val is None or price_val is None or str(qty_val).strip() == "" or str(price_val).strip() == "":
+                return JsonResponse({'success': False, 'message': 'Quantity and Price are required.'})
+                
+            qty = int(float(qty_val))
+            price = Decimal(str(price_val))
+        except (ValueError, TypeError, InvalidOperation):
+            return JsonResponse({'success': False, 'message': 'Invalid format for Quantity or Price.'})
 
-        if not symbol:
-            return JsonResponse({'success': False, 'message': 'Symbol is required.'})
+        if not symbol or side not in ['BUY', 'SELL'] or qty <= 0 or price <= 0:
+            return JsonResponse({'success': False, 'message': 'Invalid trade details provided.'})
+
+        # Create Order instance
+        order = Order(user=request.user, symbol=symbol, side=side, qty=qty, price=price, status='OPEN')
+
+        # 1. Validate (Circuit limits + Funds)
+        is_valid, err = MatchingEngine.validate_order(order)
+        if not is_valid: 
+            return JsonResponse({'success': False, 'message': err})
+
+        with transaction.atomic():
+            user = request.user.__class__.objects.select_for_update().get(pk=request.user.pk)
+            
+            if side == 'BUY':
+                total_cost = Decimal(str(qty)) * price
+                if user.virtual_balance < total_cost:
+                    return JsonResponse({'success': False, 'message': 'Insufficient balance.'})
+                user.virtual_balance -= total_cost
+                user.save()
+
+            order.user = user
+            order.save()
+            matches = MatchingEngine.match_order(order)
+
+        msg = "✅ Order matched!" if matches else "Order placed in Market Depth. Waiting for counter-party."
+        return JsonResponse({'success': True, 'message': msg})
         
-        if side not in ['BUY', 'SELL']:
-            return JsonResponse({'success': False, 'message': 'Invalid side (BUY/SELL).'})
-            
-        if qty <= 0:
-            return JsonResponse({'success': False, 'message': 'Quantity must be positive.'})
-            
-        if price <= 0:
-            return JsonResponse({'success': False, 'message': 'Price must be positive.'})
-
-        user = request.user
-        price_decimal = Decimal(str(price))
-        qty_decimal = Decimal(str(qty))
-        total_cost = qty_decimal * price_decimal
-
-        # Wrap in atomic transaction - all succeed or all rollback
-        try:
-            with transaction.atomic():
-                # Step 1: Lock User object first to prevent deadlocks (User then Portfolio)
-                User = get_user_model()
-                user = User.objects.select_for_update().get(pk=user.pk)
-
-                if side == 'BUY':
-                    # BUY Validation & Execution
-                    if user.virtual_balance < total_cost:
-                        return JsonResponse({
-                            'success': False, 
-                            'message': f'Insufficient balance. Required: Rs {total_cost:,.2f}, Available: Rs {user.virtual_balance:,.2f}'
-                        })
-                    
-                    # 1. Deduct balance
-                    user.virtual_balance -= total_cost
-                    user.save(update_fields=['virtual_balance'])
-
-                    # 2. Update Portfolio (Weighted Average)
-                    portfolio, created = Portfolio.objects.select_for_update().get_or_create(
-                        user=user,
-                        symbol=symbol,
-                        defaults={
-                            'quantity': qty,
-                            'avg_price': price_decimal
-                        }
-                    )
-                    
-                    if not created:
-                        old_qty = Decimal(str(portfolio.quantity))
-                        old_avg = portfolio.avg_price
-                        total_qty = old_qty + qty_decimal
-                        # New Avg = ((Old Qty * Old Avg) + (New Qty * New Price)) / Total Qty
-                        new_avg_price = ((old_qty * old_avg) + (qty_decimal * price_decimal)) / total_qty
-                        
-                        portfolio.quantity = int(total_qty)
-                        portfolio.avg_price = new_avg_price.quantize(Decimal('0.01'))
-                        portfolio.save(update_fields=['quantity', 'avg_price', 'updated_at'])
-
-                elif side == 'SELL':
-                    # SELL Validation & Execution
-                    try:
-                        # Lock portfolio row
-                        portfolio = Portfolio.objects.select_for_update().get(
-                            user=user,
-                            symbol=symbol
-                        )
-                    except Portfolio.DoesNotExist:
-                        return JsonResponse({
-                            'success': False,
-                            'message': f'You do not own any {symbol} shares. Cannot sell.'
-                        })
-                    
-                    if portfolio.quantity < qty:
-                        return JsonResponse({
-                            'success': False,
-                            'message': f'Insufficient holdings. You have {portfolio.quantity} {symbol} shares but trying to sell {qty}.'
-                        })
-                    
-                    # 1. Update portfolio (Delete if empty)
-                    new_quantity = portfolio.quantity - qty
-                    if new_quantity <= 0:
-                        portfolio.delete()
-                    else:
-                        portfolio.quantity = new_quantity
-                        portfolio.save(update_fields=['quantity', 'updated_at'])
-                    
-                    # 2. Credit balance
-                    user.virtual_balance += total_cost
-                    user.save(update_fields=['virtual_balance'])
-
-                # Step 4: Create Trade record (Final step)
-                Trade.objects.create(
-                    user=user,
-                    symbol=symbol,
-                    side=side,
-                    qty=qty,
-                    price=price_decimal,
-                    status='COMPLETED'
-                )
-
-                return JsonResponse({
-                    'success': True, 
-                    'message': f'✅ {side} order executed! {qty} {symbol} @ Rs {price:,.2f}'
-                })
-
-        except Portfolio.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': f'Portfolio error: You do not own {symbol}.'
-            })
-        
-        except Exception as db_error:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Trade execution error for user {user.id}: {str(db_error)}", exc_info=True)
-            
-            return JsonResponse({
-                'success': False,
-                'message': f'Order execution failed: {str(db_error)}'
-            })
-    
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'message': 'Invalid JSON in request body.'
-        })
-    
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Unexpected error in api_place_order: {str(e)}", exc_info=True)
-        
-        return JsonResponse({
-            'success': False,
-            'message': f'An unexpected error occurred: {str(e)}'
-        })
-
+        # This will now give you a readable error instead of the CSS class name
+        return JsonResponse({'success': False, 'message': f"Error: {str(e)}"})
+    
 # Add these new API endpoints to your existing views.py
 
 from django.shortcuts import render, redirect
@@ -2029,76 +1927,97 @@ def api_portfolio_holdings(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+
 @login_required
 @require_http_methods(["GET"])
 def api_portfolio_performance(request):
-    """
-    Get historical portfolio performance for line/area charts.
-    """
+    """Calculates Total Net Worth (Cash + Stocks) over time with live data fallback"""
     try:
-        from decimal import Decimal
         user = request.user
         range_param = request.GET.get('range', '1D').upper()
         now = timezone.now()
         
+        # 1. Determine the Time Range
         if range_param == '1D':
             start_time = now - timedelta(days=1)
         elif range_param == '1W':
             start_time = now - timedelta(weeks=1)
-        elif range_param == '1M':
-            start_time = now - timedelta(days=30)
         else:
-            start_time = now - timedelta(days=1)
+            start_time = now - timedelta(days=30)
         
+        # 2. Get User Holdings and Cash
         holdings = Portfolio.objects.filter(user=user, quantity__gt=0)
-        
-        # Get distinct timestamps in range
-        timestamps = NEPSEPrice.objects.filter(
+        symbols = [h.symbol for h in holdings]
+        current_cash = float(user.virtual_balance)
+
+        # 3. Get universal market timestamps (so the chart has a baseline)
+        timestamps_qs = NEPSEPrice.objects.filter(
             timestamp__gte=start_time
         ).values_list('timestamp', flat=True).distinct().order_by('timestamp')
         
-        # Sampling for performance
-        timestamps = list(timestamps)
-        if len(timestamps) > 60:
-            step = len(timestamps) // 60
+        # Fallback: if no data in range (e.g. market closed all weekend), get last 10 points
+        if not timestamps_qs.exists():
+            timestamps_qs = NEPSEPrice.objects.values_list('timestamp', flat=True).distinct().order_by('-timestamp')[:10]
+            timestamps = list(reversed(list(timestamps_qs)))
+        else:
+            timestamps = list(timestamps_qs)
+
+        # Sampling (Limit to 50 points for performance)
+        if len(timestamps) > 50:
+            step = len(timestamps) // 50
             timestamps = timestamps[::step]
         
         labels = []
         values = []
+
+        # 4. Calculate Net Worth for every historical point
         for ts in timestamps:
-            total_value = Decimal('0')
-            # One query for all holdings at this timestamp
-            prices = NEPSEPrice.objects.filter(
-                timestamp=ts,
-                symbol__in=[h.symbol for h in holdings]
-            ).values('symbol', 'ltp')
-            
-            price_map = {p['symbol']: Decimal(str(p['ltp'])) for p in prices if p['ltp']}
-            
-            for h in holdings:
-                current_ltp = price_map.get(h.symbol, Decimal('0'))
-                total_value += Decimal(str(h.quantity)) * current_ltp
+            stock_value = 0
+            if symbols:
+                prices = NEPSEPrice.objects.filter(timestamp=ts, symbol__in=symbols).values('symbol', 'ltp')
+                price_map = {p['symbol']: float(p['ltp'] or 0) for p in prices}
+                for h in holdings:
+                    price = price_map.get(h.symbol, 0)
+                    stock_value += (h.quantity * price)
             
             labels.append(ts.isoformat())
-            values.append(float(total_value))
+            values.append(stock_value + current_cash)
 
-        # Metrics
-        performance = {'1d': 0, '1w': 0, '1m': 0}
+        # 5. INJECT LIVE POINT (Right Now)
+        # This fixes the blank chart for new buyers
+        live_stock_value = 0
+        for h in holdings:
+            # Look at the last known price in the Stock metadata
+            s_obj = Stock.objects.filter(symbol=h.symbol).first()
+            if s_obj:
+                live_stock_value += (h.quantity * float(s_obj.last_price or 0))
+        
+        labels.append(now.isoformat())
+        values.append(live_stock_value + current_cash)
+
+        # 6. Calculate % changes for the UI labels (1 Day, 1 Week, etc.)
+        perf_pct = 0
         if len(values) >= 2:
-            performance['1d'] = ((values[-1] - values[0]) / values[0] * 100) if values[0] > 0 else 0
+            start_val = values[0]
+            end_val = values[-1]
+            if start_val > 0:
+                perf_pct = ((end_val - start_val) / start_val) * 100
 
         return JsonResponse({
-            'success': True,
+            'success': True, 
             'data': {
-                'labels': labels,
+                'labels': labels, 
                 'values': values,
-                'performance': performance
+                'performance': {
+                    '1d': round(perf_pct, 2),
+                    '1w': round(perf_pct, 2), # Simplified: calculates based on selected range
+                    '1m': round(perf_pct, 2)
+                }
             }
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
+    
 @login_required
 @require_http_methods(["GET"])
 def api_nepse_index_performance(request):

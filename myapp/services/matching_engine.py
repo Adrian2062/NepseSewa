@@ -1,257 +1,383 @@
-"""
-Matching Engine Service
-Implements price-time priority order matching algorithm
-"""
+# """
+# Matching Engine Service
+# Implements price-time priority order matching algorithm
+# """
+# from django.db import transaction
+# from django.db.models import F
+# from decimal import Decimal
+# from myapp.models import Order, Portfolio, TradeExecution, CustomUser
+
+
+# class MatchingEngine:
+#     """
+#     Core matching engine with price-time priority.
+#     Best bid (highest) matches best ask (lowest).
+#     Supports partial fills.
+#     """
+    
+#     @staticmethod
+#     @transaction.atomic
+#     def match_order(order):
+#         """
+#         Main entry point for matching a new order.
+#         Returns list of trade executions created.
+#         """
+#         executions = []
+        
+#         # Find matching orders
+#         matching_orders = MatchingEngine.find_matching_orders(order)
+        
+#         for match_order in matching_orders:
+#             if order.remaining_qty <= 0:
+#                 break
+            
+#             # Calculate execution quantity
+#             exec_qty = min(order.remaining_qty, match_order.remaining_qty)
+            
+#             # Determine execution price (use the resting order's price)
+#             exec_price = match_order.price
+            
+#             # Execute the trade
+#             execution = MatchingEngine.execute_trade(
+#                 buy_order=order if order.side == 'BUY' else match_order,
+#                 sell_order=match_order if order.side == 'BUY' else order,
+#                 qty=exec_qty,
+#                 price=exec_price
+#             )
+            
+#             executions.append(execution)
+        
+#         return executions
+    
+#     @staticmethod
+#     def find_matching_orders(order):
+#         """
+#         Find counter-party orders that can match.
+#         Returns orders sorted by price-time priority.
+#         """
+#         # Find opposite side orders for same symbol
+#         counter_side = 'SELL' if order.side == 'BUY' else 'BUY'
+        
+#         # Get open or partial orders
+#         candidates = Order.objects.filter(
+#             symbol=order.symbol,
+#             side=counter_side,
+#             status__in=['OPEN', 'PARTIAL']
+#         ).select_for_update()
+        
+#         # Apply price filter
+#         if order.side == 'BUY':
+#             # Buy order matches sell orders at or below buy price
+#             candidates = candidates.filter(price__lte=order.price)
+#             # Sort: lowest price first (best for buyer), then oldest first
+#             candidates = candidates.order_by('price', 'created_at')
+#         else:
+#             # Sell order matches buy orders at or above sell price
+#             candidates = candidates.filter(price__gte=order.price)
+#             # Sort: highest price first (best for seller), then oldest first
+#             candidates = candidates.order_by('-price', 'created_at')
+        
+#         return list(candidates)
+    
+#     @staticmethod
+#     @transaction.atomic
+#     def execute_trade(buy_order, sell_order, qty, price):
+#         """
+#         Execute a trade between buy and sell orders.
+#         Updates orders, wallets, portfolios, and creates execution record.
+#         """
+#         # Lock users for update to prevent race conditions
+#         buyer = CustomUser.objects.select_for_update().get(id=buy_order.user_id)
+#         seller = CustomUser.objects.select_for_update().get(id=sell_order.user_id)
+        
+#         # Update order filled quantities
+#         buy_order.filled_qty = F('filled_qty') + qty
+#         buy_order.save()
+#         buy_order.refresh_from_db()
+        
+#         sell_order.filled_qty = F('filled_qty') + qty
+#         sell_order.save()
+#         sell_order.refresh_from_db()
+        
+#         # Update order statuses
+#         if buy_order.is_fully_filled:
+#             buy_order.status = 'FILLED'
+#             buy_order.save()
+#         elif buy_order.filled_qty > 0:
+#             buy_order.status = 'PARTIAL'
+#             buy_order.save()
+        
+#         if sell_order.is_fully_filled:
+#             sell_order.status = 'FILLED'
+#             sell_order.save()
+#         elif sell_order.filled_qty > 0:
+#             sell_order.status = 'PARTIAL'
+#             sell_order.save()
+        
+#         # Update wallets
+#         MatchingEngine.update_wallets(buyer, seller, qty, price, buy_order.price)
+        
+#         # Update portfolios
+#         MatchingEngine.update_portfolios(buyer, seller, buy_order.symbol, qty, price)
+        
+#         # Create trade execution record
+#         execution = TradeExecution.objects.create(
+#             buy_order=buy_order,
+#             sell_order=sell_order,
+#             symbol=buy_order.symbol,
+#             executed_qty=qty,
+#             executed_price=price
+#         )
+        
+#         return execution
+    
+#     @staticmethod
+#     def update_wallets(buyer, seller, qty, price, buyer_limit_price=None):
+#         """
+#         Update user wallets after trade execution.
+#         Buyer already paid matched cost (at limit price) when placing order.
+#         If executed price < limit price, refund the difference.
+#         Seller receives executed_price * qty.
+#         """
+#         total_executed_value = Decimal(str(qty)) * Decimal(str(price))
+        
+#         # Seller receives payment
+#         seller.virtual_balance = F('virtual_balance') + total_executed_value
+#         seller.save()
+#         seller.refresh_from_db()
+        
+#         # Buyer Refund Logic
+#         if buyer_limit_price and buyer_limit_price > price:
+#             refund_per_share = Decimal(str(buyer_limit_price)) - Decimal(str(price))
+#             total_refund = refund_per_share * Decimal(str(qty))
+            
+#             if total_refund > 0:
+#                 buyer.virtual_balance = F('virtual_balance') + total_refund
+#                 buyer.save()
+#                 buyer.refresh_from_db()
+    
+#     @staticmethod
+#     def update_portfolios(buyer, seller, symbol, qty, price):
+#         """
+#         Update user portfolios after trade execution.
+#         Buyer gains shares, seller loses shares.
+#         """
+#         price_decimal = Decimal(str(price))
+#         qty_decimal = Decimal(str(qty))
+        
+#         # Update buyer's portfolio (add shares)
+#         buyer_portfolio, created = Portfolio.objects.select_for_update().get_or_create(
+#             user=buyer,
+#             symbol=symbol,
+#             defaults={'quantity': qty, 'avg_price': price_decimal}
+#         )
+        
+#         if not created:
+#             # Calculate new average price (Weighted Average)
+#             old_qty = Decimal(str(buyer_portfolio.quantity))
+#             old_avg = buyer_portfolio.avg_price
+#             total_qty = old_qty + qty_decimal
+            
+#             new_avg_price = ((old_qty * old_avg) + (qty_decimal * price_decimal)) / total_qty
+            
+#             buyer_portfolio.quantity = int(total_qty)
+#             buyer_portfolio.avg_price = new_avg_price.quantize(Decimal('0.01'))
+#             buyer_portfolio.save(update_fields=['quantity', 'avg_price', 'updated_at'])
+        
+#         # Update seller's portfolio (remove shares)
+#         try:
+#             seller_portfolio = Portfolio.objects.select_for_update().get(user=seller, symbol=symbol)
+#             new_qty = seller_portfolio.quantity - qty
+            
+#             if new_qty <= 0:
+#                 seller_portfolio.delete()
+#             else:
+#                 seller_portfolio.quantity = new_qty
+#                 seller_portfolio.save(update_fields=['quantity', 'updated_at'])
+#         except Portfolio.DoesNotExist:
+#             # Should not happen with validation, but we'll log it or ignore
+#             pass
+    
+#     @staticmethod
+#     def validate_order(order):
+#         """
+#         Validate order before placing.
+#         Enforces realistic prices (±5% of LTP) and checks balance/holdings.
+#         Returns (is_valid, error_message)
+#         """
+#         from myapp.models import Stock, MarketSession
+        
+#         # 0. Check Market Status (Professional requirement)
+#         active_session = MarketSession.objects.filter(is_active=True).first()
+#         if not active_session or active_session.status != 'CONTINUOUS':
+#             return False, "Market is currently CLOSED. Trading is only allowed during continuous sessions."
+
+#         # 1. Fetch latest price from Stock model (Professional Architecture)
+#         try:
+#             stock = Stock.objects.get(symbol=order.symbol)
+#             if not stock.last_price or stock.last_price <= 0:
+#                 return False, f"Trading for {order.symbol} is unavailable until a first valid price is recorded."
+#             ltp = Decimal(str(stock.last_price))
+#         except Stock.DoesNotExist:
+#             return False, f"Stock {order.symbol} is not registered in the system."
+
+#         # 2. Handle Market Orders Price Setting
+#         if order.order_type == 'MARKET':
+#             if order.side == 'BUY':
+#                 # For Market Buy, we use a ceiling price (LTP + 5%) for balance check and matching
+#                 order.price = (ltp * Decimal('1.05')).quantize(Decimal('0.01'))
+#             else:
+#                 # For Market Sell, we use a floor price (LTP - 5%) for matching
+#                 order.price = (ltp * Decimal('0.95')).quantize(Decimal('0.01'))
+
+#         # 3. Enforce Realistic Prices (±5% of LTP)
+#         elif order.order_type == 'LIMIT':
+#             if order.side == 'BUY':
+#                 if order.price > ltp * Decimal('1.05'):
+#                     return False, f"Buy price too high. Max allowed: Rs {(ltp * Decimal('1.05')):.2f} (+5% of LTP: {ltp})"
+#             elif order.side == 'SELL':
+#                 if order.price < ltp * Decimal('0.95'):
+#                     return False, f"Sell price too low. Min allowed: Rs {(ltp * Decimal('0.95')):.2f} (-5% of LTP: {ltp})"
+
+#         # 4. Check user balance for BUY orders
+#         if order.side == 'BUY':
+#             total_cost = Decimal(str(order.qty)) * order.price
+#             if order.user.virtual_balance < total_cost:
+#                 return False, f"Insufficient balance. Required (incl. margin for Market): Rs {total_cost:,.2f}, Available: Rs {order.user.virtual_balance:,.2f}"
+        
+#         # 5. Check user holdings for SELL orders
+#         elif order.side == 'SELL':
+#             try:
+#                 portfolio = Portfolio.objects.get(user=order.user, symbol=order.symbol)
+#                 if portfolio.quantity < order.qty:
+#                     return False, f"Insufficient holdings. Required: {order.qty}, Available: {portfolio.quantity}"
+#             except Portfolio.DoesNotExist:
+#                 return False, f"You don't own any {order.symbol} shares"
+        
+#         return True, None
 from django.db import transaction
 from django.db.models import F
 from decimal import Decimal
-from myapp.models import Order, Portfolio, TradeExecution, CustomUser
-
+from myapp.models import Order, Portfolio, TradeExecution, CustomUser, Stock, MarketSession, NEPSEPrice
 
 class MatchingEngine:
-    """
-    Core matching engine with price-time priority.
-    Best bid (highest) matches best ask (lowest).
-    Supports partial fills.
-    """
-    
     @staticmethod
     @transaction.atomic
     def match_order(order):
-        """
-        Main entry point for matching a new order.
-        Returns list of trade executions created.
-        """
+        """Looks for a counter-party. If found, executes trade. If not, stays OPEN."""
         executions = []
-        
-        # Find matching orders
-        matching_orders = MatchingEngine.find_matching_orders(order)
-        
-        for match_order in matching_orders:
-            if order.remaining_qty <= 0:
-                break
-            
-            # Calculate execution quantity
-            exec_qty = min(order.remaining_qty, match_order.remaining_qty)
-            
-            # Determine execution price (use the resting order's price)
-            exec_price = match_order.price
-            
-            # Execute the trade
-            execution = MatchingEngine.execute_trade(
-                buy_order=order if order.side == 'BUY' else match_order,
-                sell_order=match_order if order.side == 'BUY' else order,
-                qty=exec_qty,
-                price=exec_price
-            )
-            
-            executions.append(execution)
-        
-        return executions
-    
-    @staticmethod
-    def find_matching_orders(order):
-        """
-        Find counter-party orders that can match.
-        Returns orders sorted by price-time priority.
-        """
-        # Find opposite side orders for same symbol
         counter_side = 'SELL' if order.side == 'BUY' else 'BUY'
         
-        # Get open or partial orders
+        # Look for orders at the EXACT same price (Price-Time Priority)
         candidates = Order.objects.filter(
             symbol=order.symbol,
             side=counter_side,
-            status__in=['OPEN', 'PARTIAL']
-        ).select_for_update()
-        
-        # Apply price filter
-        if order.side == 'BUY':
-            # Buy order matches sell orders at or below buy price
-            candidates = candidates.filter(price__lte=order.price)
-            # Sort: lowest price first (best for buyer), then oldest first
-            candidates = candidates.order_by('price', 'created_at')
-        else:
-            # Sell order matches buy orders at or above sell price
-            candidates = candidates.filter(price__gte=order.price)
-            # Sort: highest price first (best for seller), then oldest first
-            candidates = candidates.order_by('-price', 'created_at')
-        
-        return list(candidates)
-    
+            status__in=['OPEN', 'PARTIAL'],
+            price=order.price 
+        ).order_by('created_at').select_for_update()
+
+        for match in candidates:
+            if order.filled_qty >= order.qty: break
+            
+            exec_qty = min(order.qty - order.filled_qty, match.qty - match.filled_qty)
+            
+            # This is the ONLY place where stock/cash moves
+            execution = MatchingEngine.execute_trade(
+                buy_order=order if order.side == 'BUY' else match,
+                sell_order=match if order.side == 'BUY' else order,
+                qty=exec_qty,
+                price=order.price
+            )
+            executions.append(execution)
+        return executions
+
     @staticmethod
-    @transaction.atomic
     def execute_trade(buy_order, sell_order, qty, price):
-        """
-        Execute a trade between buy and sell orders.
-        Updates orders, wallets, portfolios, and creates execution record.
-        """
-        # Lock users for update to prevent race conditions
-        buyer = CustomUser.objects.select_for_update().get(id=buy_order.user_id)
+        qty_dec = Decimal(str(qty))
+        trade_value = qty_dec * price
+
+        # 1. Update Order Statuses
+        for o in [buy_order, sell_order]:
+            o.filled_qty = F('filled_qty') + qty
+            o.save()
+            o.refresh_from_db()
+            o.status = 'FILLED' if o.filled_qty >= o.qty else 'PARTIAL'
+            o.save()
+
+        # 2. SELLER: Receives Cash
         seller = CustomUser.objects.select_for_update().get(id=sell_order.user_id)
-        
-        # Update order filled quantities
-        buy_order.filled_qty = F('filled_qty') + qty
-        buy_order.save()
-        buy_order.refresh_from_db()
-        
-        sell_order.filled_qty = F('filled_qty') + qty
-        sell_order.save()
-        sell_order.refresh_from_db()
-        
-        # Update order statuses
-        if buy_order.is_fully_filled:
-            buy_order.status = 'FILLED'
-            buy_order.save()
-        elif buy_order.filled_qty > 0:
-            buy_order.status = 'PARTIAL'
-            buy_order.save()
-        
-        if sell_order.is_fully_filled:
-            sell_order.status = 'FILLED'
-            sell_order.save()
-        elif sell_order.filled_qty > 0:
-            sell_order.status = 'PARTIAL'
-            sell_order.save()
-        
-        # Update wallets
-        MatchingEngine.update_wallets(buyer, seller, qty, price, buy_order.price)
-        
-        # Update portfolios
-        MatchingEngine.update_portfolios(buyer, seller, buy_order.symbol, qty, price)
-        
-        # Create trade execution record
-        execution = TradeExecution.objects.create(
-            buy_order=buy_order,
-            sell_order=sell_order,
-            symbol=buy_order.symbol,
-            executed_qty=qty,
-            executed_price=price
-        )
-        
-        return execution
-    
-    @staticmethod
-    def update_wallets(buyer, seller, qty, price, buyer_limit_price=None):
-        """
-        Update user wallets after trade execution.
-        Buyer already paid matched cost (at limit price) when placing order.
-        If executed price < limit price, refund the difference.
-        Seller receives executed_price * qty.
-        """
-        total_executed_value = Decimal(str(qty)) * Decimal(str(price))
-        
-        # Seller receives payment
-        seller.virtual_balance = F('virtual_balance') + total_executed_value
+        seller.virtual_balance = F('virtual_balance') + trade_value
         seller.save()
-        seller.refresh_from_db()
-        
-        # Buyer Refund Logic
-        if buyer_limit_price and buyer_limit_price > price:
-            refund_per_share = Decimal(str(buyer_limit_price)) - Decimal(str(price))
-            total_refund = refund_per_share * Decimal(str(qty))
-            
-            if total_refund > 0:
-                buyer.virtual_balance = F('virtual_balance') + total_refund
-                buyer.save()
-                buyer.refresh_from_db()
-    
-    @staticmethod
-    def update_portfolios(buyer, seller, symbol, qty, price):
-        """
-        Update user portfolios after trade execution.
-        Buyer gains shares, seller loses shares.
-        """
-        price_decimal = Decimal(str(price))
-        qty_decimal = Decimal(str(qty))
-        
-        # Update buyer's portfolio (add shares)
-        buyer_portfolio, created = Portfolio.objects.select_for_update().get_or_create(
-            user=buyer,
-            symbol=symbol,
-            defaults={'quantity': qty, 'avg_price': price_decimal}
+
+        # 3. BUYER: Receives Stock (and update Avg Price)
+        buyer_portfolio, _ = Portfolio.objects.get_or_create(
+            user_id=buy_order.user_id, symbol=buy_order.symbol,
+            defaults={'quantity': 0, 'avg_price': 0}
         )
-        
-        if not created:
-            # Calculate new average price (Weighted Average)
-            old_qty = Decimal(str(buyer_portfolio.quantity))
-            old_avg = buyer_portfolio.avg_price
-            total_qty = old_qty + qty_decimal
-            
-            new_avg_price = ((old_qty * old_avg) + (qty_decimal * price_decimal)) / total_qty
-            
-            buyer_portfolio.quantity = int(total_qty)
-            buyer_portfolio.avg_price = new_avg_price.quantize(Decimal('0.01'))
-            buyer_portfolio.save(update_fields=['quantity', 'avg_price', 'updated_at'])
-        
-        # Update seller's portfolio (remove shares)
-        try:
-            seller_portfolio = Portfolio.objects.select_for_update().get(user=seller, symbol=symbol)
-            new_qty = seller_portfolio.quantity - qty
-            
-            if new_qty <= 0:
-                seller_portfolio.delete()
-            else:
-                seller_portfolio.quantity = new_qty
-                seller_portfolio.save(update_fields=['quantity', 'updated_at'])
-        except Portfolio.DoesNotExist:
-            # Should not happen with validation, but we'll log it or ignore
-            pass
-    
+        old_val = Decimal(str(buyer_portfolio.quantity)) * buyer_portfolio.avg_price
+        new_qty = buyer_portfolio.quantity + qty
+        buyer_portfolio.avg_price = (old_val + trade_value) / Decimal(str(new_qty))
+        buyer_portfolio.quantity = new_qty
+        buyer_portfolio.save()
+
+        # 4. SELLER: Loses Stock
+        s_port = Portfolio.objects.get(user_id=sell_order.user_id, symbol=sell_order.symbol)
+        s_port.quantity -= qty
+        s_port.delete() if s_port.quantity <= 0 else s_port.save()
+
+        return TradeExecution.objects.create(
+            buy_order=buy_order, sell_order=sell_order,
+            symbol=buy_order.symbol, executed_qty=qty, executed_price=price
+        )
+
     @staticmethod
     def validate_order(order):
-        """
-        Validate order before placing.
-        Enforces realistic prices (±5% of LTP) and checks balance/holdings.
-        Returns (is_valid, error_message)
-        """
-        from myapp.models import Stock, MarketSession
-        
-        # 0. Check Market Status (Professional requirement)
-        active_session = MarketSession.objects.filter(is_active=True).first()
-        if not active_session or active_session.status != 'CONTINUOUS':
-            return False, "Market is currently CLOSED. Trading is only allowed during continuous sessions."
+        """Checks balance and ±10% circuit limits."""
+        from myapp.models import MarketSession, NEPSEPrice, Stock, Portfolio
+        from decimal import Decimal
 
-        # 1. Fetch latest price from Stock model (Professional Architecture)
+        # 1. Market Session Check
+        active = MarketSession.objects.filter(is_active=True, status='CONTINUOUS').exists()
+        if not active: return False, "Market is currently CLOSED."
+
+        # 2. Reference Price Logic (Fixes the Decimal Conversion error)
         try:
-            stock = Stock.objects.get(symbol=order.symbol)
-            if not stock.last_price or stock.last_price <= 0:
-                return False, f"Trading for {order.symbol} is unavailable until a first valid price is recorded."
-            ltp = Decimal(str(stock.last_price))
-        except Stock.DoesNotExist:
-            return False, f"Stock {order.symbol} is not registered in the system."
-
-        # 2. Handle Market Orders Price Setting
-        if order.order_type == 'MARKET':
-            if order.side == 'BUY':
-                # For Market Buy, we use a ceiling price (LTP + 5%) for balance check and matching
-                order.price = (ltp * Decimal('1.05')).quantize(Decimal('0.01'))
+            latest = NEPSEPrice.objects.filter(symbol=order.symbol).order_by('-timestamp').first()
+            # Try to find Previous Close
+            prev = None
+            if latest:
+                prev = NEPSEPrice.objects.filter(symbol=order.symbol, timestamp__date__lt=latest.timestamp.date()).order_by('-timestamp').first()
+            
+            # Mathematical Fallback for ref_price
+            if prev and prev.close:
+                ref_price = Decimal(str(prev.close))
+            elif latest and latest.ltp:
+                # If no previous day, calculate from today's LTP and Change
+                change_factor = 1 + (float(latest.change_pct or 0) / 100)
+                ref_price = Decimal(str(float(latest.ltp) / change_factor))
             else:
-                # For Market Sell, we use a floor price (LTP - 5%) for matching
-                order.price = (ltp * Decimal('0.95')).quantize(Decimal('0.01'))
+                stock_obj = Stock.objects.get(symbol=order.symbol)
+                ref_price = Decimal(str(stock_obj.last_price or 0))
 
-        # 3. Enforce Realistic Prices (±5% of LTP)
-        elif order.order_type == 'LIMIT':
-            if order.side == 'BUY':
-                if order.price > ltp * Decimal('1.05'):
-                    return False, f"Buy price too high. Max allowed: Rs {(ltp * Decimal('1.05')):.2f} (+5% of LTP: {ltp})"
-            elif order.side == 'SELL':
-                if order.price < ltp * Decimal('0.95'):
-                    return False, f"Sell price too low. Min allowed: Rs {(ltp * Decimal('0.95')):.2f} (-5% of LTP: {ltp})"
+            if ref_price <= 0:
+                return False, "Circuit limits unavailable for this stock yet."
 
-        # 4. Check user balance for BUY orders
+            up = (ref_price * Decimal('1.10')).quantize(Decimal('0.01'))
+            low = (ref_price * Decimal('0.90')).quantize(Decimal('0.01'))
+
+            if order.price > up or order.price < low:
+                return False, f"Price outside circuit (Rs {low} - Rs {up})"
+
+        except Exception as e:
+            return False, f"Validation error: {str(e)}"
+
+        # 3. Balance/Holdings Check
         if order.side == 'BUY':
-            total_cost = Decimal(str(order.qty)) * order.price
-            if order.user.virtual_balance < total_cost:
-                return False, f"Insufficient balance. Required (incl. margin for Market): Rs {total_cost:,.2f}, Available: Rs {order.user.virtual_balance:,.2f}"
-        
-        # 5. Check user holdings for SELL orders
-        elif order.side == 'SELL':
-            try:
-                portfolio = Portfolio.objects.get(user=order.user, symbol=order.symbol)
-                if portfolio.quantity < order.qty:
-                    return False, f"Insufficient holdings. Required: {order.qty}, Available: {portfolio.quantity}"
-            except Portfolio.DoesNotExist:
-                return False, f"You don't own any {order.symbol} shares"
+            if order.user.virtual_balance < (Decimal(str(order.qty)) * order.price):
+                return False, "Insufficient balance."
+        else:
+            p = Portfolio.objects.filter(user=order.user, symbol=order.symbol).first()
+            if not p or p.quantity < order.qty: 
+                return False, "You do not have enough shares to sell."
         
         return True, None

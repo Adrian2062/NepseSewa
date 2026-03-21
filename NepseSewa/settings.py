@@ -183,7 +183,7 @@ BASE_URL = "http://127.0.0.1:8000"
 
 # ========== KHALTI INTEGRATION SETTINGS ==========
 KHALTI_PUBLIC_KEY = "e62e4d9b16a84b1eb0cbd2dc24f23603"
-KHALTI_SECRET_KEY = "1025bef34dfe40f58667375da641f6e7"
+KHALTI_SECRET_KEY = "be28940eceee4bc1b2e27d26427b869d"
 KHALTI_INITIATE_URL = "https://a.khalti.com/api/v2/epayment/initiate/"
 KHALTI_LOOKUP_URL = "https://a.khalti.com/api/v2/epayment/lookup/"
 KHALTI_RETURN_URL = f"{BASE_URL}/payment/khalti/success/"
@@ -199,4 +199,4 @@ CELERY_TIMEZONE = TIME_ZONE
 # For development: Set this to True to run tasks synchronously without Redis
 # Set to False once Redis and Celery worker are running locally
 CELERY_TASK_ALWAYS_EAGER = True 
-
+

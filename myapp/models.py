@@ -643,22 +643,31 @@ class PaymentTransaction(models.Model):
 # --- SIGNALS ---
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+from django.contrib.auth import get_user_model
 
 @receiver(post_save, sender=PaymentTransaction)
 def activate_subscription_on_payment(sender, instance, created, **kwargs):
-    """Automatically activate subscription when PaymentTransaction is marked COMPLETED by admin"""
+    """Automatically activate subscription when PaymentTransaction is marked COMPLETED"""
     if instance.status == 'COMPLETED':
-        from django.utils import timezone
         
+        # 1. Update or create the user's subscription
         UserSubscription.objects.update_or_create(
             user=instance.user,
             defaults={
                 'plan': instance.plan,
                 'start_date': timezone.now(),
-                # end_date calculation is handled by UserSubscription.save() logic if not set,
-                # but we'll set it here explicitly for clarity
                 'end_date': timezone.now() + timezone.timedelta(days=instance.plan.duration_days),
                 'is_active': True
             }
         )
+        
+        # 2. Allocate 1,000,000 balance for Premium users
+        if instance.plan.tier >= 2:
+            User = get_user_model()
+            # .update() goes straight to the DB, preventing any overwrite bugs!
+            User.objects.filter(id=instance.user.id).update(
+                virtual_balance=1000000.00,
+                is_premium=True
+            )
 

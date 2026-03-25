@@ -441,6 +441,8 @@ def settings_view(request):
     Settings page with full backend functionality.
     Handles: profile update, email change, password change, account reset, account delete, notifications
     """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
     user = request.user
 
     if request.method == "POST":
@@ -464,7 +466,7 @@ def settings_view(request):
                         messages.error(request, f"Error: The email {new_email} is already in use by another account.")
                     else:
                         user.email = new_email
-                        user.username = new_email  # Sync username if email is the identifier
+                        user.username = new_email  
                         messages.success(request, "✅ Email address updated.")
                 
                 user.save()
@@ -494,7 +496,7 @@ def settings_view(request):
             try:
                 # Reset currency-related fields
                 user.virtual_balance = 100000.00
-                user.portfolio_value = 100000.00
+                user.portfolio_value = 0.00  # Reset portfolio value to zero
                 user.save()
                 
                 # Use bulk delete for efficiency
@@ -525,8 +527,13 @@ def settings_view(request):
 
         return redirect("settings")
 
+    # --- GET Subscription Data for the Template ---
+    # We use getattr to safely handle cases where the UserSubscription record might not exist yet
+    subscription = getattr(user, 'subscription', None)
+
     context = {
         'active_page': 'settings',
+        'subscription': subscription, # Passed to settings.html to show expiry date
     }
     return render(request, "settings.html", context)
 
@@ -545,6 +552,20 @@ def pricing(request):
 def join_plan(request, plan_id):
     """Initiates immediate activation for free plans or QR payment for paid plans"""
     plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+    
+    # === NEW LOGIC: Prevent Downgrade to Basic ===
+    if hasattr(request.user, 'subscription') and request.user.subscription:
+        current_sub = request.user.subscription
+        # Check if they have an active subscription that is NOT expired yet
+        if current_sub.is_active and not current_sub.is_expired and current_sub.plan:
+            # If the plan they are trying to join has a lower tier than their current active tier
+            if plan.tier < current_sub.plan.tier:
+                messages.error(
+                    request, 
+                    f"You cannot downgrade to the {plan.name} plan while your {current_sub.plan.name} subscription is still active."
+                )
+                return redirect('pricing')
+    # ==============================================
     
     # NEW: If plan is free, activate it immediately!
     if plan.price == 0:
@@ -620,9 +641,6 @@ def join_plan(request, plan_id):
     #     'active_page': 'pricing'
     # })
     # return render(request, 'manual_payment.html', context)
-
-# Removed manual_payment_submit
-
 
 def logout_view(request):
     logout(request)
@@ -1692,40 +1710,79 @@ def api_refresh_all_recommendations(request):
 @require_http_methods(["GET"])
 def api_dashboard_summary(request):
     """
-    Get high-level summary for the dashboard: Rank, Wealth, and basic stats.
+    Get high-level summary for the dashboard. 
+    Force-syncs the database to 0 if no holdings are found (fixes Admin deletion ghost values).
     """
     try:
-        from django.db.models import F
+        from django.db.models import F, Max
+        from decimal import Decimal
+        from .models import Portfolio, NEPSEPrice 
+        from django.contrib.auth import get_user_model
+        
+        User = get_user_model()
         user = request.user
         
-        # 1. Total Wealth (Balance + Portfolio Value)
-        wealth = float(user.virtual_balance + user.portfolio_value)
+        # 1. Calculate REAL current portfolio value from active holdings
+        holdings = Portfolio.objects.filter(user=user, quantity__gt=0)
+        real_portfolio_value = Decimal('0.00')
+        total_cost_basis = Decimal('0.00')
         
-        # 2. Calculate Rank
-        user_wealth = user.virtual_balance + user.portfolio_value
+        if holdings.exists():
+            latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
+            # Normalize symbols for lookup (fixes lowercase 'ompl' issue)
+            symbols = [h.symbol.strip().upper() for h in holdings]
+            
+            price_map = {}
+            if latest_time:
+                latest_prices = NEPSEPrice.objects.filter(symbol__in=symbols, timestamp=latest_time)
+                price_map = {p.symbol.upper(): Decimal(str(p.ltp or 0)) for p in latest_prices}
+            
+            for h in holdings:
+                sym = h.symbol.strip().upper()
+                # Use live price or fallback to manual purchase price
+                current_price = price_map.get(sym, h.avg_price)
+                qty = Decimal(str(h.quantity))
+                
+                real_portfolio_value += qty * current_price
+                total_cost_basis += qty * h.avg_price
         
-        # Use 'User' which is get_user_model() defined at top of file
+        # 2. FORCE SYNC: Update the database field directly.
+        # If you deleted records in Admin, 'holdings.exists()' is False, 
+        # so 'real_portfolio_value' is 0.00. We write this to the DB now.
+        if user.portfolio_value != real_portfolio_value:
+            User.objects.filter(id=user.id).update(portfolio_value=real_portfolio_value)
+            user.portfolio_value = real_portfolio_value # Update object in memory for current request
+
+        # 3. Calculate Profit Metrics
+        overall_profit = real_portfolio_value - total_cost_basis
+        profit_pct = (overall_profit / total_cost_basis * 100) if total_cost_basis > 0 else 0
+        
+        # 4. Final Math (Wealth = Cash + Real Stock Value)
+        wealth = float(user.virtual_balance) + float(real_portfolio_value)
+        
+        # 5. Calculate Rank using synced values
+        user_total = user.virtual_balance + user.portfolio_value
         rank = User.objects.annotate(
-            total_wealth=F('virtual_balance') + F('portfolio_value')
-        ).filter(total_wealth__gt=user_wealth).count() + 1
-        
-        total_users = User.objects.count()
+            calculated_wealth=F('virtual_balance') + F('portfolio_value')
+        ).filter(calculated_wealth__gt=user_total).count() + 1
         
         return JsonResponse({
             'success': True,
             'data': {
                 'rank': rank,
-                'total_users': total_users,
-                'portfolio_value': float(user.portfolio_value),
+                'total_users': User.objects.count(),
+                'portfolio_value': float(real_portfolio_value),
                 'virtual_balance': float(user.virtual_balance),
                 'total_wealth': wealth,
+                'today_profit': float(overall_profit),
+                'today_profit_pct': float(profit_pct),
                 'username': user.first_name or user.username
             }
         })
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-
 @login_required
 @require_http_methods(["GET"])
 def api_portfolio_analytics(request):
@@ -2254,17 +2311,14 @@ def khalti_verify(request):
         data = response.json()
 
         if data.get("status") == "Completed":
-            # Query by pidx since it is reliably returned in the callback URL and we saved it during initiation.
+            # Query by pidx since it is reliably returned in the callback URL
             transaction = get_object_or_404(PaymentTransaction, pidx=pidx)
             
-            # 1. Update Transaction
+            # 1. Update Transaction (This triggers the Signal which gives the 1,000,000 balance!)
             transaction.status = 'COMPLETED'
             transaction.save()
             
-            # 2. Mark user as premium (requested flag)
-            user = request.user
-            user.is_premium = True
-            user.save()
+            # We REMOVED the manual `user.save()` here to prevent overwriting the signal!
             
             messages.success(request, f"👑 Payment successful! You are now a Premium member.")
             return redirect('dashboard')

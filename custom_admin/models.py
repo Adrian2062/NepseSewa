@@ -2,15 +2,27 @@ from django.db import models
 from django.conf import settings
 
 class Notification(models.Model):
-    """System notifications for admins and users"""
+    NOTIFICATION_TYPES = (
+        ('buy', 'Buy Order'),
+        ('sell', 'Sell Order'),
+        ('membership', 'Membership'),
+        ('system', 'System'),
+    )
+    
+    # Restored null=True, blank=True to prevent migration errors and allow global notifications
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True, help_text="Leave blank to send to all users")
     title = models.CharField(max_length=200)
     message = models.TextField()
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, help_text="Leave blank to send to all users")
+    type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='system')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering =['-created_at']
+
     def __str__(self):
-        return f"Notification: {self.title}"
+        username = self.user.username if self.user else "GLOBAL"
+        return f"{username} - {self.type} - {self.title}"
 
 class ActivityLog(models.Model):
     """System activity logs for tracking user and admin actions"""

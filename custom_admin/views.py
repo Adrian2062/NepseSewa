@@ -17,6 +17,10 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.db.models import Q
 from .models import ActivityLog, SystemSetting, Notification
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.views import PasswordChangeView
+from django.urls import reverse_lazy
 
 logger = logging.getLogger(__name__)
 
@@ -366,4 +370,95 @@ def admin_logout_view(request):
     """Logout and redirect to admin login"""
     logout(request)
     messages.info(request, "Successfully logged out of the admin panel.")
-    return redirect('custom_admin:admin_login')
+    return redirect('custom_admin:admin_login')
+# --- API ENDPOINTS FOR AJAX (NOTIFICATIONS & SEARCH) ---
+
+def api_get_notifications(request):
+    """Fetch latest notifications for polling"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+        
+    # Fetch notifications specifically for the user OR global notifications (user is NULL)
+    notifications = Notification.objects.filter(
+        Q(user=request.user) | Q(user__isnull=True)
+    ).order_by('-created_at')[:10]
+    
+    unread_count = Notification.objects.filter(
+        Q(user=request.user) | Q(user__isnull=True), 
+        is_read=False
+    ).count()
+    
+    data =[{
+        'id': n.id,
+        'title': n.title,
+        'message': n.message,
+        'type': n.type, # Make sure 'type' was added to your Notification model!
+        'is_read': n.is_read,
+        'time': n.created_at.strftime('%b %d, %H:%M')
+    } for n in notifications]
+    
+    return JsonResponse({'notifications': data, 'unread_count': unread_count})
+
+
+@require_POST
+def api_mark_notification_read(request, notif_id):
+    """Mark a specific notification as read (Handles User and Global)"""
+    if request.user.is_authenticated:
+        # Filter by ID AND (User is current user OR notification is global)
+        Notification.objects.filter(
+            id=notif_id
+        ).filter(
+            Q(user=request.user) | Q(user__isnull=True)
+        ).update(is_read=True)
+        
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+
+def api_live_search(request):
+    """AJAX endpoint for searching stocks AND users dynamically"""
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+        
+    results =[]
+    
+    # 1. Search Stocks
+    stocks = Stock.objects.filter(
+        Q(symbol__icontains=query) | Q(company_name__icontains=query)
+    ).order_by('symbol')[:4]
+    
+    for s in stocks:
+        results.append({
+            'title': s.symbol,
+            'subtitle': s.company_name,
+            'icon': 'bx-buildings' # Building icon for stocks
+        })
+    
+    # 2. Search Users
+    users = CustomUser.objects.filter(
+        Q(username__icontains=query) | Q(email__icontains=query)
+    ).order_by('username')[:4]
+    
+    for u in users:
+        results.append({
+            'title': u.username,
+            'subtitle': u.email,
+            'icon': 'bx-user' # User icon for accounts
+        })
+        
+    return JsonResponse({'results': results})
+@staff_member_required(login_url='custom_admin:admin_login')
+def admin_profile_view(request):
+    context = {
+        'page_title': 'Admin Profile',
+        'user': request.user,
+    }
+    return render(request, 'custom_admin/admin_profile.html', context)
+class AdminPasswordChangeView(PasswordChangeView):
+    template_name = 'custom_admin/password_change.html'
+    success_url = reverse_lazy('custom_admin:admin_profile')
+
+    def form_valid(self, form):
+        messages.success(self.request, "Your password has been updated successfully!")
+        return super().form_valid(form)

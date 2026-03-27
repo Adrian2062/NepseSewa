@@ -1,0 +1,135 @@
+{% extends 'custom_admin/panel_base.html' %}
+
+{% block panel_content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- LEFT COLUMN (Sidebar info) -->
+        <div class="col-lg-4">
+            
+            <!-- Identity Card -->
+            <div class="card shadow-sm border-0 text-center p-4 mb-4">
+                <div class="mb-3 position-relative d-inline-block mx-auto">
+                    <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=008cff&color=fff&size=128" 
+                         class="rounded-circle border border-4 border-white shadow-sm" width="120">
+                </div>
+                <h4 class="fw-bold mb-1">{{ user.username|title }}</h4>
+                <p class="text-muted small mb-3">System Administrator</p>
+                
+                <div class="d-grid">
+                    <span class="badge bg-light text-primary border border-primary-subtle py-2">
+                        <i class='bx bxs-shield-quarter me-1'></i> Access Level: Superuser
+                    </span>
+                </div>
+            </div>
+
+            <!-- Account Status Card -->
+            <div class="card shadow-sm border-0 p-3 mb-4">
+                <h6 class="fw-bold text-muted small text-uppercase mb-3">Account Status</h6>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="p-2 bg-success rounded-circle me-2" style="width:10px; height:10px;"></div>
+                    <span class="small fw-medium">Active & Verified</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div class="p-2 bg-info rounded-circle me-2" style="width:10px; height:10px;"></div>
+                    <span class="small fw-medium">Multi-Factor Auth Enabled</span>
+                </div>
+            </div>
+
+            <!-- Security Settings Card (Now properly nested inside col-lg-4) -->
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="fw-bold text-muted small text-uppercase mb-3">Security Settings</h6>
+                <p class="text-muted small mb-3">Keep your admin credentials secure. It is recommended to update your password every 90 days.</p>
+                <div class="d-grid">
+                    <a href="{% url 'custom_admin:password_change' %}" class="btn btn-outline-danger btn-sm rounded-pill py-2">
+                        <i class='bx bx-refresh me-1'></i> Change Account Password
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN (System Metadata) -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 overflow-hidden">
+                <div class="card-header bg-white border-bottom py-3 d-flex align-items-center">
+                    <i class='bx bx-fingerprint fs-4 me-2 text-primary'></i>
+                    <h5 class="mb-0 fw-bold">Permanent System Identity</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <!-- Primary ID -->
+                        <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="d-block text-muted small text-uppercase fw-bold mb-1">Internal Database ID</span>
+                                <span class="fw-mono text-dark">#USR-{{ user.id|add:"1000" }}</span>
+                            </div>
+                            <i class='bx bx-lock-alt text-muted fs-4'></i>
+                        </li>
+
+                        <!-- Fixed Username -->
+                        <li class="list-group-item p-4 d-flex justify-content-between align-items-center bg-light-subtle">
+                            <div>
+                                <span class="d-block text-muted small text-uppercase fw-bold mb-1">Fixed System Username</span>
+                                <span class="fw-bold text-dark">{{ user.username }}</span>
+                            </div>
+                            <span class="badge bg-secondary">Immutable</span>
+                        </li>
+
+                        <!-- Primary Email -->
+                        <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="d-block text-muted small text-uppercase fw-bold mb-1">Registered Email Address</span>
+                                <span class="text-dark">{{ user.email }}</span>
+                            </div>
+                            <i class='bx bx-envelope text-muted fs-4'></i>
+                        </li>
+
+                        <!-- Security Roles -->
+                        <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="d-block text-muted small text-uppercase fw-bold mb-1">Security Permissions</span>
+                                <div class="mt-1">
+                                    <span class="badge bg-soft-primary text-primary border border-primary-subtle">is_staff</span>
+                                    <span class="badge bg-soft-primary text-primary border border-primary-subtle">is_superuser</span>
+                                    <span class="badge bg-soft-success text-success border border-success-subtle">is_active</span>
+                                </div>
+                            </div>
+                            <i class='bx bx-check-shield text-success fs-4'></i>
+                        </li>
+
+                        <!-- Creation Timestamp -->
+                        <li class="list-group-item p-4 d-flex justify-content-between align-items-center bg-light-subtle">
+                            <div>
+                                <span class="d-block text-muted small text-uppercase fw-bold mb-1">Account Creation Date</span>
+                                <span class="text-dark">{{ user.date_joined|date:"F d, Y" }}</span>
+                                <small class="text-muted d-block" style="font-size: 11px;">at {{ user.date_joined|date:"P" }} (System Time)</small>
+                            </div>
+                            <i class='bx bx-calendar text-muted fs-4'></i>
+                        </li>
+
+                        <!-- Last Login Record -->
+                        <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="d-block text-muted small text-uppercase fw-bold mb-1">Last Secure Login</span>
+                                <span class="text-dark">{{ user.last_login|date:"M d, Y" }}</span>
+                                <small class="text-muted d-block" style="font-size: 11px;">from Session ID: {{ request.session.session_key|truncatechars:15 }}</small>
+                            </div>
+                            <i class='bx bx-history text-muted fs-4'></i>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-light p-3 text-center border-top-0">
+                    <p class="mb-0 text-muted" style="font-size: 12px;">
+                        <i class='bx bx-info-circle me-1'></i> Identity records are locked by system policy. Please contact the lead developer to request modifications.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-soft-primary { background-color: rgba(0, 140, 255, 0.1); }
+    .bg-soft-success { background-color: rgba(21, 202, 32, 0.1); }
+    .fw-mono { font-family: 'Courier New', Courier, monospace; letter-spacing: 1px; }
+</style>
+{% endblock %}

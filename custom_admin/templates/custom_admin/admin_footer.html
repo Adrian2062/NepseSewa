@@ -1,0 +1,122 @@
+{% load static %}
+<!-- Compact Corporate Admin Footer -->
+<footer class="admin-footer">
+    <div class="container-fluid py-4 px-4">
+        <div class="row">
+            <!-- Brand Column -->
+            <div class="col-lg-3 mb-3 mb-lg-0">
+                <div class="footer-brand mb-2">
+                    <!-- Increased Logo Size to 85px -->
+                    <img src="{% static 'img/logo.png' %}" alt="NepseSewa Logo" style="height: 85px; width: auto; object-fit: contain;">
+                </div>
+                <p class="text-secondary small pe-lg-4 mb-0" style="line-height: 1.5; font-size: 13px; max-width: 280px;">
+                    Enterprise administration engine for the NEPSE virtual platform. High-performance trade matching and market monitoring.
+                </p>
+            </div>
+
+            <!-- Column 1: Core Engine -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <h6 class="footer-heading">Core Engine</h6>
+                <ul class="footer-links">
+                    <li><a href="{% url 'custom_admin:admin_trading_dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'MarketSession' %}">Market Sessions</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Order' %}">Active Orders</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'TradeExecution' %}">Executions</a></li>
+                </ul>
+            </div>
+
+            <!-- Column 2: Market Intel -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <h6 class="footer-heading">Market Intel</h6>
+                <ul class="footer-links">
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Stock' %}">Stocks Library</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Sector' %}">Sectors</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'NEPSEPrice' %}">Live Scrapes</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'StockRecommendation' %}">AI Signals</a></li>
+                </ul>
+            </div>
+
+            <!-- Column 3: Accounts -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <h6 class="footer-heading">Accounts</h6>
+                <ul class="footer-links">
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'CustomUser' %}">User Base</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'UserSubscription' %}">Subscriptions</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'PaymentTransaction' %}">Payments</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'myapp' 'Portfolio' %}">Portfolios</a></li>
+                </ul>
+            </div>
+
+            <!-- Column 4: System -->
+            <div class="col-6 col-md-3 col-lg-2">
+                <h6 class="footer-heading">System</h6>
+                <ul class="footer-links">
+                    <li><a href="{% url 'custom_admin:generic_list' 'custom_admin' 'ActivityLog' %}">Activity Logs</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'custom_admin' 'Notification' %}">Notifications</a></li>
+                    <li><a href="{% url 'custom_admin:generic_list' 'custom_admin' 'SystemSetting' %}">Global Settings</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compact Bottom Bar -->
+    <div class="copyright-bar py-2 px-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap">
+            <p class="mb-0 text-secondary" style="font-size: 12px;">© 2026 <strong>NepseSewa Admin</strong>. Secure Financial Operations.</p>
+            <p class="mb-0 text-secondary" style="font-size: 12px;"><i class='bx bx-map me-1'></i>Kathmandu, Nepal | Internal Use Only</p>
+        </div>
+    </div>
+</footer>
+
+<style>
+    /* Professional Layout Styles */
+    footer.admin-footer {
+        background-color: #ffffff;
+        border-top: 1px solid #edf2f7;
+        margin-top: auto;
+    }
+
+    .footer-heading {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: #1a202c; 
+        margin-bottom: 15px;
+    }
+
+    .footer-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .footer-links li {
+        margin-bottom: 8px;
+    }
+
+    .footer-links a {
+        color: #718096;
+        text-decoration: none;
+        font-size: 13.5px;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }
+
+    .footer-links a:hover {
+        color: #008cff;
+    }
+
+    .copyright-bar {
+        background-color: #f7fafc; 
+        border-top: 1px solid #edf2f7;
+    }
+
+    /* Column Dividers for Desktop */
+    @media (min-width: 992px) {
+        .col-lg-2 {
+            border-left: 1px solid #f1f5f9;
+            padding-left: 25px;
+        }
+    }
+</style>

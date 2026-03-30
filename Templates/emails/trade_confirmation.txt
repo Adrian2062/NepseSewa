@@ -1,0 +1,34 @@
+=========================================
+          NEPSESEWA - TRADE ALERT
+=========================================
+
+Hello {{ user.first_name|default:user.username }},
+
+Your order to {{ transaction_type }} shares of {{ stock_symbol }} has been placed successfully in the NepseSewa market. 
+
+Here are your transaction details:
+
+-----------------------------------------
+Stock:           {{ stock_name }} ({{ stock_symbol }})
+Action:          {{ transaction_type }}
+Quantity:        {{ quantity }} Units
+Price per Share: Rs. {{ price_per_share|floatformat:2 }}
+Fees:            Rs. {{ total_fees|floatformat:2 }}
+-----------------------------------------
+TOTAL VALUE:     Rs. {{ net_amount|floatformat:2 }}
+-----------------------------------------
+
+UPDATED ACCOUNT SUMMARY:
+Available Cash Balance: Rs. {{ available_cash|floatformat:2 }}
+Total Portfolio Value:  Rs. {{ total_portfolio_value|floatformat:2 }}
+
+View your updated portfolio here:
+{{ protocol }}://{{ domain }}{% url 'portfolio' %}
+
+-----------------------------------------
+If you didn't authorize this transaction, please log in immediately and update your password, or contact support.
+
+Manage your notification preferences in your settings:
+{{ protocol }}://{{ domain }}{% url 'settings' %}
+
+© 2026 NepseSewa • Kathmandu, Nepal

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Base Styles */
+        body { margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 40px 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        
+        /* Header Logic */
+        .header { 
+            padding: 40px 20px; text-align: center; color: #ffffff;
+            background: {% if side == 'BUY' %}linear-gradient(135deg, #059669 0%, #10b981 100%){% else %}linear-gradient(135deg, #dc2626 0%, #ef4444 100%){% endif %}; 
+        }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .header p { margin: 8px 0 0 0; font-size: 14px; opacity: 0.9; font-weight: 500; }
+
+        /* Content Body */
+        .content { padding: 32px; }
+        .status-pill { 
+            display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 24px;
+            {% if side == 'BUY' %} background-color: #d1fae5; color: #065f46; {% else %} background-color: #fee2e2; color: #991b1b; {% endif %}
+        }
+        .greeting { font-size: 20px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0; }
+        .intro-text { font-size: 15px; color: #64748b; line-height: 1.5; margin-bottom: 32px; }
+
+        /* Data Cards */
+        .section-title { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block; }
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; background-color: #f1f5f9; border-radius: 12px; }
+        .data-table td { padding: 16px; border-bottom: 1px solid #e2e8f0; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .label { font-size: 14px; color: #64748b; font-weight: 500; }
+        .value { font-size: 14px; color: #1e293b; font-weight: 700; text-align: right; }
+        .highlight-value { 
+            font-size: 16px; font-weight: 800; text-align: right;
+            {% if side == 'BUY' %} color: #059669; {% else %} color: #dc2626; {% endif %}
+        }
+
+        /* Footer & Button */
+        .btn-container { text-align: center; padding: 10px 0 30px 0; }
+        .btn { 
+            display: inline-block; padding: 14px 40px; border-radius: 12px; font-weight: 700; font-size: 15px; text-decoration: none; transition: all 0.2s; color: #ffffff !important;
+            background-color: {% if side == 'BUY' %}#10b981{% else %}#ef4444{% endif %}; 
+        }
+        .footer { padding: 24px; background-color: #f8fafc; text-align: center; border-top: 1px solid #e2e8f0; }
+        .footer p { margin: 4px 0; font-size: 12px; color: #94a3b8; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <h1>Order Executed</h1>
+                <p>Reference: #ORD-{{ order_id }}</p>
+            </div>
+
+            <div class="content">
+                <div class="status-pill">{{ side }} ORDER FILLED</div>
+                <h2 class="greeting">Hi {{ user_name }},</h2>
+                <p class="intro-text">Your order for <strong>{{ symbol }}</strong> has been matched and executed successfully on the NepseSewa matching engine.</p>
+                
+                <!-- Transaction Summary -->
+                <span class="section-title">Transaction Details</span>
+                <table class="data-table">
+                    <tr>
+                        <td class="label">Stock Symbol</td>
+                        <td class="value">{{ symbol }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Quantity</td>
+                        <td class="value">{{ qty }} Shares</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Execution Price</td>
+                        <td class="value">Rs {{ price }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">{% if side == 'BUY' %}Total Cost{% else %}Total Received{% endif %}</td>
+                        <td class="highlight-value">Rs {{ total_amount }}</td>
+                    </tr>
+                </table>
+
+                <!-- Account Impact -->
+                <span class="section-title">Account Impact</span>
+                <table class="data-table">
+                    <tr>
+                        <td class="label">New Shares Owned</td>
+                        <td class="value">{{ new_total_shares }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Portfolio Weight</td>
+                        <td class="value">{{ weight }}%</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Remaining Cash</td>
+                        <td class="value">Rs {{ remaining_cash }}</td>
+                    </tr>
+                </table>
+
+                <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
+                    Executed on {{ nepal_time }} (Nepal Time)
+                </p>
+
+                <div class="btn-container">
+                    <a href="{{ base_url }}/dashboard/" class="btn">View My Dashboard</a>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p><strong>Security Tip:</strong> If you did not authorize this trade, please secure your account or contact support immediately.</p>
+                <p>&copy; 2026 NepseSewa Trading Engine. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

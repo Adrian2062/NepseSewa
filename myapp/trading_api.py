@@ -155,8 +155,10 @@ def api_cancel_order(request, order_id):
 def api_place_order_new(request):
     """
     POST /api/trade/place/
-    Place a new order with matching engine
+    Place a new order with matching engine and send email on execution.
     """
+    from .utils import send_trade_confirmation_email
+
     try:
         data = json.loads(request.body)
         symbol = (data.get('symbol') or '').strip().upper()
@@ -165,13 +167,11 @@ def api_place_order_new(request):
         
         try:
             qty = int(data.get('qty', 0))
-            # Price is optional for MARKET orders
             price_val = data.get('price')
             price = float(price_val) if price_val is not None else 0.0
         except (ValueError, TypeError):
             return JsonResponse({'success': False, 'message': 'Invalid quantity or price.'})
         
-        # Validate inputs
         if not symbol:
             return JsonResponse({'success': False, 'message': 'Symbol is required.'})
         
@@ -187,14 +187,13 @@ def api_place_order_new(request):
         if order_type == 'LIMIT' and price <= 0:
             return JsonResponse({'success': False, 'message': 'Price must be positive for limit orders.'})
         
-        # Check market is open
         if not is_market_open():
             return JsonResponse({
                 'success': False,
                 'message': 'Market is closed. Trading hours: 11:00-15:00 Nepal Time'
             })
         
-        # Create order object (not saved yet)
+        # Create order object
         order = Order(
             user=request.user,
             symbol=symbol,
@@ -205,7 +204,6 @@ def api_place_order_new(request):
             status='OPEN'
         )
         
-        # Validate order (this will set the price for MARKET orders based on LTP)
         is_valid, error_msg = MatchingEngine.validate_order(order)
         if not is_valid:
             return JsonResponse({'success': False, 'message': error_msg})
@@ -213,10 +211,9 @@ def api_place_order_new(request):
         # Deduct balance for BUY orders
         if side == 'BUY':
             total_cost = Decimal(str(qty)) * order.price
-            order.user.virtual_balance -= total_cost
-            order.user.save()
+            request.user.virtual_balance -= total_cost
+            request.user.save()
         
-        # Save order
         order.save()
         
         # Try to match order
@@ -227,14 +224,26 @@ def api_place_order_new(request):
             total_filled = sum(e.executed_qty for e in executions)
             avg_price = sum(e.executed_qty * float(e.executed_price) for e in executions) / total_filled if total_filled > 0 else 0
             
+            # REFRESH USER DATA: Ensures current wealth/cash is accurate for the email
+            request.user.refresh_from_db()
+
+            # TRIGGER THE PROFESSIONAL EMAIL
+            send_trade_confirmation_email(
+                user=request.user,
+                symbol=symbol,
+                side=side,
+                qty=total_filled,
+                price=avg_price,
+                order_id=order.id,
+                order_type=order_type
+            )
+
             message = f'Order placed! Filled {total_filled}/{qty} shares @ avg Rs {avg_price:.2f}'
         else:
             message = f'Order placed successfully! {side} {qty} {symbol} @ Rs {price:.2f} (waiting for match)'
         
-        # Refresh order status
         order.refresh_from_db()
         
-        # Add success message if notifications are enabled
         if request.user.buy_sell_notifications:
             from django.contrib import messages
             messages.success(request, f"✅ {side} order placed successfully for {symbol}")

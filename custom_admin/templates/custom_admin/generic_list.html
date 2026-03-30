@@ -114,12 +114,14 @@
                 <thead>
                     <tr>
                         {% for header in headers %}
+                            {% if header|lower != 'id' %} <!-- Skip ID column in Header -->
                             <th>
                                 <a href="?{% if current_sort == header %}{% url_replace request 'sort' '-'|add:header %}{% else %}{% url_replace request 'sort' header %}{% endif %}" class="text-decoration-none text-dark d-flex align-items-center justify-content-between">
                                     {{ header|title|replace:"_, " }}
                                     <i class='bx {% if current_sort == header %}bx-sort-up text-primary{% elif current_sort == "-"|add:header %}bx-sort-down text-primary{% else %}bx-sort-alt text-muted{% endif %} ms-1'></i>
                                 </a>
                             </th>
+                            {% endif %}
                         {% endfor %}
                         <th class="text-end pe-4">Actions</th>
                     </tr>
@@ -128,6 +130,7 @@
                     {% for obj in objects %}
                         <tr>
                             {% for field in fields %}
+                                {% if field|lower != 'id' %} <!-- Skip ID column in Data -->
                                 <td>
                                     {% if 'is_' in field or '_active' in field %}
                                         {% if obj|get_attribute:field %}
@@ -143,6 +146,7 @@
                                         {{ obj|get_attribute:field|truncatechars:50|default:"-" }}
                                     {% endif %}
                                 </td>
+                                {% endif %}
                             {% endfor %}
                             <td class="text-end pe-4">
                                 <div class="d-flex justify-content-end gap-2">

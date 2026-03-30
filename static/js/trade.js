@@ -244,10 +244,10 @@ document.getElementById('tradeForm')?.addEventListener('submit', async (e) => {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
 
     try {
-        const res = await fetch('/api/trade/place/', {
+        const res = await fetch('/api/trade/place-new/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-            body: JSON.stringify({ symbol: sym, side: currentSide, qty, price })
+            body: JSON.stringify({ symbol: sym, side: currentSide, qty, price, order_type: 'LIMIT' })
         });
         const json = await res.json();
 

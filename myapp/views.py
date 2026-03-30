@@ -929,6 +929,8 @@ def api_place_order(request):
     try:
         import json
         from decimal import Decimal, InvalidOperation
+        # Import the email function here
+        from .utils import send_trade_confirmation_email 
         
         data = json.loads(request.body)
         symbol = (data.get('symbol') or '').strip().upper()
@@ -972,11 +974,29 @@ def api_place_order(request):
             order.save()
             matches = MatchingEngine.match_order(order)
 
-        msg = "✅ Order matched!" if matches else "Order placed in Market Depth. Waiting for counter-party."
+        # === ADDED EMAIL NOTIFICATION LOGIC HERE ===
+        if matches:
+            # Refresh user data to get updated virtual_balance and portfolio_value
+            request.user.refresh_from_db()
+
+            # Trigger the professional email
+            send_trade_confirmation_email(
+                user=request.user,
+                symbol=symbol,
+                side=side,
+                qty=qty,
+                price=price,
+                order_id=order.id,
+                order_type="LIMIT" # Legacy orders are usually LIMIT
+            )
+            msg = "✅ Order matched!"
+        else:
+            msg = "Order placed in Market Depth. Waiting for counter-party."
+        # ===========================================
+
         return JsonResponse({'success': True, 'message': msg})
         
     except Exception as e:
-        # This will now give you a readable error instead of the CSS class name
         return JsonResponse({'success': False, 'message': f"Error: {str(e)}"})
     
 # Add these new API endpoints to your existing views.py

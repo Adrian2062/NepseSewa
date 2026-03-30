@@ -185,16 +185,23 @@ def login_view(request):
         if form_type == 'register':
             form = RegistrationForm(request.POST)
             if form.is_valid():
+                # 1. Save the user
                 user = form.save()
-                login(request, user, backend='myapp.views.EmailBackend')
-                messages.success(request, "Registration successful!")
-                return redirect('dashboard')
+                
+                # 2. DO NOT call login() here. 
+                # This forces the user to go to the login form.
+                
+                # 3. Change the message to tell them to log in
+                messages.success(request, "Registration successful! Please log in with your credentials.")
+                
+                # 4. Redirect to 'login' instead of 'dashboard'
+                return redirect('login')
             else:
                 for field, errors in form.errors.items():
                     for error in errors:
                         messages.error(request, f"{field}: {error}")
         else:
-            # Login logic
+            # Login logic (Keep this exactly as it was)
             email = request.POST.get('email')
             password = request.POST.get('password')
             
@@ -208,7 +215,6 @@ def login_view(request):
                 messages.error(request, 'Invalid email or password')
     
     return render(request, 'login.html', context)
-
 
 def password_reset(request):
     if request.method == "POST":
@@ -537,14 +543,42 @@ def settings_view(request):
     }
     return render(request, "settings.html", context)
 
+from django.utils import timezone
+
+@login_required
 def pricing(request):
-    """View to display subscription plans"""
+    """View to display subscription plans or active membership details"""
     plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
     
+    # 1. Safely get the user's subscription
+    subscription = getattr(request.user, 'subscription', None)
+    
+    # 2. Logic to check if they have a valid, active, non-expired plan
+    is_subscribed = False
+    days_left = 0
+    progress_percent = 0
+    
+    if subscription and subscription.is_active and not subscription.is_expired:
+        is_subscribed = True
+        
+        # Calculate days remaining
+        delta = subscription.end_date - timezone.now()
+        days_left = max(0, delta.days)
+        
+        # Calculate Progress for the bar (Days Left / Total Duration)
+        total_duration = subscription.plan.duration_days
+        if total_duration > 0:
+            progress_percent = (days_left / total_duration) * 100
+            progress_percent = min(100, max(0, progress_percent)) # Keep between 0-100
+
     context = get_nepse_context()
     context.update({
         'active_page': 'pricing',
         'plans': plans,
+        'is_subscribed': is_subscribed,
+        'subscription': subscription,
+        'days_left': days_left,
+        'progress_percent': progress_percent,
     })
     return render(request, 'pricing.html', context)
 

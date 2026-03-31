@@ -1,3 +1,4 @@
+{% load static %}
 <style>
     .app-footer {
         background: #fff;
@@ -70,11 +71,16 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        color: var(--primary);
-        font-weight: 800;
-        font-size: 1.1rem;
         margin-bottom: 1rem;
         text-decoration: none;
+    }
+
+    /* Added this to control your logo size */
+    .footer-logo {
+        height: 120px; /* Change this number to make the logo bigger or smaller */
+        width: auto;
+        object-fit: contain;
+        margin-bottom: 5px;
     }
 </style>
 
@@ -82,10 +88,13 @@
     <div class="container-fluid px-4">
         <div class="row">
             <div class="col-lg-4 mb-4 mb-lg-0">
+                
+                <!-- LOGO ADDED HERE -->
                 <a href="{% url 'dashboard' %}" class="footer-brand">
-                    <i class="fas fa-chart-line"></i> NepseSewa
+                    <img src="{% static 'img/logo.png' %}" alt="NepseSewa Logo" class="footer-logo">
                 </a>
-                <p class="small pe-lg-5">
+                
+                <p class="small pe-lg-5 text-muted mt-2">
                     Master the Nepal Stock Exchange with our virtual trading platform.
                     Practice with zero risk and real-time market data.
                 </p>
@@ -96,6 +105,7 @@
                     <a href="#"><i class="fab fa-instagram"></i></a>
                 </div>
             </div>
+            
             <div class="col-sm-6 col-md-3 col-lg-2 mb-4">
                 <h6>Navigation</h6>
                 <ul>
@@ -132,7 +142,7 @@
                 </ul>
             </div>
         </div>
-        <div class="app-footer-bottom">
+        <div class="app-footer-bottom text-muted">
             <div>&copy; {% now "Y" %} NepseSewa. Built for education.</div>
         </div>
     </div>

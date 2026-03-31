@@ -166,9 +166,51 @@ def get_nepse_context():
 
 
 # ========== PAGE VIEWS ==========
+from django.db.models import Sum, F
+from django.utils import timezone # For Trades Today option
+from myapp.models import CustomUser, TradeExecution, Stock # Added Stock
+from .models import Testimonial
+
 def landing_page(request):
-    """Landing page with NEPSE data"""
+    """Landing page with NEPSE data and dynamic platform stats"""
     context = get_nepse_context()
+
+    # 1. Calculate Active Traders
+    total_traders = CustomUser.objects.count()
+    
+    # 2. Calculate Total Virtual Trade Volume
+    total_volume_raw = TradeExecution.objects.aggregate(
+        total=Sum(F('executed_qty') * F('executed_price'))
+    )['total'] or 0
+
+    # 3. Calculate Total Listed Stocks (DYNAMIC REPLACEMENT FOR RATING)
+    total_listed_stocks = Stock.objects.count()
+
+    # --- Formatting Logic ---
+    
+    # Format Traders count
+    if total_traders >= 1000:
+        display_traders = f"{total_traders / 1000:.1f}K+"
+    else:
+        display_traders = str(total_traders)
+
+    # Format Trade Volume
+    if total_volume_raw >= 1000000:
+        display_volume = f"Rs {total_volume_raw / 1000000:.1f}M+"
+    elif total_volume_raw >= 1000:
+        display_volume = f"Rs {total_volume_raw / 1000:.1f}K+"
+    else:
+        display_volume = f"Rs {total_volume_raw:,.0f}"
+
+    testimonials = Testimonial.objects.filter(is_active=True).order_by('-created_at')[:3]
+    # Update context
+    context.update({
+        'display_traders': display_traders,
+        'display_volume': display_volume,
+        'listed_stocks': total_listed_stocks, # The new dynamic variable
+        'testimonials': testimonials,
+    })
+
     return render(request, 'landing.html', context)
 
 

@@ -157,26 +157,7 @@
     color: white;
   }
 
-  /* Search Input Customization */
-  .search-box {
-    position: relative;
-    width: 100%;
-    max-width: 300px;
-  }
-
-  .search-box input {
-    padding-left: 2.5rem;
-    border-radius: 50px;
-    background-color: #f9fafb;
-  }
-
-  .search-box i {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9ca3af;
-  }
+  /* I HAVE REMOVED THE CONFLICTING .search-box CSS FROM HERE */
 </style>
 {% endblock %}
 
@@ -187,7 +168,8 @@
   <div class="hero-section">
     <div class="hero-pattern"></div>
     <div class="position-relative z-1">
-      <div class="row align-items-center">
+      <!-- ADDED m-0 HERE TO FIX BOOTSTRAP GRID OVERFLOW -->
+      <div class="row m-0 align-items-center">
         <div class="col-lg-7">
           <span class="badge bg-white text-primary mb-3 px-3 py-2 rounded-pill fw-bold">🚀 Start Learning</span>
           <h1 class="display-5 fw-bold mb-3">Master the Market</h1>

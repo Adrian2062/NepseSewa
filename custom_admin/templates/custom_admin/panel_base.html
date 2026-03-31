@@ -346,6 +346,13 @@
                     Notifications</a></li>
             <li><a href="{% url 'custom_admin:generic_list' 'custom_admin' 'SystemSetting' %}"><i class='bx bx-cog'></i>
                     Global Settings</a></li>
+            <!-- Inside your sidebar <ul> -->
+            <li class="menu-title">Content</li>
+            <li>
+                <a href="{% url 'custom_admin:generic_list' 'myapp' 'Testimonial' %}">
+                    <i class='bx bx-comment-detail'></i> Manage Testimonials
+                </a>
+            </li>
         </ul>
     </div>
 

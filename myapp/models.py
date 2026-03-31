@@ -670,4 +670,20 @@ def activate_subscription_on_payment(sender, instance, created, **kwargs):
                 virtual_balance=1000000.00,
                 is_premium=True
             )
+class Testimonial(models.Model):
+    full_name = models.CharField(max_length=100)
+    designation = models.CharField(max_length=100)
+    content = models.TextField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.full_name
+
+    @property
+    def initials(self):
+        parts = self.full_name.split()
+        if len(parts) >= 2:
+            return f"{parts[0][0]}{parts[1][0]}".upper()
+        return self.full_name[0:2].upper()
 

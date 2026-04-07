@@ -334,16 +334,24 @@ class MatchingEngine:
     def validate_order(order):
         """Checks balance and ±10% circuit limits."""
         from myapp.models import MarketSession, NEPSEPrice, Stock, Portfolio
+        from myapp.services.playback_engine import get_playback_state
         from decimal import Decimal
 
-        # 1. Market Session Check
+        # 1. Market Session Check (Allows Playback Mode)
+        state = get_playback_state()
         active = MarketSession.objects.filter(is_active=True, status='CONTINUOUS').exists()
-        if not active: return False, "Market is currently CLOSED."
+        
+        if not active and not state['is_playback']: 
+            return False, "Market is currently CLOSED."
 
-        # 2. Reference Price Logic (Fixes the Decimal Conversion error)
+        # 2. Reference Price Logic
         try:
-            latest = NEPSEPrice.objects.filter(symbol=order.symbol).order_by('-timestamp').first()
-            # Try to find Previous Close
+            # Use playback timestamp if available, else standard fallback
+            if state['is_playback']:
+                latest = NEPSEPrice.objects.filter(symbol=order.symbol, timestamp__lte=state['timestamp']).order_by('-timestamp').first()
+            else:
+                latest = NEPSEPrice.objects.filter(symbol=order.symbol).order_by('-timestamp').first()
+                
             prev = None
             if latest:
                 prev = NEPSEPrice.objects.filter(symbol=order.symbol, timestamp__date__lt=latest.timestamp.date()).order_by('-timestamp').first()
@@ -352,7 +360,6 @@ class MatchingEngine:
             if prev and prev.close:
                 ref_price = Decimal(str(prev.close))
             elif latest and latest.ltp:
-                # If no previous day, calculate from today's LTP and Change
                 change_factor = 1 + (float(latest.change_pct or 0) / 100)
                 ref_price = Decimal(str(float(latest.ltp) / change_factor))
             else:

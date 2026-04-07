@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loadPortfolioHoldings();
         loadPortfolioPerformance(currentRange);
         loadRecentActivity(currentActivityPage);
-    }, 30000);
+    }, 60000);
 });
 
 /**
@@ -42,27 +42,53 @@ async function loadPortfolioAnalytics() {
         if (result.success) {
             const data = result.data;
 
-            // Update summary cards
-            document.getElementById('sumTotalValue').textContent = `Rs ${formatNumber(data.total_value)}`;
-            document.getElementById('sumHoldings').textContent = data.holdings_count;
+            // 1. Safe update for Total Value & Holdings
+            const totalValueEl = document.getElementById('sumTotalValue');
+            if (totalValueEl) totalValueEl.textContent = `Rs ${formatNumber(data.total_value || 0)}`;
 
-            // Today's P/L
-            const todayPL = data.today_pl;
-            const todayPLPct = data.today_pl_pct;
-            document.getElementById('sumTodayPL').textContent = formatPL(todayPL);
-            document.getElementById('sumTodayPLPct').textContent = formatPLPercent(todayPLPct);
-            document.getElementById('sumTodayPLPct').className = getPLClass(todayPL);
+            const holdingsEl = document.getElementById('sumHoldings');
+            if (holdingsEl) holdingsEl.textContent = data.holdings_count || 0;
 
-            // Overall P/L
-            const overallPL = data.overall_pl;
-            const overallPLPct = data.overall_pl_pct;
-            document.getElementById('sumOverallPL').textContent = formatPL(overallPL);
-            document.getElementById('sumOverallPLPct').textContent = formatPLPercent(overallPLPct);
-            document.getElementById('sumOverallPLPct').className = getPLClass(overallPL);
+            // 2. Safe update for Today's P/L
+            const todayPL = data.today_pl || 0;
+            const todayPLPct = data.today_pl_pct || 0;
+            
+            // Check for Portfolio Page IDs OR Dashboard Page IDs
+            const todayPLEl = document.getElementById('sumTodayPL') || document.getElementById('dashboardTodayProfit');
+            const todayPLPctEl = document.getElementById('sumTodayPLPct') || document.getElementById('dashboardTodayProfitPct');
 
-            // Update timestamp
-            const timestamp = new Date(data.timestamp);
-            document.getElementById('portfolioAsOf').textContent = `As of ${formatTimestamp(timestamp)}`;
+            if (todayPLEl) {
+                todayPLEl.textContent = formatPL(todayPL);
+                todayPLEl.className = `stat-value ${getPLClass(todayPL)}`;
+            }
+            if (todayPLPctEl) {
+                todayPLPctEl.textContent = formatPLPercent(todayPLPct);
+                todayPLPctEl.className = getPLClass(todayPLPct);
+            }
+
+            // 3. Safe update for Overall P/L
+            const overallPL = data.overall_pl || 0;
+            const overallPLPct = data.overall_pl_pct || 0;
+            
+            const overallPLEl = document.getElementById('sumOverallPL');
+            const overallPLPctEl = document.getElementById('sumOverallPLPct');
+
+            if (overallPLEl) {
+                overallPLEl.textContent = formatPL(overallPL);
+                overallPLEl.className = `stat-value ${getPLClass(overallPL)}`;
+            }
+            if (overallPLPctEl) {
+                overallPLPctEl.textContent = formatPLPercent(overallPLPct);
+                overallPLPctEl.className = getPLClass(overallPLPct);
+            }
+
+            // 4. Safe update for Timestamp
+            const asOfEl = document.getElementById('portfolioAsOf');
+            if (asOfEl && data.timestamp) {
+                const timestamp = new Date(data.timestamp);
+                asOfEl.textContent = `As of ${formatTimestamp(timestamp)}`;
+            }
+            
         } else {
             console.error('Failed to load portfolio analytics:', result.error);
         }

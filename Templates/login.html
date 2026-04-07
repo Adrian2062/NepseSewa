@@ -132,6 +132,7 @@
             <form id="loginForm" class="form-container active" method="post" action="{% url 'login' %}">
                 {% csrf_token %}
                 <input type="hidden" name="form-type" value="login">
+                <input type="hidden" name="next" value="{{ next }}">
 
                 <div class="form-title">
                     <h3>Welcome Back</h3>

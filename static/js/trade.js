@@ -69,29 +69,45 @@ async function refreshLatest() {
     if (selectedSymbol) applySelectedQuote(selectedSymbol);
 }
 
-function applySelectedQuote(sym) {
+async function applySelectedQuote(sym) {
     selectedSymbol = sym;
     if (symbolInput) symbolInput.value = sym;
     if (tradeSearch && tradeSearch.value !== sym) tradeSearch.value = sym;
 
     safeText(selSymbolEl, sym);
 
-    const live = latestMap.get(sym);
-    const ltp = Number(live?.ltp);
-    const pct = Number(live?.change_pct);
+    // 1. Fetch detailed quote (includes Open, High, Low, Prev Close, 52W info)
+    try {
+        const res = await fetch(`/api/stock-quote/${encodeURIComponent(sym)}/`);
+        const json = await res.json();
 
-    safeText(selLtpEl, `Rs ${isFinite(ltp) ? fmtNumber(ltp, 2) : '—'}`);
+        if (json.success) {
+            const d = json.data;
+            
+            // Populate Basic Header
+            safeText(selLtpEl, `Rs ${fmtNumber(d.ltp, 2)}`);
+            
+            // Populating Grid Fields
+            safeText(document.getElementById('valOpen'), fmtNumber(d.open, 2));
+            safeText(document.getElementById('valHigh'), fmtNumber(d.high, 2));
+            safeText(document.getElementById('valLow'), fmtNumber(d.low, 2));
+            safeText(document.getElementById('valPrev'), fmtNumber(d.prev_close, 2)); // FIXED
+            safeText(document.getElementById('valVol'), fmtInt(d.volume));
+            safeText(document.getElementById('val52H'), fmtNumber(d.high_52, 2));
+            safeText(document.getElementById('val52L'), fmtNumber(d.low_52, 2));
 
-    if (isFinite(pct)) {
-        const cls = pct >= 0 ? 'text-success' : 'text-danger';
-        const sign = pct >= 0 ? '+' : '';
-        selChangeEl.classList.remove('text-success', 'text-danger', 'text-muted');
-        selChangeEl.classList.add(cls);
-        safeText(selChangeEl, `${sign}${pct.toFixed(2)}%`);
-    } else {
-        selChangeEl.classList.remove('text-success', 'text-danger');
-        selChangeEl.classList.add('text-muted');
-        safeText(selChangeEl, '—');
+            // Change Pct Color
+            const pct = d.change_pct;
+            if (isFinite(pct)) {
+                const cls = pct >= 0 ? 'text-success' : 'text-danger';
+                const sign = pct >= 0 ? '+' : '';
+                selChangeEl.classList.remove('text-success', 'text-danger', 'text-muted');
+                selChangeEl.classList.add(cls);
+                safeText(selChangeEl, `${sign}${pct.toFixed(2)}%`);
+            }
+        }
+    } catch (e) {
+        console.error("Error fetching detailed quote:", e);
     }
 
     const grid = document.getElementById('stockInfoGrid');
@@ -139,14 +155,24 @@ tradeSearch?.addEventListener('input', () => {
     }, 250);
 });
 
-tradeSearchResults?.addEventListener('click', (e) => {
+tradeSearchResults?.addEventListener('click', async (e) => {
     const item = e.target.closest('.search-result-item');
     if (!item) return;
     const sym = item.getAttribute('data-symbol');
     tradeSearchResults.style.display = 'none';
+    
+    // 1. Fetch fresh data for THIS symbol specifically right now
+    await refreshLatest(); 
+    
+    // 2. Update the Quote display
     applySelectedQuote(sym);
     hideMsg();
-    loadUserOrderHistory(); // ✅ refresh orderbook
+    
+    // 3. Update Depth and Order Book
+    await loadOrderBook();      
+    await fetchMarketDepth(sym); 
+    
+    console.log("Instant fetch triggered for:", sym);
 });
 
 document.addEventListener('click', (e) => {
@@ -184,49 +210,51 @@ function updateEstimate() {
     estValueChip.innerHTML = `<i class="fa-solid fa-calculator"></i> Est: ${isFinite(est) ? 'Rs ' + fmtNumber(est, 2) : 'Rs —'}`;
 }
 
-// Order book: user history only
-async function loadUserOrderHistory() {
+let obPage = 1;
+const OB_SIZE = 5; // Show 5 rows at a time
+
+async function loadOrderBook() {
     const tbody = document.getElementById('orderBookTbody');
     const countEl = document.getElementById('orderBookCount');
-    const asofEl = document.getElementById('orderBookAsOf');
+    const pageInfo = document.getElementById('obPageInfo');
 
     try {
-        const res = await fetch('/api/trade/history/');
-        const json = await res.json();
-        const rows = Array.isArray(json?.data) ? json.data : [];
+        const [ordersRes, execRes] = await Promise.all([
+            fetch('/api/trade/orders/'), fetch('/api/trade/executions/')
+        ]);
+        const allActivity = [...(await ordersRes.json()).data, ...(await execRes.json()).data]
+            .sort((a, b) => new Date(b.created_at || b.executed_at) - new Date(a.created_at || a.executed_at));
 
-        rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const maxPage = Math.ceil(allActivity.length / OB_SIZE) || 1;
+        
+        // Render slice
+        const start = (obPage - 1) * OB_SIZE;
+        const pageItems = allActivity.slice(start, start + OB_SIZE);
 
-        if (!rows.length) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted p-4">No trade history found.</td></tr>`;
-            countEl.textContent = '0';
-            asofEl.textContent = new Date().toLocaleString();
-            return;
-        }
-
-        tbody.innerHTML = rows.slice(0, 50).map(r => {
-            const side = String(r.side || '').toUpperCase();
-            const sideCls = side === 'BUY' ? 'text-success' : (side === 'SELL' ? 'text-danger' : 'text-muted');
-            return `
+        tbody.innerHTML = pageItems.length ? pageItems.map(r => `
             <tr>
-              <td class="ps-3">${r.created_at || '—'}</td>
-              <td><span class="symbol-pill"><i class="fa-solid fa-tag"></i>${r.symbol}</span></td>
-              <td class="${sideCls}" style="font-weight:900;">${side || '—'}</td>
-              <td class="text-end">${r.qty != null ? fmtInt(r.qty) : '—'}</td>
-              <td class="text-end">Rs ${r.price != null ? fmtNumber(r.price, 2) : '—'}</td>
-              <td class="text-end pe-3">${r.status || '—'}</td>
-            </tr>
-          `;
-        }).join('');
+              <td class="ps-3">${r.created_at || r.executed_at}</td>
+              <td><span class="symbol-pill">${r.symbol}</span></td>
+              <td class="${r.side === 'BUY' ? 'text-success' : 'text-danger'} fw-bold">${r.side}</td>
+              <td class="text-end">${fmtInt(r.qty || r.executed_qty)}</td>
+              <td class="text-end">Rs ${fmtNumber(r.price, 2)}</td>
+              <td class="text-end pe-3 fw-bold">${r.status || 'FILLED'}</td>
+            </tr>`).join('') : '<tr><td colspan="6" class="text-center p-3 text-muted">No activity.</td></tr>';
 
-        countEl.textContent = String(rows.length);
-        asofEl.textContent = new Date().toLocaleString();
-    } catch (e) {
-        console.error(e);
-        tbody.innerHTML = `<tr><td colspan="6" class="text-muted p-3 ps-3">Error loading your order history.</td></tr>`;
-    }
+        pageInfo.textContent = `Page ${obPage} of ${maxPage}`;
+        document.getElementById('obPrev').disabled = (obPage === 1);
+        document.getElementById('obNext').disabled = (obPage >= maxPage);
+        countEl.textContent = `${allActivity.length} items`;
+    } catch (e) { console.error(e); }
 }
 
+// Attach listeners once on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('obPrev').onclick = () => { obPage--; loadOrderBook(); };
+    document.getElementById('obNext').onclick = () => { obPage++; loadOrderBook(); };
+});
+
+// Place order
 // Place order
 document.getElementById('tradeForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -254,7 +282,12 @@ document.getElementById('tradeForm')?.addEventListener('submit', async (e) => {
         if (!json.success) return setMsg(json.message || 'Order failed.', 'danger');
 
         setMsg(json.message || '✅ Order placed successfully!', 'success');
-        await loadUserOrderHistory();
+        
+        // --- THIS IS THE FIX ---
+        await loadOrderBook();       // Updates the list at the bottom
+        await fetchMarketDepth(sym); // Updates the Top 5 Bids/Asks immediately!
+        // -----------------------
+
     } catch (err) {
         console.error(err);
         setMsg('Order error. Check console.', 'danger');
@@ -268,8 +301,11 @@ async function fetchMarketSession() {
     try {
         const res = await fetch('/api/market/session/');
         const json = await res.json();
+        
+        console.log("DEBUG - API Response:", json); // This will tell us if is_playback is true or false
+        
         if (json.success) {
-            marketSession = json.data;
+            marketSession = json.data; // Ensure this matches the structure { status, is_active, is_playback }
             updateMarketStatusUI();
         }
     } catch (e) {
@@ -280,22 +316,32 @@ async function fetchMarketSession() {
 function updateMarketStatusUI() {
     const chip = document.getElementById('marketStatusChip');
     const placeOrderBtn = document.getElementById('btnPlaceOrder');
-
     if (!chip) return;
 
-    if (marketSession.status === 'CONTINUOUS' && marketSession.is_active) {
+    // PRIORITY: If is_playback is true, always show Playback Mode
+    if (marketSession.is_playback === true) {
+        chip.innerHTML = '<i class="fa-solid fa-history text-warning me-1"></i> PLAYBACK MODE';
+        chip.style.borderColor = 'rgba(245,158,11,.25)';
+        chip.style.background = 'rgba(245,158,11,.08)';
+        chip.style.color = '#d97706';
+        if (placeOrderBtn) placeOrderBtn.disabled = false;
+    } 
+    // Fallback to normal status checks
+    else if (marketSession.status === 'CONTINUOUS' && marketSession.is_active) {
         chip.innerHTML = '<i class="fa-solid fa-circle text-success me-1"></i> MARKET OPEN';
         chip.style.borderColor = 'rgba(16,185,129,.25)';
         chip.style.background = 'rgba(16,185,129,.08)';
         chip.style.color = 'var(--primary-dark)';
         if (placeOrderBtn) placeOrderBtn.disabled = false;
-    } else if (marketSession.status === 'PAUSED') {
+    } 
+    else if (marketSession.status === 'PAUSED') {
         chip.innerHTML = '<i class="fa-solid fa-pause-circle text-warning me-1"></i> PAUSED';
         chip.style.borderColor = 'rgba(245,158,11,.25)';
         chip.style.background = 'rgba(245,158,11,.08)';
         chip.style.color = '#d97706';
         if (placeOrderBtn) placeOrderBtn.disabled = true;
-    } else {
+    } 
+    else {
         chip.innerHTML = '<i class="fa-solid fa-circle text-danger me-1"></i> MARKET CLOSED';
         chip.style.borderColor = 'rgba(239,68,68,.25)';
         chip.style.background = 'rgba(239,68,68,.08)';
@@ -355,26 +401,23 @@ function renderMarketDepth(bids, asks) {
 }
 
 // Init
+// Init
 async function initTradePage() {
     applySideUI();
-    // updateNavbarBar(); // Handled by script.js globally
+    
+    // Fetch base data first
     await refreshLatest();
-    await loadUserOrderHistory();
+    await loadOrderBook(); 
     await fetchMarketSession();
 
     const params = new URLSearchParams(window.location.search);
     const qsym = params.get('symbol');
     if (qsym) {
-        applySelectedQuote(qsym.toUpperCase());
-        await fetchMarketDepth(qsym.toUpperCase());
+        const sym = qsym.toUpperCase();
+        applySelectedQuote(sym);
+        
+        // --- ADD THIS HERE ---
+        // Fetch depth instantly for the initial load
+        await fetchMarketDepth(sym); 
     }
 }
-
-initTradePage();
-setInterval(async () => {
-    // updateNavbarBar(); // Handled by script.js globally
-    await refreshLatest();
-    await loadUserOrderHistory();
-    await fetchMarketSession();
-    if (selectedSymbol) await fetchMarketDepth(selectedSymbol);
-}, 3000);

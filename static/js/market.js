@@ -46,7 +46,6 @@ async function initMarketPage() {
     }
 
     if (searchInput) {
-        // Direct event listener for max reliability
         searchInput.addEventListener('input', debounce(function () {
             applyFilters();
         }, 300));
@@ -59,43 +58,56 @@ async function initMarketPage() {
 
     setupPagination();
     await fetchMarketData();
+
+    // --- ADD THIS BLOCK HERE ---
+    // Auto-refresh the market table every 60 seconds
+    setInterval(() => {
+        // Logic: Only refresh if the user is NOT looking at a specific 
+        // historical date manually (dateInput.value will be empty for the live/playback view)
+        if (!dateInput || !dateInput.value) {
+            fetchMarketData();
+        }
+    }, 60000); 
+    // ----------------------------
 }
 
 /**
  * Core Fetch: Gets data from server.
  */
+/**
+ * Core Fetch: Gets data from server, handles Playback Mode UI, and renders the table.
+ */
+/**
+ * Core Fetch: Gets data from server, handles Playback UI, and renders the table.
+ */
 async function fetchMarketData() {
     const tbody = document.getElementById('marketBody');
-    const countEl = document.getElementById('marketCount');
-    const dateInput = document.getElementById('marketDate');
-    const dateVal = dateInput ? dateInput.value : '';
-
-    if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading live market data...</td></tr>';
-    }
-    if (countEl) countEl.textContent = 'Loading...';
+    const badge = document.getElementById('marketStatusBadge');
+    const badgeText = document.getElementById('marketStatusText');
+    const badgeIcon = document.getElementById('marketStatusIcon');
 
     try {
-        const params = new URLSearchParams();
-        if (dateVal) params.append('date', dateVal);
-
-        const res = await fetch('/api/market-data/?' + params.toString());
+        const res = await fetch('/api/market-data/?t=' + Date.now()); // Added cache buster
         const json = await res.json();
 
         if (json.success) {
             allMarketData_global = json.stocks || [];
-            applyFilters(); // Filter and render
+            applyFilters(); 
 
-            if (json.date && dateInput && !dateInput.value) {
-                dateInput.value = json.date;
+            // Update Badge Colors
+            if (json.is_playback) {
+                badge.style.background = '#f59e0b'; // Yellow
+                badge.style.color = '#fff';
+                badgeText.innerText = 'PLAYBACK MODE';
+                if(badgeIcon) badgeIcon.className = "fa-solid fa-history me-1";
+            } else {
+                badge.style.background = '#10b981'; // Green
+                badge.style.color = '#fff';
+                badgeText.innerText = 'LIVE MARKET';
+                if(badgeIcon) badgeIcon.className = "fa-solid fa-circle me-1";
             }
-        } else {
-            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">Error: ' + (json.error || 'Unknown') + '</td></tr>';
         }
-    } catch (e) {
-        console.error("Fetch error:", e);
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">Failed to fetch data.</td></tr>';
-    }
+    } catch (e) { console.error(e); }
 }
 
 async function initDatePicker() {

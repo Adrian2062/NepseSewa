@@ -1,30 +1,32 @@
 """
-New API endpoints for trading engine
+Trading Engine API Endpoints
+Handles order placement, book tracking, and playback simulation logic.
 """
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET
-from django.db.models import Sum, Count
+from django.db.models import Sum, Q
 from django.core.cache import cache
+from django.db import transaction
 from decimal import Decimal
 import json
 
-from myapp.models import Order, TradeExecution, Portfolio
+from myapp.models import Order, TradeExecution, Portfolio, CustomUser, NEPSEPrice
 from myapp.services.matching_engine import MatchingEngine
 from myapp.services.market_session import (
     is_market_open, get_market_status, get_nepal_time
 )
-
+from myapp.services.playback_engine import get_playback_state
 
 @require_GET
 def api_orderbook(request, symbol):
     """
     GET /api/orderbook/<symbol>/
-    Returns aggregated Top 5 Bid and Top 5 Ask levels
+    Returns aggregated Top 5 Bid and Top 5 Ask levels.
     """
     symbol = symbol.upper().strip()
     
-    # Check cache first (1 second TTL)
+    # Cache key (1 second TTL for real-time feel)
     cache_key = f'orderbook_{symbol}'
     cached_data = cache.get(cache_key)
     if cached_data:
@@ -32,36 +34,26 @@ def api_orderbook(request, symbol):
     
     # Get open and partial orders for this symbol
     buy_orders = Order.objects.filter(
-        symbol=symbol,
-        side='BUY',
-        status__in=['OPEN', 'PARTIAL']
+        symbol=symbol, side='BUY', status__in=['OPEN', 'PARTIAL']
     ).values('price').annotate(
         total_qty=Sum('qty') - Sum('filled_qty')
-    ).order_by('-price')[:5]  # Top 5 highest prices
+    ).order_by('-price')[:5]
     
     sell_orders = Order.objects.filter(
-        symbol=symbol,
-        side='SELL',
-        status__in=['OPEN', 'PARTIAL']
+        symbol=symbol, side='SELL', status__in=['OPEN', 'PARTIAL']
     ).values('price').annotate(
         total_qty=Sum('qty') - Sum('filled_qty')
-    ).order_by('price')[:5]  # Top 5 lowest prices
-    
-    # Format data
-    bids = [{'price': float(o['price']), 'qty': int(o['total_qty'])} for o in buy_orders]
-    asks = [{'price': float(o['price']), 'qty': int(o['total_qty'])} for o in sell_orders]
+    ).order_by('price')[:5]
     
     response_data = {
         'success': True,
         'symbol': symbol,
-        'bids': bids,  # Top 5 Buy orders
-        'asks': asks,  # Top 5 Sell orders
+        'bids': [{'price': float(o['price']), 'qty': int(o['total_qty'])} for o in buy_orders],
+        'asks': [{'price': float(o['price']), 'qty': int(o['total_qty'])} for o in sell_orders],
         'last_updated': get_nepal_time().isoformat()
     }
     
-    # Cache for 1 second
     cache.set(cache_key, response_data, 1)
-    
     return JsonResponse(response_data)
 
 
@@ -69,33 +61,34 @@ def api_orderbook(request, symbol):
 def api_market_session(request):
     """
     GET /api/market/session/
-    Returns current market session status
+    Returns current market session status including playback mode flag.
     """
     status = get_market_status()
+    state = get_playback_state()
+    
+    # Inject the playback flag so the frontend knows to show "Playback Mode"
+    status['is_playback'] = state['is_playback']
+    
     return JsonResponse({
         'success': True,
         'data': status
     })
 
 
+from django.utils import timezone  # Ensure this is imported at the top
+
 @require_GET
 @login_required
 def api_user_orders(request):
     """
     GET /api/trade/orders/
-    Returns user's open and partial orders
+    Returns current user's open and partial orders.
     """
     symbol = request.GET.get('symbol', '').strip().upper()
-    
-    qs = Order.objects.filter(
-        user=request.user,
-        status__in=['OPEN', 'PARTIAL']
-    )
+    qs = Order.objects.filter(user=request.user, status__in=['OPEN', 'PARTIAL'])
     
     if symbol:
         qs = qs.filter(symbol=symbol)
-    
-    qs = qs.order_by('-created_at')[:100]
     
     data = [{
         'id': o.id,
@@ -106,58 +99,50 @@ def api_user_orders(request):
         'remaining_qty': o.remaining_qty,
         'price': float(o.price),
         'status': o.status,
-        'created_at': o.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-    } for o in qs]
+        # Updated to use local timezone based on settings.py (Asia/Kathmandu)
+        'created_at': timezone.localtime(o.created_at).strftime('%Y-%m-%d %H:%M:%S'),
+    } for o in qs.order_by('-created_at')[:100]]
     
     return JsonResponse({'success': True, 'data': data})
-
 
 @require_http_methods(['POST'])
 @login_required
 def api_cancel_order(request, order_id):
     """
     POST /api/trade/cancel/<order_id>/
-    Cancel an open order
+    Cancel an open order and refund Virtual Balance if it was a Buy order.
     """
     try:
         order = Order.objects.get(id=order_id, user=request.user)
         
         if order.status not in ['OPEN', 'PARTIAL']:
-            return JsonResponse({
-                'success': False,
-                'message': 'Order cannot be cancelled (already filled or cancelled)'
-            })
+            return JsonResponse({'success': False, 'message': 'Order already filled or cancelled.'})
         
-        # Refund balance for BUY orders
-        if order.side == 'BUY':
-            remaining_cost = Decimal(str(order.remaining_qty)) * order.price
-            order.user.virtual_balance += remaining_cost
-            order.user.save()
+        with transaction.atomic():
+            if order.side == 'BUY':
+                refund = Decimal(str(order.remaining_qty)) * order.price
+                request.user.virtual_balance += refund
+                request.user.save()
+            
+            order.status = 'CANCELLED'
+            order.save()
         
-        # Update order status
-        order.status = 'CANCELLED'
-        order.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Order cancelled successfully. Refunded: Rs {remaining_cost:,.2f}' if order.side == 'BUY' else 'Order cancelled successfully.'
-        })
+        return JsonResponse({'success': True, 'message': 'Order successfully cancelled.'})
         
     except Order.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'message': 'Order not found'
-        }, status=404)
+        return JsonResponse({'success': False, 'message': 'Order not found.'}, status=404)
 
 
 @require_http_methods(['POST'])
 @login_required
 def api_place_order_new(request):
     """
-    POST /api/trade/place/
-    Place a new order with matching engine and send email on execution.
+    POST /api/trade/place-new/
+    Main order matching logic. Notifies BOTH the Taker and the Maker(s) via email.
     """
     from .utils import send_trade_confirmation_email
+    from myapp.models import CustomUser, Portfolio
+    from django.db import transaction
 
     try:
         data = json.loads(request.body)
@@ -167,114 +152,116 @@ def api_place_order_new(request):
         
         try:
             qty = int(data.get('qty', 0))
-            price_val = data.get('price')
-            price = float(price_val) if price_val is not None else 0.0
+            price = Decimal(str(data.get('price', 0)))
         except (ValueError, TypeError):
-            return JsonResponse({'success': False, 'message': 'Invalid quantity or price.'})
+            return JsonResponse({'success': False, 'message': 'Invalid quantity or price format.'})
         
-        if not symbol:
-            return JsonResponse({'success': False, 'message': 'Symbol is required.'})
+        # 1. Check Market / Playback Status
+        state = get_playback_state()
+        if not is_market_open() and not state['is_playback']:
+            return JsonResponse({'success': False, 'message': 'Market is closed.'})
         
-        if side not in ['BUY', 'SELL']:
-            return JsonResponse({'success': False, 'message': 'Invalid side (BUY/SELL).'})
-            
-        if order_type not in ['LIMIT', 'MARKET', 'STOP_LOSS']:
-            return JsonResponse({'success': False, 'message': 'Invalid order type.'})
-        
-        if qty <= 0:
-            return JsonResponse({'success': False, 'message': 'Quantity must be positive.'})
-        
-        if order_type == 'LIMIT' and price <= 0:
-            return JsonResponse({'success': False, 'message': 'Price must be positive for limit orders.'})
-        
-        if not is_market_open():
-            return JsonResponse({
-                'success': False,
-                'message': 'Market is closed. Trading hours: 11:00-15:00 Nepal Time'
-            })
-        
-        # Create order object
-        order = Order(
-            user=request.user,
-            symbol=symbol,
-            side=side,
-            order_type=order_type,
-            qty=qty,
-            price=Decimal(str(price)),
-            status='OPEN'
-        )
-        
+        # 2. Create and Validate Order
+        order = Order(user=request.user, symbol=symbol, side=side, order_type=order_type, qty=qty, price=price, status='OPEN')
         is_valid, error_msg = MatchingEngine.validate_order(order)
         if not is_valid:
             return JsonResponse({'success': False, 'message': error_msg})
         
-        # Deduct balance for BUY orders
+        # 3. Deduct Funds for BUY (locking capital)
         if side == 'BUY':
-            total_cost = Decimal(str(qty)) * order.price
+            total_cost = Decimal(str(qty)) * price
             request.user.virtual_balance -= total_cost
             request.user.save()
         
         order.save()
         
-        # Try to match order
+        # 4. Run Matching Engine
         executions = MatchingEngine.match_order(order)
         
-        # Prepare response
+        # 5. DEMO MAGIC: Playback Auto-Execution Bot
+        if state['is_playback'] and not executions:
+            pb_price_obj = NEPSEPrice.objects.filter(symbol=symbol, timestamp=state['timestamp']).first()
+            if pb_price_obj and pb_price_obj.ltp:
+                pb_ltp = float(pb_price_obj.ltp)
+                if (side == 'BUY' and pb_ltp <= float(price)) or (side == 'SELL' and pb_ltp >= float(price)):
+                    mm_user, _ = CustomUser.objects.get_or_create(
+                        username='marketbot', 
+                        email='bot@nepse.com', 
+                        defaults={'virtual_balance': 999999999}
+                    )
+                    bot_side = 'SELL' if side == 'BUY' else 'BUY'
+                    with transaction.atomic():
+                        if bot_side == 'SELL':
+                            Portfolio.objects.update_or_create(user=mm_user, symbol=symbol, defaults={'quantity': 999999, 'avg_price': 100})
+                        bot_order = Order.objects.create(user=mm_user, symbol=symbol, side=bot_side, order_type='LIMIT', qty=order.remaining_qty, price=Decimal(str(pb_ltp)), status='OPEN')
+                        execution = MatchingEngine.execute_trade(buy_order=order if side == 'BUY' else bot_order, sell_order=bot_order if side == 'BUY' else order, qty=order.remaining_qty, price=Decimal(str(pb_ltp)))
+                        executions.append(execution)
+        
+        # 6. EMAIL NOTIFICATION LOGIC (The Fix)
         if executions:
-            total_filled = sum(e.executed_qty for e in executions)
-            avg_price = sum(e.executed_qty * float(e.executed_price) for e in executions) / total_filled if total_filled > 0 else 0
-            
-            # REFRESH USER DATA: Ensures current wealth/cash is accurate for the email
+            # --- A. Notify the person who just placed the order (The Taker) ---
             request.user.refresh_from_db()
-
-            # TRIGGER THE PROFESSIONAL EMAIL
+            taker_qty = sum(e.executed_qty for e in executions)
+            taker_avg_p = sum(e.executed_qty * float(e.executed_price) for e in executions) / taker_qty
+            
             send_trade_confirmation_email(
-                user=request.user,
-                symbol=symbol,
-                side=side,
-                qty=total_filled,
-                price=avg_price,
-                order_id=order.id,
+                user=request.user, 
+                symbol=symbol, 
+                side=side, 
+                qty=taker_qty, 
+                price=taker_avg_p, 
+                order_id=order.id, 
                 order_type=order_type
             )
 
-            message = f'Order placed! Filled {total_filled}/{qty} shares @ avg Rs {avg_price:.2f}'
+            # --- B. Notify the counter-parties (The Makers) ---
+            for e in executions:
+                # Determine who the counter-party is for this specific execution
+                if side == 'BUY':
+                    # Current user is Buyer, so counter-party is the Seller
+                    maker_user = e.sell_order.user
+                    maker_side = 'SELL'
+                    maker_order_id = e.sell_order.id
+                else:
+                    # Current user is Seller, so counter-party is the Buyer
+                    maker_user = e.buy_order.user
+                    maker_side = 'BUY'
+                    maker_order_id = e.buy_order.id
+
+                # Don't send emails to the Market Bot
+                if maker_user.username == 'marketbot':
+                    continue
+
+                # Refresh maker's data so the email shows updated balance/shares
+                maker_user.refresh_from_db()
+
+                send_trade_confirmation_email(
+                    user=maker_user,
+                    symbol=symbol,
+                    side=maker_side,
+                    qty=e.executed_qty,
+                    price=float(e.executed_price),
+                    order_id=maker_order_id,
+                    order_type='LIMIT'
+                )
+
+            message = f'Trade success! {taker_qty} shares filled.'
         else:
-            message = f'Order placed successfully! {side} {qty} {symbol} @ Rs {price:.2f} (waiting for match)'
-        
-        order.refresh_from_db()
-        
-        if request.user.buy_sell_notifications:
-            from django.contrib import messages
-            messages.success(request, f"✅ {side} order placed successfully for {symbol}")
-        
-        return JsonResponse({
-            'success': True,
-            'message': message,
-            'order': {
-                'id': order.id,
-                'status': order.status,
-                'filled_qty': order.filled_qty,
-                'remaining_qty': order.remaining_qty
-            },
-            'executions': len(executions)
-        })
+            message = f'Order placed successfully! Waiting for match.'
+            
+        return JsonResponse({'success': True, 'message': message, 'executions': len(executions)})
         
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
-
+        return JsonResponse({'success': False, 'message': f"Engine Error: {str(e)}"})
 
 @require_GET
 @login_required
 def api_trade_executions(request):
     """
     GET /api/trade/executions/
-    Returns user's trade executions (completed trades)
+    Returns history of filled trades for the current user.
     """
     symbol = request.GET.get('symbol', '').strip().upper()
-    
-    # Get executions where user was buyer or seller
-    from django.db.models import Q
     
     qs = TradeExecution.objects.filter(
         Q(buy_order__user=request.user) | Q(sell_order__user=request.user)
@@ -283,23 +270,13 @@ def api_trade_executions(request):
     if symbol:
         qs = qs.filter(symbol=symbol)
     
-    qs = qs.order_by('-executed_at')[:200]
-    
-    data = []
-    for e in qs:
-        # Determine if user was buyer or seller
-        if e.buy_order.user == request.user:
-            side = 'BUY'
-        else:
-            side = 'SELL'
-        
-        data.append({
-            'executed_at': e.executed_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'symbol': e.symbol,
-            'side': side,
-            'qty': e.executed_qty,
-            'price': float(e.executed_price),
-            'status': 'FILLED'
-        })
+    data = [{
+        'executed_at': timezone.localtime(e.executed_at).strftime('%Y-%m-%d %H:%M:%S'),
+        'symbol': e.symbol,
+        'side': 'BUY' if e.buy_order.user == request.user else 'SELL',
+        'qty': e.executed_qty,
+        'price': float(e.executed_price),
+        'status': 'FILLED'
+    } for e in qs.order_by('-executed_at')[:200]]
     
     return JsonResponse({'success': True, 'data': data})

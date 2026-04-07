@@ -87,13 +87,14 @@ async function loadPortfolioAnalytics() {
  * 3. Bespoke Pro Choice Chart (Premium NEPSE Index Chart)
  */
 let dashboardChart = null;
+
 async function loadDashboardPerformance(range = '1D') {
     const canvas = document.getElementById('portfolioChart');
     if (!canvas) return;
 
     // Update buttons
     document.querySelectorAll('.btn-group-sm .btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${range}'`));
+        btn.classList.toggle('active', btn.getAttribute('onclick')?.includes(`'${range}'`));
     });
 
     try {
@@ -110,21 +111,17 @@ async function loadDashboardPerformance(range = '1D') {
             const ctx = canvas.getContext('2d');
             if (dashboardChart) dashboardChart.destroy();
 
-            // Create Premium Gradient (Blue for NEPSE)
+            // Create Premium Gradient
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)'); // Pro Blue
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
             gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.05)');
             gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
 
             dashboardChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: d.labels.map(l => {
-                        try {
-                            const date = new Date(l);
-                            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                        } catch { return ''; }
-                    }),
+                    // FIX: Use labels directly (already formatted as "HH:MM AM/PM" in Python)
+                    labels: d.labels, 
                     datasets: [{
                         label: 'NEPSE Index',
                         data: d.values,
@@ -132,7 +129,7 @@ async function loadDashboardPerformance(range = '1D') {
                         borderWidth: 3,
                         backgroundColor: gradient,
                         fill: true,
-                        tension: 0.4, // Smooth Spline
+                        tension: 0.4,
                         pointRadius: 0,
                         pointHoverRadius: 6,
                         pointHoverBackgroundColor: '#3b82f6',
@@ -155,7 +152,8 @@ async function loadDashboardPerformance(range = '1D') {
                             displayColors: false,
                             callbacks: {
                                 label: (ctx) => `NEPSE Index: ${fmtNumber(ctx.raw, 2)}`,
-                                title: (items) => new Date(d.labels[items[0].dataIndex]).toLocaleString()
+                                // FIX: Use the label string directly from the data array
+                                title: (items) => d.labels[items[0].dataIndex]
                             }
                         }
                     },
@@ -189,7 +187,6 @@ async function loadDashboardPerformance(range = '1D') {
         console.error("NEPSE Chart error:", err);
     }
 }
-
 function updatePerfLabel(id, val) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -308,54 +305,98 @@ async function loadDashboardWatchlist() {
 /**
  * Shared Ticker Logic (if required to be in dashboard.js)
  */
+/**
+ * Update the Ticker Marquee and handle the Playback/Live mode badge.
+ * Synchronized with the Playback Engine to show minute-by-minute movement.
+ */
 async function initTicker() {
     const tickerContent = document.getElementById('tickerContent');
     const tickerAsOf = document.getElementById('tickerAsOf');
     const activeStocksEl = document.getElementById('activeStocks');
+    const tickerLabel = document.getElementById('tickerLabel');
 
     if (!tickerContent) return;
 
     try {
-        const res = await fetch('/api/latest/');
+        // We add ?t= to the URL to force the browser to get the NEW minute from the server
+        const res = await fetch('/api/latest/?t=' + Date.now());
         const json = await res.json();
 
         if (json.success && json.data) {
             const ts = new Date(json.timestamp);
-            if (tickerAsOf) tickerAsOf.innerText = "As of " + ts.toLocaleTimeString();
+            
+            // 1. Update the Timestamp display (Show the historical time if in playback)
+            if (tickerAsOf) {
+                tickerAsOf.innerText = "As of " + ts.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                });
+            }
 
+            // 2. Handle the Mode Badge (Live Red vs Playback Yellow)
+            if (tickerLabel) {
+                if (json.is_playback) {
+                    tickerLabel.innerHTML = '<i class="fas fa-history me-1"></i> Market Closed - Playback Mode';
+                    tickerLabel.style.backgroundColor = '#f59e0b'; // Professional Orange/Yellow
+                    tickerLabel.style.color = '#fff';
+                    tickerLabel.style.boxShadow = '0 0 10px rgba(245, 158, 11, 0.3)';
+                } else {
+                    tickerLabel.innerHTML = '<i class="fas fa-circle me-1"></i> Live Market';
+                    tickerLabel.style.backgroundColor = '#ef4444'; // Live Red
+                    tickerLabel.style.color = '#fff';
+                    tickerLabel.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.3)';
+                }
+            }
+
+            // 3. Render the scrolling ticker items
             let html = '';
             json.data.forEach(item => {
-                const color = item.change_pct >= 0 ? '#10b981' : '#ef4444';
-                const icon = item.change_pct >= 0 ? 'fa-caret-up' : 'fa-caret-down';
+                const isUp = item.change_pct >= 0;
+                const color = isUp ? '#10b981' : '#ef4444';
+                const icon = isUp ? 'fa-caret-up' : 'fa-caret-down';
+                
                 html += `
-                <div class="ticker-item">
-                    <span style="color:#111827;">${item.symbol}</span>
-                    <span style="color:${color};">${fmtNumber(item.ltp)}</span>
-                    <i class="fas ${icon}" style="color:${color};"></i>
-                    <span style="color:${color};">${item.change_pct.toFixed(2)}%</span>
+                <div class="ticker-item" style="padding-right: 30px; display: inline-flex; align-items: center; gap: 8px;">
+                    <span style="color:#1e293b; font-weight: 800;">${item.symbol}</span>
+                    <span style="color:#475569; font-weight: 700;">${fmtNumber(item.ltp, 2)}</span>
+                    <span style="color:${color}; font-weight: 900; display: flex; align-items: center; gap: 4px;">
+                        <i class="fas ${icon}"></i>
+                        ${Math.abs(item.change_pct).toFixed(2)}%
+                    </span>
                 </div>
                 `;
             });
-            tickerContent.innerHTML = html + html;
-            if (activeStocksEl) activeStocksEl.innerText = json.data.length;
-        }
-    } catch (err) { }
-}
 
+            // Double the HTML to ensure a seamless infinite scroll loop
+            tickerContent.innerHTML = html + html;
+
+            // 4. Update the active stocks counter
+            if (activeStocksEl) activeStocksEl.innerText = json.data.length;
+            
+            console.log(`Ticker synced to ${json.is_playback ? 'Playback' : 'Live'} time: ${json.timestamp}`);
+        }
+    } catch (err) {
+        console.error("Ticker Sync Error:", err);
+    }
+}
 /**
  * Global Init
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initial Data Load
+    refreshDashboardData();
+
+    setInterval(() => {
+        console.log("Sync Tick: Loading next minute of data...");
+        refreshDashboardData();
+    }, 60000); // 60 seconds
+});
+
+async function refreshDashboardData() {
+    await initTicker(); 
     loadDashboardSummary();
     loadDashboardPerformance('1D');
     loadDashboardActivity();
     loadDashboardWatchlist();
-    initTicker();
-
-    // 2. Refresh Loop (Every 60s for live feel)
-    setInterval(() => {
-        loadDashboardSummary();
-        initTicker();
-    }, 60000);
-});
+}

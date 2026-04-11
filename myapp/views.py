@@ -76,6 +76,7 @@ def get_latest_nepse_index_with_change():
 # ========== HELPER FUNCTIONS ==========
 def get_nepse_context():
     try:
+        from django.db.models import Max
         state = get_playback_state()
         latest_time = state['timestamp'] if state['is_playback'] else NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
         
@@ -83,6 +84,17 @@ def get_nepse_context():
 
         # FETCH ALL DATA RELATIVE TO PLAYBACK MINUTE
         latest_prices = NEPSEPrice.objects.filter(timestamp=latest_time, ltp__gt=0)
+        
+        # --- ROBUST TURNOVER LOGIC ---
+        # 1. Try to get turnover from the current 'latest_time'
+        top_turnover = list(latest_prices.filter(turnover__gt=0).order_by('-turnover')[:5].values('symbol', 'turnover'))
+
+        # 2. FALLBACK: If current data has 0 turnover (market closed or scraper off), find the last active one
+        if not top_turnover:
+            # Find the most recent timestamp in history that has turnover > 0
+            last_active_ts = NEPSEPrice.objects.filter(turnover__gt=0).aggregate(m=Max('timestamp'))['m']
+            if last_active_ts:
+                top_turnover = list(NEPSEPrice.objects.filter(timestamp=last_active_ts).order_by('-turnover')[:5].values('symbol', 'turnover'))
         
         # Sync the Header Indices and Summary to the SAME MINUTE
         nepse_index = NEPSEIndex.objects.filter(timestamp__lte=latest_time).order_by('-timestamp').first()
@@ -93,10 +105,14 @@ def get_nepse_context():
         return {
             'has_data': True,
             'is_playback': state['is_playback'],
-            'market_stats': {'total_symbols': latest_prices.count(), 'gainers': latest_prices.filter(change_pct__gt=0).count(), 'losers': latest_prices.filter(change_pct__lt=0).count()},
+            'market_stats': {
+                'total_symbols': latest_prices.count(), 
+                'gainers': latest_prices.filter(change_pct__gt=0).count(), 
+                'losers': latest_prices.filter(change_pct__lt=0).count()
+            },
             'top_gainers': list(latest_prices.order_by('-change_pct')[:5].values('symbol', 'ltp', 'change_pct')),
             'top_losers': list(latest_prices.order_by('change_pct')[:5].values('symbol', 'ltp', 'change_pct')),
-            'top_turnover': list(latest_prices.order_by('-turnover')[:5].values('symbol', 'ltp', 'change_pct', 'turnover')),
+            'top_turnover': top_turnover, # Now uses the robust fallback
             'last_update': latest_time,
             'nepse_index': nepse_index, 
             'sensitive_index': sensitive_index,
@@ -104,6 +120,7 @@ def get_nepse_context():
             'market_summary': market_summary
         }
     except Exception as e:
+        print(f"Context Error: {e}")
         return {'has_data': False}
     
 # ========== PAGE VIEWS ==========
@@ -216,6 +233,44 @@ def dashboard(request):
     context = get_nepse_context()
     context['active_page'] = 'dashboard'
     return render(request, 'dashboard.html', context)
+
+@login_required
+def profile_view(request):
+    from django.db.models import F, Q, Count
+    from django.utils import timezone
+    user = request.user
+    
+    # 1. Financial Calculations
+    user_total = user.virtual_balance + user.portfolio_value
+    rank = CustomUser.objects.annotate(
+        total_w=F('virtual_balance') + F('portfolio_value')
+    ).filter(total_w__gt=user_total).count() + 1
+
+    # 2. Holdings & Trading Stats
+    holdings_count = Portfolio.objects.filter(user=user, quantity__gt=0).count()
+    # Count trades where the user was either the buyer or the seller
+    total_trades = TradeExecution.objects.filter(
+        Q(buy_order__user=user) | Q(sell_order__user=user)
+    ).count()
+
+    # 3. Subscription Details
+    # Using getattr safely in case a user record exists but a subscription record doesn't
+    subscription = getattr(user, 'subscription', None)
+    days_left = None
+    if subscription and subscription.end_date:
+        delta = subscription.end_date - timezone.now()
+        days_left = max(0, delta.days)
+
+    context = {
+        'active_page': 'profile',
+        'rank': rank,
+        'total_wealth': float(user_total),
+        'holdings_count': holdings_count,
+        'total_trades': total_trades,
+        'subscription': subscription,
+        'days_left': days_left,
+    }
+    return render(request, 'profile.html', context)
 
 
 @login_required
@@ -838,58 +893,51 @@ def api_market_summary(request):
 
 @require_http_methods(["GET"])
 def api_sector_indices(request):
-    """Get latest Sensitive and Float indices, calculating % change dynamically if missing"""
+    """Get indices using flexible naming to match Scraper vs Database differences"""
     try:
         from myapp.services.playback_engine import get_playback_state
         state = get_playback_state()
         
-        # Determine the exact minute we are looking at
-        if state['is_playback'] and state['timestamp']:
-            ref_time = state['timestamp']
-        else:
-            latest_idx = MarketIndex.objects.order_by('-timestamp').first()
-            if not latest_idx:
-                return JsonResponse({'success': True, 'data': []})
-            ref_time = latest_idx.timestamp
+        # Sync to playback or live time
+        ref_time = state['timestamp'] if state['is_playback'] else timezone.now()
+
+        # Define the pairs of names to look for
+        targets = [
+            {'search': ['Sensitive Index', 'Sensitive'], 'display': 'SENSITIVE'},
+            {'search': ['Float Index', 'Float'], 'display': 'FLOAT'}
+
+        ]
         
-        indices_to_fetch = ['Sensitive Index', 'Float Index']
-        data = []
+        found_data = []
         
-        for name in indices_to_fetch:
-            # 1. Get the current index value
-            current_idx = MarketIndex.objects.filter(
-                index_name=name, 
+        for target in targets:
+            # Look for the current record using ANY of the possible names
+            curr = MarketIndex.objects.filter(
+                index_name__in=target['search'], 
                 timestamp__lte=ref_time
             ).order_by('-timestamp').first()
             
-            if current_idx:
-                current_value = float(current_idx.value)
-                change_pct = float(current_idx.change_pct or 0.0)
-                
-                # ========================================================
-                # 2. DYNAMIC CALCULATION: If percentage is 0.0, calculate it!
-                # ========================================================
-                if change_pct == 0.0:
-                    # Find the last known value from a PREVIOUS date
-                    prev_idx = MarketIndex.objects.filter(
-                        index_name=name,
-                        timestamp__date__lt=current_idx.timestamp.date()
+            if curr:
+                val = float(curr.value)
+                pct = float(curr.change_pct or 0.0)
+
+                # --- IF PERCENT IS 0, CALCULATE MANUALLY ---
+                if pct == 0.0:
+                    prev = MarketIndex.objects.filter(
+                        index_name__in=target['search'],
+                        timestamp__date__lt=curr.timestamp.date()
                     ).order_by('-timestamp').first()
                     
-                    if prev_idx and float(prev_idx.value) > 0:
-                        prev_value = float(prev_idx.value)
-                        # The Math: ((Current - Previous) / Previous) * 100
-                        change_pct = ((current_value - prev_value) / prev_value) * 100
-                # ========================================================
-                
-                data.append({
-                    'name': current_idx.index_name, 
-                    'value': current_value, 
-                    'change_pct': round(change_pct, 2) # Rounded neatly for the UI
+                    if prev and float(prev.value) > 0:
+                        pct = ((val - float(prev.value)) / float(prev.value)) * 100
+
+                found_data.append({
+                    'name': target['display'], 
+                    'value': val, 
+                    'change_pct': round(pct, 2)
                 })
         
-        return JsonResponse({'success': True, 'data': data})
-        
+        return JsonResponse({'success': True, 'data': found_data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 @login_required
@@ -1096,54 +1144,65 @@ def api_stocks(request):
 @login_required
 def api_market_data_by_date(request):
     try:
-        date_str = request.GET.get('date')
+        from django.db.models import Max
+        date_str = request.GET.get('date') # This is what JS sends
         sector_filter = request.GET.get('sector')
         search_query = request.GET.get('search', '').strip().upper()
 
-        state = get_playback_state()
-
         if date_str:
-            filter_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            qs = NEPSEPrice.objects.filter(timestamp__date=filter_date)
-            is_pb = False
-        elif state['is_playback']:
-            # SYNC: Use the specific minute from the Playback Engine
-            qs = NEPSEPrice.objects.filter(timestamp=state['timestamp'])
-            filter_date = state['timestamp'].date()
-            is_pb = True
-        else:
-            latest_entry = NEPSEPrice.objects.order_by('-timestamp').first()
-            if not latest_entry: return JsonResponse({'success': True, 'stocks': []})
-            qs = NEPSEPrice.objects.filter(timestamp=latest_entry.timestamp)
-            filter_date = latest_entry.timestamp.date()
-            is_pb = False
+            # --- HISTORICAL MODE ---
+            try:
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                target_date = timezone.now().date()
 
+            # Find the LATEST record ID for each stock on that specific day
+            latest_ids = NEPSEPrice.objects.filter(
+                timestamp__date=target_date
+            ).values('symbol').annotate(max_id=Max('id')).values_list('max_id', flat=True)
+            
+            qs = NEPSEPrice.objects.filter(id__in=latest_ids)
+            is_pb = False # It's historical, not playback
+            filter_date_display = target_date
+        else:
+            # --- LIVE / PLAYBACK MODE ---
+            state = get_playback_state()
+            if state['is_playback']:
+                qs = NEPSEPrice.objects.filter(timestamp=state['timestamp'])
+                filter_date_display = state['timestamp'].date()
+                is_pb = True
+            else:
+                latest_entry = NEPSEPrice.objects.order_by('-timestamp').first()
+                if not latest_entry: return JsonResponse({'success': True, 'stocks': []})
+                qs = NEPSEPrice.objects.filter(timestamp=latest_entry.timestamp)
+                filter_date_display = latest_entry.timestamp.date()
+                is_pb = False
+
+        # Apply frontend filters (Sector/Search)
         if sector_filter and sector_filter not in ['All Sectors', '']:
             relevant_symbols = list(Stock.objects.filter(sector__name__iexact=sector_filter).values_list('symbol', flat=True))
             qs = qs.filter(symbol__in=relevant_symbols)
         if search_query:
             qs = qs.filter(symbol__icontains=search_query)
 
+        # Optimization: Build results
         all_prices = qs.values('symbol', 'open', 'high', 'low', 'close', 'ltp', 'change_pct', 'volume', 'turnover', 'timestamp').order_by('symbol')
-
-        stock_info = {s.symbol.upper(): {
-            'sector': s.sector.name if s.sector else 'Others',
-            'company_name': s.company_name
-        } for s in Stock.objects.all().select_related('sector')}
-
+        
+        # Attach Metadata
+        stock_map = {s.symbol.upper(): s for s in Stock.objects.all().select_related('sector')}
         stocks_data = []
         for item in all_prices:
             sym = item['symbol'].upper()
-            info = stock_info.get(sym, {'sector': 'Others', 'company_name': sym})
-            item['sector'] = info['sector']
-            item['company_name'] = info['company_name']
+            meta = stock_map.get(sym)
+            item['sector'] = meta.sector.name if (meta and meta.sector) else 'Others'
+            item['company_name'] = meta.company_name if meta else sym
             stocks_data.append(item)
 
         return JsonResponse({
             'success': True, 
             'is_playback': is_pb,
             'stocks': stocks_data,
-            'date': str(filter_date),
+            'date': str(filter_date_display),
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -1797,17 +1856,18 @@ def api_dashboard_summary(request):
 @login_required
 @require_http_methods(["GET"])
 def api_portfolio_analytics(request):
-    """
-    Get portfolio analytics summary for the logged-in user.
-    Returns: total value, holdings count, today's P/L, overall P/L
-    """
+    """Calculates TRUE Today's Profit by comparing against the last trading day's close"""
     try:
         from decimal import Decimal
+        from myapp.services.playback_engine import get_playback_state
         user = request.user
         
-        # Get user's portfolio holdings
+        # 1. Get user's portfolio holdings
         holdings = Portfolio.objects.filter(user=user, quantity__gt=0)
         
+        # Determine the number of unique scrips (Fixes the "0 holdings" bug)
+        holdings_count = holdings.count()
+
         if not holdings.exists():
             return JsonResponse({
                 'success': True,
@@ -1823,96 +1883,77 @@ def api_portfolio_analytics(request):
                 }
             })
         
-        # Get latest price timestamp
-        latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
+        # 2. Get latest market time (Handle Playback/Live)
+        state = get_playback_state()
+        if state['is_playback'] and state['timestamp']:
+            latest_time = state['timestamp']
+        else:
+            latest_time = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
+            
         if not latest_time:
-            return JsonResponse({
-                'success': False,
-                'error': 'No market data available'
-            }, status=404)
+            return JsonResponse({'success': False, 'error': 'No market data'}, status=404)
 
-        # Get previous day's date for today's P/L calculation
-        previous_day = latest_time.date() - timedelta(days=1)
+        # 3. Find actual PREVIOUS trading day (Fixes weekend/holiday bugs)
+        prev_date_record = NEPSEPrice.objects.filter(
+            timestamp__date__lt=latest_time.date()
+        ).order_by('-timestamp').first()
+        previous_day = prev_date_record.timestamp.date() if prev_date_record else latest_time.date()
         
-        # Get all latest prices for holdings in one batch query (Fix N+1)
-        symbols = [h.symbol for h in holdings]
-        latest_prices_qs = NEPSEPrice.objects.filter(
-            symbol__in=symbols,
-            timestamp=latest_time
-        )
-        latest_prices_map = {p.symbol: p for p in latest_prices_qs}
-
-        # Get all previous day's prices in one batch query
+        symbols = [h.symbol.upper() for h in holdings]
+        
+        # 4. Batch Fetch prices
+        latest_prices = {p.symbol.upper(): p for p in NEPSEPrice.objects.filter(symbol__in=symbols, timestamp=latest_time)}
         prev_prices_qs = NEPSEPrice.objects.filter(
-            symbol__in=symbols,
+            symbol__in=symbols, 
             timestamp__date=previous_day
         ).order_by('symbol', '-timestamp').distinct('symbol')
-        prev_prices_map = {p.symbol: p for p in prev_prices_qs}
+        prev_prices = {p.symbol.upper(): p for p in prev_prices_qs}
 
         total_value = Decimal('0')
         total_cost_basis = Decimal('0')
         total_prev_value = Decimal('0')
-        holdings_count = 0
         
-        for holding in holdings:
-            symbol = holding.symbol
-            qty = Decimal(str(holding.quantity))
-            avg_price = holding.avg_price
+        # 5. Calculation Loop
+        for h in holdings:
+            sym = h.symbol.upper()
+            qty = Decimal(str(h.quantity))
+            avg_p = Decimal(str(h.avg_price or 0))
             
-            # Use pre-fetched price map
-            current_price_obj = latest_prices_map.get(symbol)
+            curr_p_obj = latest_prices.get(sym)
+            curr_ltp = Decimal(str(curr_p_obj.ltp)) if curr_p_obj else avg_p
             
-            if current_price_obj and current_price_obj.ltp:
-                current_ltp = Decimal(str(current_price_obj.ltp))
-                
-                # Calculate current value
-                current_value = qty * current_ltp
-                total_value += current_value
-                
-                # Calculate cost basis
-                cost_basis = qty * avg_price
-                total_cost_basis += cost_basis
-                
-                # Use pre-fetched previous price map
-                prev_price_obj = prev_prices_map.get(symbol)
-                
-                if prev_price_obj and prev_price_obj.close:
-                    prev_close = Decimal(str(prev_price_obj.close))
-                    prev_value = qty * prev_close
-                    total_prev_value += prev_value
-                else:
-                    # If no previous data, use current value
-                    total_prev_value += current_value
-                
-                holdings_count += 1
+            prev_p_obj = prev_prices.get(sym)
+            prev_ltp = Decimal(str(prev_p_obj.close or prev_p_obj.ltp)) if prev_p_obj else curr_ltp
+            
+            total_value += (qty * curr_ltp)
+            total_cost_basis += (qty * avg_p)
+            total_prev_value += (qty * prev_ltp)
         
-        # Calculate P/L metrics
+        # 6. Final Math
+        today_pl = total_value - total_prev_value
+        today_pl_pct = (today_pl / total_prev_value * 100) if total_prev_value > 0 else 0
         overall_pl = total_value - total_cost_basis
         overall_pl_pct = (overall_pl / total_cost_basis * 100) if total_cost_basis > 0 else 0
         
-        today_pl = total_value - total_prev_value
-        today_pl_pct = (today_pl / total_prev_value * 100) if total_prev_value > 0 else 0
-        
+        # 7. Return Full Data Payload
         return JsonResponse({
             'success': True,
             'data': {
                 'total_value': float(total_value),
-                'holdings_count': holdings_count,
+                'holdings_count': holdings_count,  # <-- ADDED THIS
                 'today_pl': float(today_pl),
                 'today_pl_pct': float(today_pl_pct),
                 'overall_pl': float(overall_pl),
                 'overall_pl_pct': float(overall_pl_pct),
-                'cost_basis': float(total_cost_basis),
-                'timestamp': latest_time.isoformat()
+                'cost_basis': float(total_cost_basis), # <-- ADDED THIS
+                'timestamp': latest_time.isoformat(),
+                'is_playback': state['is_playback']    # <-- ADDED THIS
             }
         })
-        
     except Exception as e:
         import traceback
-        print(f"Error in api_portfolio_analytics: {e}")
         print(traceback.format_exc())
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
+        return JsonResponse({'success': False, 'error': 'Server calculation error'}, status=500)
 
 @login_required
 @require_http_methods(["GET"])

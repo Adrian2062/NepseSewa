@@ -1,101 +1,114 @@
-from django.core.management.base import BaseCommand
-from myapp.models import Stock, NEPSEPrice
-from django.utils import timezone
 import datetime
-import random
-from decimal import Decimal
+import time
+import re
+from django.core.management.base import BaseCommand
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from bs4 import BeautifulSoup
+from django.utils import timezone
+from myapp.models import NEPSEPrice, MarketIndex
 
 class Command(BaseCommand):
-    help = 'Backfill 3 months of stock history with realistic mock data for DEMO'
+    help = 'Scrape REAL historical closing prices and Indices from Merolagani archives'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--days', type=int, default=90, help='Number of days to go back')
 
     def handle(self, *args, **options):
-        self.stdout.write("Starting 3-Month History Backfill...")
-        
-        # Get unique symbols from existing price data
-        symbols = NEPSEPrice.objects.values_list('symbol', flat=True).distinct()
-        
-        if not symbols:
-            self.stdout.write(self.style.WARNING("No symbols found in NEPSEPrice table. Please run the scraper first."))
-            return
-            
-        end_date = timezone.now().date()
-        start_date = end_date - datetime.timedelta(days=90)
-        
-        self.stdout.write(f"Generating data from {start_date} to {end_date}...")
-        self.stdout.write(f"Found {len(symbols)} symbols to process...")
-        
-        created_count = 0
-        
-        for symbol in symbols:
-            # Get latest price to start walking backwards from, or default
-            latest = NEPSEPrice.objects.filter(symbol=symbol).order_by('-timestamp').first()
-            if latest:
-                current_price = float(latest.ltp)
-            else:
-                current_price = random.uniform(100, 1000) # Default start
-                
-            # Walk backwards
-            for i in range(90):
-                date = end_date - datetime.timedelta(days=i)
-                
-                # Skip if already exists (optional, or just overwrite)
-                # For speed, we just create bulk? No, loop is safer.
-                
-                # Verify weekday (NEPSE closed Fri/Sat usually, but let's just do Mon-Thu+Sun for strictness? 
-                # Or just simple Mon-Fri for demo logic. Let's do Mon-Fri + Sun? 
-                # Actually, simplest is just exclude Saturday.)
-                if date.weekday() == 5: # Saturday
-                    continue
-                    
-                # Calculate previous day's price (reverse logic)
-                # If current is X, previous was X / (1 + change)
-                change_pct = random.uniform(-2.5, 2.5)
-                # So prev_price * (1 + change/100) = current_price
-                # prev_price = current_price / (1 + change/100)
-                
-                # Wait, we are generating FORWARD from past or BACKWARD from now?
-                # BACKWARD is easier to match current LTPS.
-                # Today is 100. Yesterday was... 
-                # If yesterday was 98, and change +2%, then today 100.
-                # So Yesterday = Today / (1 + change/100)
-                
-                prev_price = current_price / (1 + (change_pct / 100))
-                
-                # Create the record for 'date' (which is the loop date)
-                # Wait, if I iterate backwards (i=0 is today), I am creating record for today? 
-                # No, today already exists. I should skip today.
-                if i == 0 and latest and latest.timestamp.date() == end_date:
-                    current_price = prev_price
-                    continue
+        days_to_pull = options['days']
+        self.stdout.write(self.style.SUCCESS(f"🚀 Starting REAL History Scrape for {days_to_pull} days..."))
 
-                # Generate OHLC
-                daily_volatility = random.uniform(0.5, 3.0)
-                open_p = prev_price * (1 + random.uniform(-0.5, 0.5)/100)
-                high_p = max(prev_price, open_p) * (1 + (daily_volatility/100))
-                low_p = min(prev_price, open_p) * (1 - (daily_volatility/100))
-                close_p = prev_price
+        # Setup Headless Chrome
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--no-sandbox')
+        driver = webdriver.Chrome(options=chrome_options)
+
+        end_date = datetime.date.today()
+        
+        for i in range(1, days_to_pull + 1):
+            target_date = end_date - datetime.timedelta(days=i)
+            
+            # THE FIX: Properly indented skip logic for Sat (5) and Sun (6)
+            if target_date.weekday() in [5, 6]: 
+                continue
+
+            date_str = target_date.strftime("%m/%d/%Y") # Merolagani URL format
+            
+            # 1. SCRAPE INDICES (For your Navbar % fixes)
+            self.scrape_indices(driver, target_date, date_str)
+            
+            # 2. SCRAPE STOCK PRICES (For your Buy/Sell AI Model)
+            self.scrape_prices(driver, target_date, date_str)
+
+        driver.quit()
+        self.stdout.write(self.style.SUCCESS("\n✨ Done! Database is now populated with REAL history."))
+
+    def scrape_indices(self, driver, target_date, date_str):
+        """Pulls NEPSE, Sensitive, and Float values for a specific date"""
+        url = f"https://merolagani.com/MarketSummary.aspx?date={date_str}"
+        try:
+            driver.get(url)
+            time.sleep(2)
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            tables = soup.find_all('table')
+            
+            timestamp = timezone.make_aware(datetime.datetime.combine(target_date, datetime.time(15, 0)))
+            
+            for table in tables:
+                rows = table.find_all('tr')
+                for row in rows:
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) < 2: continue
+                    name = cells[0].get_text(strip=True)
+                    if name in ['NEPSE Index', 'Sensitive Index', 'Float Index']:
+                        val = float(cells[1].get_text(strip=True).replace(',', ''))
+                        MarketIndex.objects.update_or_create(
+                            index_name=name, timestamp=timestamp,
+                            defaults={'value': val, 'change_pct': 0.0}
+                        )
+            self.stdout.write(f"   📊 Saved Indices for {target_date}")
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"   ❌ Index Error on {target_date}: {e}"))
+
+    def scrape_prices(self, driver, target_date, date_str):
+        """Pulls all stock closing prices for a specific date"""
+        url = f"https://merolagani.com/TodaysSharePrice.aspx?date={date_str}"
+        try:
+            driver.get(url)
+            time.sleep(3)
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            table = soup.find('table', {'class': 'table-hover'})
+            
+            if not table: return
+
+            timestamp = timezone.make_aware(datetime.datetime.combine(target_date, datetime.time(15, 0)))
+            rows = table.find_all('tr')[1:] # Skip header
+            
+            count = 0
+            for row in rows:
+                cols = row.find_all('td')
+                if len(cols) < 8: continue
                 
-                # Volume
-                volume = random.randint(100, 50000)
-                turnover = volume * close_p
-                
-                NEPSEPrice.objects.update_or_create(
-                    symbol=symbol,
-                    timestamp=datetime.datetime.combine(date, datetime.time(15, 0), tzinfo=timezone.get_current_timezone()),
-                    defaults={
-                        'open': round(open_p, 2),
-                        'high': round(high_p, 2),
-                        'low': round(low_p, 2),
-                        'close': round(close_p, 2),
-                        'ltp': round(close_p, 2),
-                        'change_pct': round(change_pct, 2),
-                        'volume': volume,
-                        'turnover': round(turnover, 2)
-                    }
-                )
-                created_count += 1
-                
-                # Update current_price for next iteration (which is previous day)
-                current_price = prev_price
-                
-        self.stdout.write(self.style.SUCCESS(f"Successfully created {created_count} historical records."))
+                symbol = cols[0].text.strip().upper()
+                try:
+                    ltp = float(cols[2].text.strip().replace(',', ''))
+                    high = float(cols[3].text.strip().replace(',', ''))
+                    low = float(cols[4].text.strip().replace(',', ''))
+                    open_p = float(cols[5].text.strip().replace(',', ''))
+                    vol = float(cols[7].text.strip().replace(',', ''))
+
+                    NEPSEPrice.objects.update_or_create(
+                        symbol=symbol, timestamp=timestamp,
+                        defaults={
+                            'ltp': ltp, 'close': ltp, 'open': open_p,
+                            'high': high, 'low': low, 'volume': vol
+                        }
+                    )
+                    count += 1
+                except: continue
+            
+            self.stdout.write(f"   ✅ Saved {count} stocks for {target_date}")
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"   ❌ Price Error on {target_date}: {e}"))

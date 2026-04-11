@@ -1,0 +1,160 @@
+{% extends "layouts/app_base.html" %}
+{% load static %}
+
+{% block title %}Profile - {{ request.user.first_name }} - NepseSewa{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-card-main { background: #fff; border-radius: 24px; border: 1px solid var(--border); overflow: hidden; }
+    .header-banner { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 4rem 2rem; text-align: center; color: white; position: relative; }
+    .avatar-circle { 
+        width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,0.2); 
+        backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; 
+        font-size: 3.5rem; font-weight: 900; margin: 0 auto 1rem; border: 6px solid rgba(255,255,255,0.3);
+    }
+    .membership-status { 
+        position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.15); 
+        padding: 8px 16px; border-radius: 50px; font-weight: 800; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.3);
+    }
+    .info-group-title { 
+        font-weight: 900; color: #1e293b; font-size: 0.8rem; text-transform: uppercase; 
+        letter-spacing: 1.5px; margin-top: 3rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;
+    }
+    .info-group-title::after { content: ""; height: 2px; background: #f1f5f9; flex-grow: 1; }
+    .detail-row { display: flex; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid #f8fafc; }
+    .label-col { font-weight: 700; color: #64748b; font-size: 0.88rem; }
+    .value-col { font-weight: 800; color: #1e293b; text-align: right; }
+    .expiry-alert { background: #fffbeb; color: #92400e; padding: 12px 18px; border-radius: 12px; border-left: 5px solid #f59e0b; font-size: 0.85rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mb-5">
+    <div class="row">
+        <!-- LEFT: Identity Summary -->
+        <div class="col-lg-4">
+            <div class="profile-card-main shadow-sm mb-4">
+                <div class="header-banner">
+                    <div class="membership-status">
+                        {% if request.user.is_premium %}👑 PREMIUM{% else %}BASIC TIER{% endif %}
+                    </div>
+                    <div class="avatar-circle">
+                        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+                    </div>
+                    <h2 class="fw-bold m-0">{{ request.user.get_full_name }}</h2>
+                    <p class="m-0 opacity-75">ID: #SEWA-{{ request.user.id|add:1000 }}</p>
+                </div>
+                <div class="p-4">
+                    <div class="row text-center g-2">
+                        <div class="col-4">
+                            <div class="p-2 bg-light rounded-3">
+                                <div class="small text-muted fw-bold">RANK</div>
+                                <div class="fw-bold text-dark">#{{ rank }}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-light rounded-3">
+                                <div class="small text-muted fw-bold">HOLDINGS</div>
+                                <div class="fw-bold text-dark">{{ holdings_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-light rounded-3">
+                                <div class="small text-muted fw-bold">TRADES</div>
+                                <div class="fw-bold text-dark">{{ total_trades }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <a href="{% url 'settings' %}" class="btn btn-outline-success fw-bold rounded-pill">
+                            <i class="fas fa-user-edit me-2"></i>Edit Account
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Full Technical Details -->
+        <div class="col-lg-8">
+            <div class="profile-card-main p-4 p-md-5 shadow-sm">
+                
+                <!-- 1. Membership Section -->
+                <div class="info-group-title">Membership & Subscription</div>
+                <div class="detail-row">
+                    <span class="label-col">Active Plan</span>
+                    <span class="value-col">{{ subscription.plan.name|default:"Basic (Free)" }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label-col">Subscription Status</span>
+                    <span class="value-col">
+                        {% if subscription.is_active and not subscription.is_expired %}
+                        <span class="text-success"><i class="fas fa-check-circle me-1"></i> Active</span>
+                        {% else %}
+                        <span class="text-danger"><i class="fas fa-times-circle me-1"></i> Expired</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="label-col">Expiry Date</span>
+                    <span class="value-col">
+                        {% if subscription.end_date %}
+                        {{ subscription.end_date|date:"F d, Y" }}
+                        {% else %}
+                        Never (Lifetime Basic)
+                        {% endif %}
+                    </span>
+                </div>
+                
+                {% if days_left is not None %}
+                <div class="expiry-alert mt-3">
+                    <i class="fas fa-hourglass-half me-2"></i> 
+                    Your premium benefits will expire in <strong>{{ days_left }} days</strong>. 
+                    <a href="{% url 'pricing' %}" class="text-decoration-none ms-2">Renew now →</a>
+                </div>
+                {% endif %}
+
+                <!-- 2. Personal Section -->
+                <div class="info-group-title">Personal Identity</div>
+                <div class="detail-row">
+                    <span class="label-col">Username</span>
+                    <span class="value-col">{{ request.user.username }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label-col">Email</span>
+                    <span class="value-col">{{ request.user.email }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label-col">Phone</span>
+                    <span class="value-col">{{ request.user.phone|default:"Unset" }}</span>
+                </div>
+
+                <!-- 3. Financial Section -->
+                <div class="info-group-title">Financial Audit</div>
+                <div class="detail-row">
+                    <span class="label-col">Virtual Cash Balance</span>
+                    <span class="value-col text-success">Rs {{ request.user.virtual_balance|floatformat:2 }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label-col">Total Stock Investment</span>
+                    <span class="value-col">Rs {{ request.user.portfolio_value|floatformat:2 }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label-col">Net Worth (Total Wealth)</span>
+                    <span class="value-col text-primary" style="font-size: 1.1rem;">Rs {{ total_wealth|floatformat:2 }}</span>
+                </div>
+
+                <!-- 4. Account Logs -->
+                <div class="info-group-title">System Logs</div>
+                <div class="detail-row">
+                    <span class="label-col">Member Since</span>
+                    <span class="value-col">{{ request.user.date_joined|date:"F d, Y" }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label-col">Last Secure Access</span>
+                    <span class="value-col">{{ request.user.last_login|date:"M d, Y | H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

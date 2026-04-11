@@ -84,30 +84,41 @@ async function fetchMarketData() {
     const tbody = document.getElementById('marketBody');
     const badge = document.getElementById('marketStatusBadge');
     const badgeText = document.getElementById('marketStatusText');
-    const badgeIcon = document.getElementById('marketStatusIcon');
+    const dateInput = document.getElementById('marketDate');
+
+    // 1. Capture the selected date from the calendar
+    const selectedDate = dateInput ? dateInput.value : '';
+    
+    // 2. Build the URL. We use 'date' as the parameter name.
+    let url = `/api/market-data/?t=${Date.now()}`;
+    if (selectedDate) {
+        url += `&date=${selectedDate}`;
+    }
 
     try {
-        const res = await fetch('/api/market-data/?t=' + Date.now()); // Added cache buster
+        console.log("Fetching data for:", selectedDate || "Today (Live)");
+        const res = await fetch(url);
         const json = await res.json();
 
         if (json.success) {
             allMarketData_global = json.stocks || [];
             applyFilters(); 
 
-            // Update Badge Colors
-            if (json.is_playback) {
-                badge.style.background = '#f59e0b'; // Yellow
-                badge.style.color = '#fff';
-                badgeText.innerText = 'PLAYBACK MODE';
-                if(badgeIcon) badgeIcon.className = "fa-solid fa-history me-1";
+            // 3. Update the UI Badge based on if we are looking at History or Live
+            if (selectedDate) {
+                // Change badge to Orange for Historical View
+                if(badge) badge.style.background = '#f59e0b'; 
+                if(badgeText) badgeText.innerText = 'HISTORICAL DATA';
+            } else if (json.is_playback) {
+                if(badge) badge.style.background = '#f59e0b';
+                if(badgeText) badgeText.innerText = 'PLAYBACK MODE';
             } else {
-                badge.style.background = '#10b981'; // Green
-                badge.style.color = '#fff';
-                badgeText.innerText = 'LIVE MARKET';
-                if(badgeIcon) badgeIcon.className = "fa-solid fa-circle me-1";
+                // Back to Green for Live
+                if(badge) badge.style.background = '#10b981';
+                if(badgeText) badgeText.innerText = 'LIVE MARKET';
             }
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Market fetch failed:", e); }
 }
 
 async function initDatePicker() {

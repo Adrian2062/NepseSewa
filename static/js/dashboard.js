@@ -28,30 +28,55 @@ async function refreshDashboardData() {
 }
 
 /**
- * 1. Dashboard Summary: Rank and Total Wealth
+ * 1. Dashboard Summary: Handles Wealth, Rank, and Today's Profit
  */
 async function loadDashboardSummary() {
     try {
-        const res = await fetch('/api/dashboard/summary/');
+        // We call the summary API which already calculates profit math
+        const res = await fetch('/api/dashboard/summary/?t=' + Date.now());
         const json = await res.json();
 
         if (json.success) {
             const d = json.data;
 
-            // Value
+            // 1. Update Total Wealth (Cash + Stocks)
             const valEl = document.getElementById('dashboardPortfolioValue');
             if (valEl) valEl.textContent = `Rs ${fmtNumber(d.total_wealth, 2)}`;
 
-            // Rank
+            // 2. Update Rank
             const rankEl = document.getElementById('dashboardRank');
             const totalEl = document.getElementById('dashboardRankTotal');
             if (rankEl) rankEl.textContent = `#${d.rank}`;
             if (totalEl) totalEl.textContent = `of ${d.total_users} users`;
+
+            // 3. FIX: Update Today's Profit Card (The "loading..." fix)
+            const profitEl = document.getElementById('dashboardTodayProfit');
+            const profitPctEl = document.getElementById('dashboardTodayProfitPct');
+
+            if (profitEl && profitPctEl) {
+                // Use the names sent by api_dashboard_summary in views.py
+                const val = d.today_profit || 0;
+                const pct = d.today_profit_pct || 0;
+                
+                const sign = val >= 0 ? '+' : '';
+                const cls = val >= 0 ? 'text-success' : 'text-danger';
+
+                profitEl.textContent = `Rs ${fmtNumber(Math.abs(val), 2)}`;
+                profitEl.className = `stat-value ${cls}`;
+                
+                profitPctEl.textContent = `${sign}${fmtNumber(pct, 2)}%`;
+                profitPctEl.className = `fw-bold ${cls}`;
+            }
         }
     } catch (err) {
         console.error("Dashboard Summary error:", err);
+        const pctEl = document.getElementById('dashboardTodayProfitPct');
+        if (pctEl) pctEl.textContent = "Error loading";
     }
 }
+
+// Remove the old loadPortfolioAnalytics() function entirely from dashboard.js 
+// to prevent it from overwriting the summary data.
 
 /**
  * 2. Portfolio Analytics: Today's Profit
@@ -66,20 +91,22 @@ async function loadPortfolioAnalytics() {
             const profitEl = document.getElementById('dashboardTodayProfit');
             const profitPctEl = document.getElementById('dashboardTodayProfitPct');
 
-            if (profitEl) {
-                const sign = d.today_pl >= 0 ? '+' : '-';
-                const cls = d.today_pl >= 0 ? 'text-success' : 'text-danger';
-                profitEl.textContent = `Rs ${fmtNumber(Math.abs(d.today_pl), 2)}`;
-                profitEl.className = `stat-value ${cls}`;
+            if (profitEl && profitPctEl) {
+                // BACKEND sends 'today_pl', not 'today_profit'
+                const val = d.today_pl || 0; 
+                const pct = d.today_pl_pct || 0;
+                
+                const sign = val >= 0 ? '+' : '';
+                const cls = val >= 0 ? 'text-success' : 'text-danger';
 
-                if (profitPctEl) {
-                    profitPctEl.textContent = `${sign}${fmtNumber(d.today_pl_pct, 2)}%`;
-                    profitPctEl.className = `fw-bold ${cls}`;
-                }
+                profitEl.textContent = `Rs ${fmtNumber(Math.abs(val), 2)}`;
+                profitEl.className = `stat-value ${cls}`;
+                profitPctEl.textContent = `${sign}${fmtNumber(pct, 2)}%`;
+                profitPctEl.className = `fw-bold ${cls}`;
             }
         }
     } catch (err) {
-        console.error("Portfolio Analytics error:", err);
+        console.error("Dashboard Profit error:", err);
     }
 }
 
@@ -301,6 +328,60 @@ async function loadDashboardWatchlist() {
         console.error("Watchlist load error:", err);
     }
 }
+/**
+ * New Function: Fetches all stocks, sorts by Turnover, and renders Top 5
+ */
+/**
+ * Fetches latest market data, sorts by Turnover, and updates the Top Active card
+ */
+async function loadTopTurnover() {
+    const container = document.getElementById('topActiveContainer');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/latest/?t=' + Date.now());
+        const json = await res.json();
+
+        if (json.success && Array.isArray(json.data)) {
+            // Filter scrips that have real turnover
+            const activeScrips = json.data.filter(s => s.turnover > 0);
+
+            // --- THE PERSISTENCE FIX ---
+            // If the newest data has 0 active scrips (market closed/scraper just started)
+            // AND we already have data showing on the screen, DON'T clear the box.
+            if (activeScrips.length === 0 && container.innerHTML.trim() !== "") {
+                console.log("No active trades in latest batch. Retaining last known turnover data.");
+                return; 
+            }
+
+            const top5 = activeScrips
+                .sort((a, b) => b.turnover - a.turnover)
+                .slice(0, 5);
+
+            // If we found data, render it. 
+            // Otherwise, if the box is totally empty, show a loading placeholder.
+            if (top5.length > 0) {
+                container.innerHTML = top5.map(item => `
+                    <div class="market-item">
+                        <div class="market-symbol" style="font-weight: 800;">${item.symbol}</div>
+                        <div class="text-end">
+                            <div class="market-price" style="font-weight: 900; color: #1e293b;">
+                                Rs ${window.fmtInt(Math.round(item.turnover))}
+                            </div>
+                            <div class="text-muted" style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">
+                                Last Traded Volume
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="p-4 text-center text-muted">Awaiting Market Session...</div>';
+            }
+        }
+    } catch (err) {
+        console.error("Top Turnover error:", err);
+    }
+}
 
 /**
  * Shared Ticker Logic (if required to be in dashboard.js)
@@ -399,4 +480,5 @@ async function refreshDashboardData() {
     loadDashboardPerformance('1D');
     loadDashboardActivity();
     loadDashboardWatchlist();
+    loadTopTurnover(); 
 }

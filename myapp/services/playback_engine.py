@@ -1,23 +1,51 @@
 import time
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.utils import timezone
-from datetime import timedelta
 from myapp.models import NEPSEPrice
+from custom_admin.models import SystemSetting
 
 def get_playback_state():
     """
-    Bulletproof Playback Engine.
-    Matches the current Nepal time (HH:MM) to the closest historical data point.
+    Smart Playback Engine.
+    Auto-detects if the scraper is running by checking data freshness.
+    If data is old, falls back to historical playback.
     """
     from myapp.services.market_session import get_current_session
     session = get_current_session()
     
-    # Use real session state for production. Forced False for demo testing.
-    is_open = False 
+    # 1. --- AUTO DETECT LIVE SCRAPER ---
+    # Find the absolute newest record in the database
+    latest_record = NEPSEPrice.objects.aggregate(Max('timestamp'))['timestamp__max']
     
-    if is_open:
+    is_live = False
+    if latest_record:
+        # Calculate how many seconds ago the data was saved
+        time_difference = (timezone.now() - latest_record).total_seconds()
+        
+        # If data is less than 3 minutes old (180 seconds), the scraper is running!
+        if time_difference < 180:
+            is_live = True
+
+    # 2. --- AUTO UPDATE UI STATUS ---
+    if is_live:
+        # Force the database session to CONTINUOUS so the frontend knows we are live
+        if session.status != 'CONTINUOUS':
+            session.status = 'CONTINUOUS'
+            session.is_active = True
+            session.save()
+        
+        # Return False for playback so the frontend asks for LIVE data
         return {'is_playback': False, 'timestamp': None}
         
+    else:
+        # Force the session to CLOSED if scraper is off
+        if session.status != 'CLOSED':
+            session.status = 'CLOSED'
+            session.is_active = False
+            session.save()
+            
+    # 3. --- START PLAYBACK MODE LOGIC (Only runs if scraper is off) ---
+    
     # Find most recent date with full data
     best_dates = NEPSEPrice.objects.values('timestamp__date').annotate(
         count=Count('id')
@@ -36,20 +64,14 @@ def get_playback_state():
     if not timestamps:
         return {'is_playback': False, 'timestamp': None}
 
-    # --- BULLETPROOF CLOCK SYNC ---
-    now = timezone.localtime() # Current real Nepal time
-    
-    # Create a "Target Time" using today's clock but yesterday's date
+    # Clock Sync for Time Machine
+    now = timezone.localtime()
     target_datetime = now.replace(
-        year=last_date.year, 
-        month=last_date.month, 
-        day=last_date.day,
-        second=0, 
-        microsecond=0
+        year=last_date.year, month=last_date.month, day=last_date.day,
+        second=0, microsecond=0
     )
     
-    # Find the historical timestamp that is CLOSEST to our Target Time
-    # This prevents the system from failing if a specific minute wasn't scraped
+    # Find closest historical point
     closest_ts = timestamps[0]
     smallest_diff = abs((timezone.localtime(closest_ts) - target_datetime).total_seconds())
 
@@ -59,9 +81,7 @@ def get_playback_state():
             smallest_diff = diff
             closest_ts = ts
     
-    # If the closest time is more than 2 hours away (e.g., it's 8:00 AM right now, 
-    # but data only starts at 11:00 AM), we fall back to the looping behavior
-    # so the demo doesn't look completely frozen.
+    # Loop fallback
     if smallest_diff > 7200: 
         current_minute_abs = int(time.time() // 60)
         index = current_minute_abs % len(timestamps)

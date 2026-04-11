@@ -117,34 +117,43 @@ class Command(BaseCommand):
             driver.quit()
 
     def scrape_market_summary(self, driver):
-        """Scrape NEPSE Index and market overview from MarketSummary.aspx"""
+        """Scrape NEPSE Index and market overview with robust session handling"""
         try:
             self.stdout.write("\n[📈 Loading Market Summary page...]")
             driver.get('https://merolagani.com/MarketSummary.aspx')
             
-            # Handle any alerts
-            time.sleep(2)
-            self.dismiss_alerts(driver)
-            
-            wait = WebDriverWait(driver, 20)
-            wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(3)
-            
-            # Dismiss any remaining alerts
             self.dismiss_alerts(driver)
+            
+            # --- CRITICAL: Wait for the JS to calculate the turnover numbers ---
+            self.stdout.write("  ⏳ Waiting for summary data to render...")
+            time.sleep(8) 
             
             soup = BeautifulSoup(driver.page_source, 'html.parser')
             timestamp = timezone.now()
             
-            # Extract NEPSE Index
+            # 1. Extract the main Index
             self.extract_nepse_index(soup, timestamp, driver)
             
-            # Extract market indices
+            # 2. Extract Sector Indices (Sensitive/Float)
             self.extract_market_indices(soup, timestamp)
             
-            # Extract market summary statistics
-            self.extract_market_stats(soup, timestamp)
+            # 3. Extract Turnover/Volume Stats
+            stats_found = self.extract_market_stats(soup, timestamp)
             
+            # --- THE UI FIX: Auto-activate the session if we got data ---
+            if stats_found:
+                from myapp.models import MarketSession
+                session, _ = MarketSession.objects.get_or_create(
+                    session_date=timestamp.date(),
+                    defaults={'status': 'CONTINUOUS', 'is_active': True}
+                )
+                if session.status != 'CONTINUOUS':
+                    session.status = 'CONTINUOUS'
+                    session.is_active = True
+                    session.save()
+                    self.stdout.write(self.style.SUCCESS("  ✓ Market Session set to LIVE"))
+
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"✗ Error scraping market summary: {str(e)}"))
 
@@ -354,57 +363,56 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"  ✗ Error extracting indices: {str(e)}"))
 
     def extract_market_stats(self, soup, timestamp):
-        """Extract market statistics (turnover, shares, etc.)"""
+        """Globally scans the page for Market Totals (Turnover/Volume)"""
         try:
             self.stdout.write("\n[📊 Extracting market statistics...]")
-            
-            page_text = soup.get_text()
             data = {}
             
-            patterns = {
-                'total_turnover':[
-                    r'Total\s+Turnover[:\s]*(?:Rs\.?\s*)?(\d[\d,\.]*)',
-                    r'Turnover[:\s]*(?:Rs\.?\s*)?(\d[\d,\.]*)',
-                ],
-                'total_traded_shares':[
-                    r'Total\s+(?:Traded\s+)?Shares?[:\s]*(\d[\d,]*)',
-                    r'Shares?\s+Traded[:\s]*(\d[\d,]*)',
-                ],
-                'total_transactions': [
-                    r'Total\s+Transactions?[:\s]*(\d[\d,]*)',
-                    r'No\.?\s+of\s+Transactions?[:\s]*(\d[\d,]*)',
-                ],
-                'total_scrips':[
-                    r'(?:Total\s+)?Scrips\s+Traded[:\s]*(\d[\d,]*)',
-                    r'No\.?\s+of\s+Scrips[:\s]*(\d[\d,]*)',
-                ],
+            # Key: what we want in DB | Value: what the website labels it as
+            labels_to_find = {
+                'total_turnover': 'total turnover',
+                'total_traded_shares': 'total traded shares',
+                'total_transactions': 'total transactions',
+                'total_scrips': 'total scrips traded'
             }
-            
-            for field, pattern_list in patterns.items():
-                for pattern in pattern_list:
-                    match = re.search(pattern, page_text, re.IGNORECASE)
-                    if match:
-                        value = self.parse_float(match.group(1))
-                        if value and value > 0:
-                            data[field] = value
-                            if field == 'total_scrips':
-                                self.expected_scrips = int(value)
-                            break
-            
-            if data:
+
+            # Strategy: Scan every row (TR) on the entire page
+            all_rows = soup.find_all('tr')
+            for tr in all_rows:
+                cells = tr.find_all(['td', 'th'])
+                if len(cells) >= 2:
+                    # Clean the label (e.g. "Total Turnover Rs.")
+                    row_label = cells[0].get_text(strip=True).lower()
+                    
+                    for field, search_text in labels_to_find.items():
+                        if search_text in row_label:
+                            # Clean the value (e.g. "Rs. 8,021,838,050.12")
+                            val_str = cells[1].get_text(strip=True)
+                            val = self.parse_float(val_str)
+                            
+                            if val is not None:
+                                data[field] = val
+
+            # --- VERIFICATION & SAVING ---
+            if data.get('total_turnover') and data.get('total_traded_shares'):
                 MarketSummary.objects.update_or_create(
                     timestamp=timestamp,
                     defaults=data
                 )
-                
-                self.stdout.write(self.style.SUCCESS("  ✓ Market statistics saved:"))
+                self.stdout.write(self.style.SUCCESS("  ✓ Market statistics saved successfully:"))
                 for key, val in data.items():
                     self.stdout.write(f"    • {key.replace('_', ' ').title()}: {val:,.0f}")
+                return True
             else:
-                self.stdout.write(self.style.WARNING("  ⚠️  No market statistics extracted"))
+                # If we missed data, let's find out what we DID find
+                found_keys = ", ".join(data.keys()) if data else "Nothing"
+                self.stdout.write(self.style.WARNING(f"  ⚠️  Incomplete stats found: {found_keys}"))
+                self.stdout.write("  ℹ️  This usually means the 'Market Summary' section hasn't loaded yet.")
+                return False
                 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"  ✗ Error extracting market stats: {str(e)}"))
+            self.stdout.write(self.style.ERROR(f"  ✗ Error in market stats: {str(e)}"))
+            return False
 
     def scrape_stock_prices(self, driver):
         """Scrape individual stock prices from StockQuote.aspx"""

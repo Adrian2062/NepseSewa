@@ -43,18 +43,21 @@ def get_current_session():
 
 
 def update_session_status(session, nepal_now=None):
-    """Update session status based on current time"""
+    """Update session status based on current time and NEW NEPSE schedule"""
     if nepal_now is None:
         nepal_now = get_nepal_time()
     
     current_time = nepal_now.time()
+    current_day = nepal_now.weekday() # 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
     
-    # Don't auto-update if admin has manually set status
     if session.is_manual:
         return session
     
-    # Check if within continuous session hours
-    if CONTINUOUS_START <= current_time < CONTINUOUS_END:
+    # --- THE NEW SCHEDULE (Monday to Friday, 11 AM - 3 PM) ---
+    is_trading_day = current_day in [0, 1, 2, 3, 4] # Mon(0) through Fri(4)
+    is_trading_hours = CONTINUOUS_START <= current_time < CONTINUOUS_END
+    
+    if is_trading_day and is_trading_hours:
         if session.status != 'CONTINUOUS':
             session.status = 'CONTINUOUS'
             session.is_active = True

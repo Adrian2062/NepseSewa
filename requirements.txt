@@ -12,3 +12,5 @@ gunicorn
 whitenoise
 dj-database-url
 psycopg2-binary
+celery==5.4.0
+redis==5.0.8

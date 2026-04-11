@@ -54,6 +54,7 @@ body {
     overflow: visible !important;
 }
 
+
 .market-item {
     padding: 0.9rem 1.25rem !important;
 }
@@ -676,7 +677,6 @@ body {
         display: none !important;
     }
 
-    <<<<<<< HEAD
 }
 
 /* Premium Table Styling */

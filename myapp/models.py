@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from django.core.validators import MinValueValidator
 
 # ============= CUSTOM USER MODEL =============
 class CustomUser(AbstractUser):
@@ -9,14 +10,23 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    virtual_balance = models.DecimalField(max_digits=12, decimal_places=2, default=100000.00)
-    portfolio_value = models.DecimalField(max_digits=12, decimal_places=2, default=100000.00)
+    virtual_balance = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=100000.00, 
+        validators=[MinValueValidator(0.00)]
+    )
+    portfolio_value = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0.00, 
+        validators=[MinValueValidator(0.00)]
+    )
     date_joined = models.DateTimeField(auto_now_add=True)
     
-    # Settings fields
     phone = models.CharField(max_length=15, blank=True, null=True)
     buy_sell_notifications = models.BooleanField(default=True)
-    is_premium = models.BooleanField(default=False) # Added for Khalti Premium
+    is_premium = models.BooleanField(default=False)
     
     USERNAME_FIELD = 'email'
     EMAIL_FIELD = 'email'
@@ -24,7 +34,17 @@ class CustomUser(AbstractUser):
     
     class Meta:
         db_table = 'users'
-    
+        # --- ADD THIS BLOCK TO SOLVE THE SECURITY ISSUE ---
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(virtual_balance__gte=0), 
+                name='virtual_balance_non_negative'
+            ),
+            models.CheckConstraint(
+                check=models.Q(portfolio_value__gte=0), 
+                name='portfolio_value_non_negative'
+            ),
+        ]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

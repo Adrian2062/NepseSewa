@@ -203,6 +203,7 @@
         </div>
     </div>
 
+
     <!-- Active Stocks (By Turnover) -->
     <div class="col-lg-4 mb-3">
         <div class="card market-card h-100">
@@ -210,20 +211,20 @@
                 <h5 class="card-title text-primary">Top Active</h5>
                 <small><i class="fas fa-bolt"></i> Turnover</small>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body p-0" id="topActiveContainer">
                 {% for item in top_turnover %}
                 <div class="market-item">
-                    <div class="market-symbol">{{ item.symbol }}</div>
+                    <div class="market-symbol" style="font-weight: 800;">{{ item.symbol }}</div>
                     <div class="text-end">
-                        <div class="market-price">Rs {{ item.ltp|floatformat:2 }}</div>
-                        <div
-                            class="market-change {% if item.change_pct >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {% if item.change_pct >= 0 %}+{% endif %}{{ item.change_pct|floatformat:2 }}%
+                        <div class="market-price" style="font-weight: 900; color: #1e293b;">
+                            Rs {{ item.turnover|floatformat:0 }}
+                        </div>
+                        <div class="text-muted"
+                            style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">
+                            Volume Traded
                         </div>
                     </div>
                 </div>
-                {% empty %}
-                <div class="p-3 text-muted text-center">No data available</div>
                 {% endfor %}
             </div>
         </div>

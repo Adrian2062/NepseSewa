@@ -1,6 +1,11 @@
+import re
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.core.exceptions import ValidationError
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordResetForm
+from django.contrib.auth import get_user_model
 from .models import CustomUser
+
+User = get_user_model()
 
 class RegistrationForm(UserCreationForm):
     first_name = forms.CharField(
@@ -30,6 +35,7 @@ class RegistrationForm(UserCreationForm):
         })
     )
     password1 = forms.CharField(
+        label="Password",
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
             'placeholder': 'Create a password',
@@ -37,6 +43,7 @@ class RegistrationForm(UserCreationForm):
         })
     )
     password2 = forms.CharField(
+        label="Confirm Password",
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
             'placeholder': 'Confirm your password',
@@ -47,10 +54,47 @@ class RegistrationForm(UserCreationForm):
     class Meta:
         model = CustomUser
         fields = ['first_name', 'last_name', 'email', 'password1', 'password2']
+
+    # --- CUSTOM VALIDATION LOGIC ---
+
+    def clean_first_name(self):
+        first_name = self.cleaned_data.get('first_name')
+        # Regex: Start to end, only allow letters A-Z and a-z
+        if not re.match(r'^[a-zA-Z]+$', first_name):
+            raise ValidationError("First name must only contain alphabetical letters (no symbols or numbers).")
+        return first_name
+
+    def clean_last_name(self):
+        last_name = self.cleaned_data.get('last_name')
+        if not re.match(r'^[a-zA-Z]+$', last_name):
+            raise ValidationError("Last name must only contain alphabetical letters (no symbols or numbers).")
+        return last_name
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email').strip().lower()
+
+        # ✅ Strict regex (blocks ! and other invalid characters)
+        pattern = r'^[a-zA-Z0-9._]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+        if not re.match(pattern, email):
+            raise ValidationError("Enter a valid email (no special characters like !, #, etc).")
+
+        if User.objects.filter(email=email).exists():
+            raise ValidationError("An account with this email already exists.")
+
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get("password1")
+        p2 = cleaned_data.get("password2")
+        if p1 and p2 and p1 != p2:
+            self.add_error('password2', "The two password fields didn't match.")
+        return cleaned_data
     
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.username = self.cleaned_data['email']  # Use email as username
+        user.username = self.cleaned_data['email']
         user.email = self.cleaned_data['email']
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
@@ -79,7 +123,7 @@ class LoginForm(AuthenticationForm):
 # ============= SETTINGS FORMS =============
 
 class ProfileUpdateForm(forms.ModelForm):
-    """Form for updating user profile information"""
+    """Form for updating user profile information with character validation"""
     class Meta:
         model = CustomUser
         fields = ['first_name', 'last_name', 'phone']
@@ -102,17 +146,20 @@ class ProfileUpdateForm(forms.ModelForm):
         first_name = self.cleaned_data.get('first_name')
         if not first_name:
             raise forms.ValidationError('First name is required.')
+        if not re.match(r'^[a-zA-Z]+$', first_name):
+            raise ValidationError("First name must only contain alphabetical letters.")
         return first_name
     
     def clean_last_name(self):
         last_name = self.cleaned_data.get('last_name')
         if not last_name:
             raise forms.ValidationError('Last name is required.')
+        if not re.match(r'^[a-zA-Z]+$', last_name):
+            raise ValidationError("Last name must only contain alphabetical letters.")
         return last_name
 
 
 class EmailUpdateForm(forms.Form):
-    """Form for updating user email"""
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
@@ -127,13 +174,12 @@ class EmailUpdateForm(forms.Form):
     
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        if CustomUser.objects.filter(email=email).exclude(pk=self.user.pk).exists():
+        if User.objects.filter(email=email).exclude(pk=self.user.pk).exists():
             raise forms.ValidationError('This email is already in use by another account.')
         return email
 
 
 class PasswordChangeCustomForm(forms.Form):
-    """Form for changing user password"""
     current_password = forms.CharField(
         required=True,
         widget=forms.PasswordInput(attrs={
@@ -179,7 +225,6 @@ class PasswordChangeCustomForm(forms.Form):
 
 
 class NotificationPreferenceForm(forms.ModelForm):
-    """Form for updating notification preferences"""
     class Meta:
         model = CustomUser
         fields = ['buy_sell_notifications']
@@ -188,14 +233,9 @@ class NotificationPreferenceForm(forms.ModelForm):
                 'class': 'form-check-input switch'
             })
         }
-from django.contrib.auth.forms import PasswordResetForm
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
 
 class CustomPasswordResetForm(PasswordResetForm):
     def get_users(self, email):
         """Return active users matching the given email."""
         active_users = User.objects.filter(email__iexact=email, is_active=True)
         return active_users
-
